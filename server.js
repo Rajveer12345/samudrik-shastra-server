@@ -123,21 +123,13 @@ async function analyzePalm(imageData, mediaType) {
           let jsonStr = text.slice(s, e + 1);
           
           // Clean up common AI JSON mistakes
-          // Replace smart quotes with regular quotes
+          // Clean problematic characters from JSON string
           jsonStr = jsonStr
-            .replace(/[‘’]/g, "'")
-            .replace(/[“”]/g, '"')
-            .replace(/[–—]/g, '-')
-            .replace(/[…]/g, '...')
-            .replace(/
-/g, '\n')
-            .replace(/
-/g, '\n')
-            .replace(/	/g, ' ');
-
-          // Remove control characters except escaped ones  
-          jsonStr = jsonStr.replace(/[ -
--]/g, '');
+            .replace(/\u2018|\u2019/g, "'")
+            .replace(/\u201C|\u201D/g, '"')
+            .replace(/\u2013|\u2014/g, '-')
+            .replace(/\u2026/g, '...')
+            .replace(/[\r\n\t]/g, ' ');
 
           try {
             resolve(JSON.parse(jsonStr));
