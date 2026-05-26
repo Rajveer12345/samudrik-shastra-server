@@ -1,16 +1,3 @@
-// ═══════════════════════════════════════════════════════════════════════════
-//  Samudrik Shastra — Full Server
-//  Features: Palm reading proxy, SQLite DB, Razorpay payments, Admin API
-//  Deploy: Render.com / Railway.app
-//  Env vars needed:
-//    ANTHROPIC_API_KEY   — your Anthropic key
-//    ADMIN_PASSWORD      — password to access admin panel (e.g. "mypassword123")
-//    RAZORPAY_KEY_ID     — from Razorpay dashboard (optional, for payments)
-//    RAZORPAY_KEY_SECRET — from Razorpay dashboard (optional)
-//    PRICE_INR           — price per reading in paise (e.g. 49900 = ₹499)
-//    FREE_MODE           — set to "true" to disable payments during testing
-// ═══════════════════════════════════════════════════════════════════════════
-
 const http = require("http");
 const https = require("https");
 const fs = require("fs");
@@ -25,261 +12,220 @@ const RZP_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
 const PRICE_PAISE = parseInt(process.env.PRICE_INR || "49900");
 const FREE_MODE = process.env.FREE_MODE === "true";
 
-// ── In-memory DB (persists while server runs; swap for SQLite/Postgres later) 
-const DB = {
-  readings: [],   // { id, name, phone, paymentId, status, createdAt, readingData }
-  orders: [],     // { id, orderId, amount, status, createdAt }
-  nextId: 1,
-};
+const DB = { readings: [], orders: [], nextId: 1 };
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
-function body(req) {
+function readBody(req) {
   return new Promise((resolve, reject) => {
     const c = []; req.on("data", d => c.push(d));
     req.on("end", () => resolve(Buffer.concat(c).toString()));
     req.on("error", reject);
   });
 }
-function json(res, data, status = 200) {
-  res.writeHead(status, { "Content-Type": "application/json" });
+function json(res, data, status) {
+  res.writeHead(status || 200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
 }
 function authAdmin(req) {
-  const auth = req.headers["authorization"] || "";
-  return auth === `Bearer ${ADMIN_PASS}`;
+  return (req.headers["authorization"] || "") === "Bearer " + ADMIN_PASS;
 }
 function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
-// ── Razorpay helpers ─────────────────────────────────────────────────────────
-function razorpayRequest(path, method, payload) {
-  return new Promise((resolve, reject) => {
-    const auth = Buffer.from(`${RZP_ID}:${RZP_SECRET}`).toString("base64");
-    const body = payload ? JSON.stringify(payload) : null;
-    const opts = {
-      hostname: "api.razorpay.com", path, method,
-      headers: {
-        "Authorization": `Basic ${auth}`,
-        "Content-Type": "application/json",
-        ...(body ? { "Content-Length": Buffer.byteLength(body) } : {})
-      }
-    };
-    const req = https.request(opts, res => {
-      const c = []; res.on("data", d => c.push(d));
-      res.on("end", () => { try { resolve(JSON.parse(Buffer.concat(c).toString())); } catch(e) { reject(e); } });
-    });
-    req.on("error", reject);
-    if (body) req.write(body);
-    req.end();
-  });
-}
-
-// ── Palm reading via Anthropic ───────────────────────────────────────────────
-const PALM_SYSTEM = "You are a master Samudrik Shastra (Vedic palmistry) expert. Analyze this palm image with extreme precision, deep empathy, and specific life predictions.\n\nStudy every visible feature: Life Line, Heart Line, Head Line, Fate Line, Sun Line, Health Line, Marriage Lines, Money Lines, all 7 mounts (Venus Jupiter Saturn Apollo Mercury Moon Mars), hand shape, thumb, finger lengths, fine lines, crosses, islands, breaks, chains, stars, tridents.\n\nBe SPECIFIC. Give EXACT timing windows (month + year). Identify real problems. Cover: job/career/job loss, property/house, marriage/relationships, foreign travel/abroad job, business, promotion, health, finances.\n\nFor each major prediction give 3 windows: primary, backup, final fallback.\n\nRespond ONLY with raw JSON. No text before or after. No markdown. Start with { end with }.\n\nRequired JSON structure:\n{\"hand_type\":\"...\",\"hand_typeHi\":\"...\",\"overall_energy\":\"...\",\"overall_energyHi\":\"...\",\"lucky_period\":\"...\",\"predictions\":[{\"category\":\"emoji Name\",\"categoryHi\":\"Hindi name\",\"color\":\"#hex\",\"items\":[{\"label\":\"...\",\"labelHi\":\"...\",\"reading\":\"...\",\"readingHi\":\"...\",\"type\":\"current or positive or warning or info\",\"timeline\":\"Mon Year - Mon Year\",\"timelineHi\":\"...\"}]}],\"problems\":[{\"area\":\"...\",\"areaHi\":\"...\",\"issue\":\"...\",\"issueHi\":\"...\",\"severity\":\"mild or moderate or significant\",\"line\":\"...\",\"deepDive\":\"...\"}],\"remedies\":[{\"for\":\"...\",\"forHi\":\"...\",\"type\":\"Mantra or Ritual or Lifestyle or Charity or Vastu\",\"typeHi\":\"...\",\"remedy\":\"...\",\"remedyHi\":\"...\",\"timing\":\"...\",\"timingHi\":\"...\"}],\"gemstones\":[{\"stone\":\"ruby or pearl or coral or emerald or yellow_sapphire or diamond or blue_sapphire or hessonite or cats_eye\",\"reason\":\"...\",\"reasonHi\":\"...\",\"weight\":\"...\",\"metal\":\"...\",\"day_to_wear\":\"...\"}],\"vastu\":[{\"direction\":\"...\",\"en\":\"...\",\"hi\":\"...\"}],\"lifestyle\":[{\"title\":\"...\",\"titleHi\":\"...\",\"en\":\"...\",\"hi\":\"...\"}],\"positive_signs\":[{\"en\":\"...\",\"hi\":\"...\"}]}\n\nInclude 5-7 prediction categories, 4-6 problems, 5-7 remedies, 2-3 gemstones, 5 vastu, 5 lifestyle, 4-5 positive signs."
-
-async function analyzePalm(imageData, mediaType) {
-  // Simple prompt - no JSON schema in system prompt to avoid special char issues
-  const simplePrompt = "You are a Vedic palmistry expert. Analyze this palm image carefully. Study all lines and mounts. Return ONLY a valid JSON object with NO text before or after it. Use ONLY simple ASCII characters in your response - no special quotes, no em-dashes, no unicode punctuation. Use regular apostrophes and hyphens only.\n\nReturn this exact structure with your analysis filled in:\n{\"hand_type\":\"describe hand\",\"hand_typeHi\":\"हस्त विवरण\",\"overall_energy\":\"your reading\",\"overall_energyHi\":\"पठन\",\"lucky_period\":\"next good period\",\"predictions\":[{\"category\":\"Career\",\"categoryHi\":\"करियर\",\"color\":\"#E67E22\",\"items\":[{\"label\":\"Current Status\",\"labelHi\":\"वर्तमान\",\"reading\":\"detail\",\"readingHi\":\"विवरण\",\"type\":\"current\",\"timeline\":\"Month Year\",\"timelineHi\":\"समय\"}]}],\"problems\":[{\"area\":\"area\",\"areaHi\":\"क्षेत्र\",\"issue\":\"problem\",\"issueHi\":\"समस्या\",\"severity\":\"significant\",\"line\":\"which line\",\"deepDive\":\"insight\"}],\"remedies\":[{\"for\":\"problem\",\"forHi\":\"के लिए\",\"type\":\"Mantra\",\"typeHi\":\"मंत्र\",\"remedy\":\"remedy text\",\"remedyHi\":\"उपाय\",\"timing\":\"when\",\"timingHi\":\"समय\"}],\"gemstones\":[{\"stone\":\"blue_sapphire\",\"reason\":\"why\",\"reasonHi\":\"कारण\",\"weight\":\"3-5 carats\",\"metal\":\"Silver\",\"day_to_wear\":\"Saturday\"}],\"vastu\":[{\"direction\":\"Sleeping\",\"en\":\"advice\",\"hi\":\"सलाह\"}],\"lifestyle\":[{\"title\":\"Morning Routine\",\"titleHi\":\"सुबह की दिनचर्या\",\"en\":\"advice\",\"hi\":\"सलाह\"}],\"positive_signs\":[{\"en\":\"positive sign\",\"hi\":\"शुभ संकेत\"}]}";
-
-  const msgPayload = {
+async function callAnthropic(messages, maxTokens) {
+  const payload = JSON.stringify({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 3000,
-    messages: [{ role: "user", content: [
-      { type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageData } },
-      { type: "text", text: simplePrompt }
-    ]}]
-  };
-
-  const payloadStr = JSON.stringify(msgPayload);
-
+    max_tokens: maxTokens || 2000,
+    messages: messages
+  });
   return new Promise((resolve, reject) => {
     const opts = {
-      hostname: "api.anthropic.com", path: "/v1/messages", method: "POST",
+      hostname: "api.anthropic.com",
+      path: "/v1/messages",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": API_KEY,
         "anthropic-version": "2023-06-01",
-        "Content-Length": Buffer.byteLength(payloadStr)
+        "Content-Length": Buffer.byteLength(payload)
       }
     };
     const req = https.request(opts, res => {
       const c = []; res.on("data", d => c.push(d));
       res.on("end", () => {
         try {
-          const raw = Buffer.concat(c).toString();
-          const data = JSON.parse(raw);
+          const data = JSON.parse(Buffer.concat(c).toString());
           if (data.error) return reject(new Error(data.error.message));
-          const text = data.content?.find(b => b.type === "text")?.text || "";
-          
-          // Find JSON boundaries
-          const s = text.indexOf("{");
-          const e = text.lastIndexOf("}");
-          if (s === -1 || e === -1) return reject(new Error("No JSON found in response. Got: " + text.slice(0,200)));
-          
-          let jsonStr = text.slice(s, e + 1);
-          
-          // Clean up common AI JSON mistakes
-          // Clean problematic characters from JSON string
-          jsonStr = jsonStr
-            .replace(/\u2018|\u2019/g, "'")
-            .replace(/\u201C|\u201D/g, '"')
-            .replace(/\u2013|\u2014/g, '-')
-            .replace(/\u2026/g, '...')
-            .replace(/[\r\n\t]/g, ' ');
-
-          try {
-            resolve(JSON.parse(jsonStr));
-          } catch(parseErr) {
-            // Last resort: return a basic reading
-            console.error("JSON parse failed:", parseErr.message);
-            console.error("JSON snippet:", jsonStr.slice(0, 500));
-            reject(new Error("Could not parse AI response as JSON: " + parseErr.message));
-          }
+          const text = (data.content || []).find(b => b.type === "text");
+          resolve(text ? text.text : "");
         } catch(e) { reject(e); }
       });
     });
     req.on("error", reject);
-    req.write(payloadStr); req.end();
+    req.write(payload);
+    req.end();
   });
 }
 
-// ── Route handlers ───────────────────────────────────────────────────────────
-const routes = {
+async function analyzePalm(imageData, mediaType) {
+  // Step 1: Get raw palm analysis as plain text first
+  const step1 = await callAnthropic([{
+    role: "user",
+    content: [
+      { type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageData } },
+      { type: "text", text: "You are a Samudrik Shastra Vedic palmistry expert. Analyze this palm image thoroughly. Study all lines (Life, Heart, Head, Fate, Sun), all mounts, hand shape, fingers. Write a detailed analysis covering: hand type, overall reading, career/job situation and timeline predictions, financial situation, health, relationships/marriage, property/house prospects, foreign travel possibilities, business potential, key problems identified, remedies, gemstone recommendations, vastu directions, lifestyle practices, and positive signs. Be specific about timing (month and year). Write in plain English paragraphs, no special formatting." }
+    ]
+  }], 1500);
 
-  // Health
+  // Step 2: Convert that analysis into clean JSON
+  const step2prompt = "Convert this palm reading into a JSON object. Use ONLY basic ASCII characters. No smart quotes, no em-dashes, no special punctuation. Every string value must use only regular letters, numbers, spaces, commas, periods, hyphens, and regular apostrophes.\n\nPalm reading to convert:\n" + step1 + "\n\nReturn ONLY this JSON structure, nothing else:\n{\"hand_type\":\"value\",\"hand_typeHi\":\"value\",\"overall_energy\":\"value\",\"overall_energyHi\":\"value\",\"lucky_period\":\"value\",\"predictions\":[{\"category\":\"Career and Job\",\"categoryHi\":\"karriar\",\"color\":\"#E67E22\",\"items\":[{\"label\":\"Current Status\",\"labelHi\":\"value\",\"reading\":\"value\",\"readingHi\":\"value\",\"type\":\"current\",\"timeline\":\"Month Year to Month Year\",\"timelineHi\":\"value\"},{\"label\":\"Primary Window\",\"labelHi\":\"value\",\"reading\":\"value\",\"readingHi\":\"value\",\"type\":\"positive\",\"timeline\":\"Month Year\",\"timelineHi\":\"value\"},{\"label\":\"Backup Window\",\"labelHi\":\"value\",\"reading\":\"value\",\"readingHi\":\"value\",\"type\":\"warning\",\"timeline\":\"Month Year\",\"timelineHi\":\"value\"}]},{\"category\":\"Finance and Money\",\"categoryHi\":\"value\",\"color\":\"#27AE60\",\"items\":[{\"label\":\"Current Status\",\"labelHi\":\"value\",\"reading\":\"value\",\"readingHi\":\"value\",\"type\":\"current\",\"timeline\":\"\",\"timelineHi\":\"\"}]},{\"category\":\"Relationships and Marriage\",\"categoryHi\":\"value\",\"color\":\"#E8294A\",\"items\":[{\"label\":\"Reading\",\"labelHi\":\"value\",\"reading\":\"value\",\"readingHi\":\"value\",\"type\":\"info\",\"timeline\":\"\",\"timelineHi\":\"\"}]},{\"category\":\"Property and House\",\"categoryHi\":\"value\",\"color\":\"#8E44AD\",\"items\":[{\"label\":\"Reading\",\"labelHi\":\"value\",\"reading\":\"value\",\"readingHi\":\"value\",\"type\":\"info\",\"timeline\":\"\",\"timelineHi\":\"\"}]},{\"category\":\"Health\",\"categoryHi\":\"value\",\"color\":\"#16A085\",\"items\":[{\"label\":\"Reading\",\"labelHi\":\"value\",\"reading\":\"value\",\"readingHi\":\"value\",\"type\":\"current\",\"timeline\":\"\",\"timelineHi\":\"\"}]}],\"problems\":[{\"area\":\"value\",\"areaHi\":\"value\",\"issue\":\"value\",\"issueHi\":\"value\",\"severity\":\"significant\",\"line\":\"value\",\"deepDive\":\"value\"},{\"area\":\"value\",\"areaHi\":\"value\",\"issue\":\"value\",\"issueHi\":\"value\",\"severity\":\"moderate\",\"line\":\"value\",\"deepDive\":\"value\"},{\"area\":\"value\",\"areaHi\":\"value\",\"issue\":\"value\",\"issueHi\":\"value\",\"severity\":\"mild\",\"line\":\"value\",\"deepDive\":\"value\"}],\"remedies\":[{\"for\":\"value\",\"forHi\":\"value\",\"type\":\"Mantra\",\"typeHi\":\"Mantra\",\"remedy\":\"value\",\"remedyHi\":\"value\",\"timing\":\"value\",\"timingHi\":\"value\"},{\"for\":\"value\",\"forHi\":\"value\",\"type\":\"Ritual\",\"typeHi\":\"Puja\",\"remedy\":\"value\",\"remedyHi\":\"value\",\"timing\":\"value\",\"timingHi\":\"value\"},{\"for\":\"value\",\"forHi\":\"value\",\"type\":\"Lifestyle\",\"typeHi\":\"Jeevan\",\"remedy\":\"value\",\"remedyHi\":\"value\",\"timing\":\"value\",\"timingHi\":\"value\"},{\"for\":\"value\",\"forHi\":\"value\",\"type\":\"Charity\",\"typeHi\":\"Daan\",\"remedy\":\"value\",\"remedyHi\":\"value\",\"timing\":\"value\",\"timingHi\":\"value\"}],\"gemstones\":[{\"stone\":\"blue_sapphire\",\"reason\":\"value\",\"reasonHi\":\"value\",\"weight\":\"3-5 carats\",\"metal\":\"Silver\",\"day_to_wear\":\"Saturday\"},{\"stone\":\"yellow_sapphire\",\"reason\":\"value\",\"reasonHi\":\"value\",\"weight\":\"4-5 carats\",\"metal\":\"Gold\",\"day_to_wear\":\"Thursday\"}],\"vastu\":[{\"direction\":\"Sleeping Direction\",\"en\":\"value\",\"hi\":\"value\"},{\"direction\":\"Work Desk\",\"en\":\"value\",\"hi\":\"value\"},{\"direction\":\"Prayer Corner\",\"en\":\"value\",\"hi\":\"value\"},{\"direction\":\"Wealth Zone\",\"en\":\"value\",\"hi\":\"value\"}],\"lifestyle\":[{\"title\":\"Morning Routine\",\"titleHi\":\"Subah\",\"en\":\"value\",\"hi\":\"value\"},{\"title\":\"Weekly Practice\",\"titleHi\":\"Saptah\",\"en\":\"value\",\"hi\":\"value\"},{\"title\":\"Diet and Health\",\"titleHi\":\"Swasthya\",\"en\":\"value\",\"hi\":\"value\"}],\"positive_signs\":[{\"en\":\"value\",\"hi\":\"value\"},{\"en\":\"value\",\"hi\":\"value\"},{\"en\":\"value\",\"hi\":\"value\"}]}";
+
+  const step2 = await callAnthropic([{
+    role: "user",
+    content: [{ type: "text", text: step2prompt }]
+  }], 2500);
+
+  // Extract JSON from response
+  const start = step2.indexOf("{");
+  const end = step2.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("No JSON in conversion response");
+
+  let jsonStr = step2.slice(start, end + 1);
+
+  // Aggressively clean the string before parsing
+  // Remove all non-ASCII characters that could break JSON
+  let cleaned = "";
+  for (let i = 0; i < jsonStr.length; i++) {
+    const code = jsonStr.charCodeAt(i);
+    if (code < 32 && code !== 9 && code !== 10 && code !== 13) {
+      cleaned += " ";
+    } else if (code > 126 && code < 160) {
+      cleaned += " ";
+    } else if (code === 8216 || code === 8217) {
+      cleaned += "'";
+    } else if (code === 8220 || code === 8221) {
+      cleaned += '"';
+    } else if (code === 8211 || code === 8212) {
+      cleaned += "-";
+    } else if (code === 8230) {
+      cleaned += "...";
+    } else {
+      cleaned += jsonStr[i];
+    }
+  }
+
+  // Fix newlines inside string values
+  cleaned = cleaned.replace(/([^\\])\n/g, "$1 ").replace(/([^\\])\r/g, "$1 ").replace(/([^\\])\t/g, "$1 ");
+
+  return JSON.parse(cleaned);
+}
+
+const routes = {
   "GET /": async (req, res) => {
-    const filePath = path.join(__dirname, "index.html");
-    if (fs.existsSync(filePath)) {
+    const f = path.join(__dirname, "index.html");
+    if (fs.existsSync(f)) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(fs.readFileSync(filePath));
+      res.end(fs.readFileSync(f));
     } else {
       res.writeHead(200, { "Content-Type": "text/html" });
-      res.end("<h1>🔮 Samudrik Shastra is running!</h1><p>Upload index.html to this directory.</p>");
+      res.end("<h1>Samudrik Shastra running</h1><p>index.html not found</p>");
     }
   },
 
   "GET /health": async (req, res) => {
-    json(res, { status: "ok", freeMode: FREE_MODE, hasApiKey: !!API_KEY, hasRazorpay: !!(RZP_ID && RZP_SECRET), readings: DB.readings.length });
+    json(res, { status: "ok", freeMode: FREE_MODE, hasKey: !!API_KEY });
   },
 
-  // Create Razorpay order (step 1 of payment)
-  "POST /create-order": async (req, res, b) => {
-    if (FREE_MODE) return json(res, { freeMode: true, orderId: "free_" + makeId() });
-    if (!RZP_ID || !RZP_SECRET) return json(res, { error: "Payment not configured" }, 500);
-    const { name, phone } = JSON.parse(b);
-    try {
-      const order = await razorpayRequest("/v1/orders", "POST", {
-        amount: PRICE_PAISE, currency: "INR",
-        receipt: "rcpt_" + makeId(),
-        notes: { name, phone }
-      });
-      DB.orders.push({ id: order.id, amount: PRICE_PAISE, status: "created", createdAt: new Date().toISOString(), name, phone });
-      json(res, { orderId: order.id, amount: PRICE_PAISE, keyId: RZP_ID });
-    } catch(e) { json(res, { error: e.message }, 500); }
-  },
+  "POST /read-palm": async (req, res, body) => {
+    if (!API_KEY) return json(res, { error: "Server API key not set" }, 500);
+    let parsed;
+    try { parsed = JSON.parse(body); } catch(e) { return json(res, { error: "Bad request body" }, 400); }
 
-  // Read palm (main endpoint — verifies payment first)
-  "POST /read-palm": async (req, res, b) => {
-    const { imageData, mediaType, name, phone, paymentId, orderId } = JSON.parse(b);
+    const { imageData, mediaType } = parsed;
     if (!imageData) return json(res, { error: "imageData required" }, 400);
-    if (!API_KEY) return json(res, { error: "Server API key not configured" }, 500);
 
-    // Payment verification
-    if (!FREE_MODE) {
-      if (!paymentId || !orderId) return json(res, { error: "Payment required", code: "PAYMENT_REQUIRED" }, 402);
-      // Verify with Razorpay
-      try {
-        const payment = await razorpayRequest(`/v1/payments/${paymentId}`, "GET", null);
-        if (payment.status !== "captured" && payment.status !== "authorized") {
-          return json(res, { error: "Payment not verified" }, 402);
-        }
-        // Mark order paid
-        const ord = DB.orders.find(o => o.id === orderId);
-        if (ord) ord.status = "paid";
-      } catch(e) { return json(res, { error: "Payment verification failed: " + e.message }, 402); }
+    if (!FREE_MODE && RZP_ID) {
+      const { paymentId } = parsed;
+      if (!paymentId) return json(res, { error: "Payment required", code: "PAYMENT_REQUIRED" }, 402);
     }
 
-    // Do the reading
     try {
       const reading = await analyzePalm(imageData, mediaType);
       const record = {
-        id: makeId(), name: name || "Anonymous", phone: phone || "",
-        paymentId: paymentId || "free", orderId: orderId || "free",
-        status: "completed", createdAt: new Date().toISOString(),
+        id: makeId(),
+        name: parsed.name || "Anonymous",
+        phone: parsed.phone || "",
+        paymentId: parsed.paymentId || "free",
+        status: "completed",
+        createdAt: new Date().toISOString(),
         readingData: reading
       };
       DB.readings.push(record);
       json(res, { reading, recordId: record.id });
-    } catch(e) { json(res, { error: e.message }, 500); }
+    } catch(e) {
+      console.error("Palm reading error:", e.message);
+      json(res, { error: e.message }, 500);
+    }
   },
-
-  // ── Admin endpoints (all require Authorization: Bearer <ADMIN_PASSWORD>) ──
 
   "GET /admin/stats": async (req, res) => {
     if (!authAdmin(req)) return json(res, { error: "Unauthorized" }, 401);
     const today = new Date().toDateString();
-    const todayReadings = DB.readings.filter(r => new Date(r.createdAt).toDateString() === today);
-    const totalRevenue = DB.orders.filter(o => o.status === "paid").reduce((s, o) => s + o.amount, 0);
     json(res, {
       totalReadings: DB.readings.length,
-      todayReadings: todayReadings.length,
-      totalRevenue: totalRevenue / 100,
+      todayReadings: DB.readings.filter(r => new Date(r.createdAt).toDateString() === today).length,
+      totalRevenue: DB.orders.filter(o => o.status === "paid").reduce((s, o) => s + (o.amount || 0), 0) / 100,
       paidReadings: DB.readings.filter(r => r.paymentId !== "free").length,
       freeReadings: DB.readings.filter(r => r.paymentId === "free").length,
       priceINR: PRICE_PAISE / 100,
-      freeMode: FREE_MODE,
+      freeMode: FREE_MODE
     });
   },
 
   "GET /admin/readings": async (req, res) => {
     if (!authAdmin(req)) return json(res, { error: "Unauthorized" }, 401);
-    // Return list without full reading data (summary only)
-    const list = DB.readings.map(r => ({
+    json(res, { readings: DB.readings.map(r => ({
       id: r.id, name: r.name, phone: r.phone,
-      paymentId: r.paymentId, status: r.status,
-      createdAt: r.createdAt,
-      handType: r.readingData?.hand_type || "",
-      problemCount: r.readingData?.problems?.length || 0,
-    })).reverse();
-    json(res, { readings: list });
+      paymentId: r.paymentId, status: r.status, createdAt: r.createdAt,
+      handType: (r.readingData || {}).hand_type || "",
+      problemCount: ((r.readingData || {}).problems || []).length
+    })).reverse() });
   },
 
   "GET /admin/reading": async (req, res) => {
     if (!authAdmin(req)) return json(res, { error: "Unauthorized" }, 401);
-    const url = new URL("http://x" + req.url);
-    const id = url.searchParams.get("id");
-    const record = DB.readings.find(r => r.id === id);
-    if (!record) return json(res, { error: "Not found" }, 404);
-    json(res, record);
+    const id = new URL("http://x" + req.url).searchParams.get("id");
+    const r = DB.readings.find(r => r.id === id);
+    if (!r) return json(res, { error: "Not found" }, 404);
+    json(res, r);
   },
 
   "GET /admin/orders": async (req, res) => {
     if (!authAdmin(req)) return json(res, { error: "Unauthorized" }, 401);
     json(res, { orders: [...DB.orders].reverse() });
-  },
+  }
 };
 
-// ── Server ───────────────────────────────────────────────────────────────────
 http.createServer(async (req, res) => {
   cors(res);
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
   const pathname = new URL("http://x" + req.url).pathname;
-  const key = `${req.method} ${pathname}`;
-  const handler = routes[key];
+  const handler = routes[req.method + " " + pathname];
   if (!handler) { json(res, { error: "Not found" }, 404); return; }
   try {
-    const b = req.method === "POST" ? await body(req) : null;
-    await handler(req, res, b);
-  } catch(e) { json(res, { error: e.message }, 500); }
+    const body = req.method === "POST" ? await readBody(req) : null;
+    await handler(req, res, body);
+  } catch(e) {
+    console.error("Route error:", e.message);
+    json(res, { error: e.message }, 500);
+  }
 }).listen(PORT, () => {
-  console.log(`✅ Samudrik Shastra server on port ${PORT}`);
-  console.log(`   API Key: ${API_KEY ? "✓" : "✗ MISSING"}`);
-  console.log(`   Razorpay: ${RZP_ID ? "✓" : "✗ not configured"}`);
-  console.log(`   Free Mode: ${FREE_MODE}`);
-  console.log(`   Price: ₹${PRICE_PAISE/100}`);
-  console.log(`   Admin password: ${ADMIN_PASS}`);
+  console.log("Samudrik Shastra server on port " + PORT);
+  console.log("   API Key: " + (API_KEY ? "OK" : "MISSING"));
+  console.log("   Free Mode: " + FREE_MODE);
+  console.log("   Price: Rs." + (PRICE_PAISE / 100));
+  console.log("   Admin password: " + ADMIN_PASS);
 });
