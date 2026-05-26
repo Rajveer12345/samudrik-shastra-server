@@ -82,35 +82,76 @@ function razorpayRequest(path, method, payload) {
 const PALM_SYSTEM = "You are a master Samudrik Shastra (Vedic palmistry) expert. Analyze this palm image with extreme precision, deep empathy, and specific life predictions.\n\nStudy every visible feature: Life Line, Heart Line, Head Line, Fate Line, Sun Line, Health Line, Marriage Lines, Money Lines, all 7 mounts (Venus Jupiter Saturn Apollo Mercury Moon Mars), hand shape, thumb, finger lengths, fine lines, crosses, islands, breaks, chains, stars, tridents.\n\nBe SPECIFIC. Give EXACT timing windows (month + year). Identify real problems. Cover: job/career/job loss, property/house, marriage/relationships, foreign travel/abroad job, business, promotion, health, finances.\n\nFor each major prediction give 3 windows: primary, backup, final fallback.\n\nRespond ONLY with raw JSON. No text before or after. No markdown. Start with { end with }.\n\nRequired JSON structure:\n{\"hand_type\":\"...\",\"hand_typeHi\":\"...\",\"overall_energy\":\"...\",\"overall_energyHi\":\"...\",\"lucky_period\":\"...\",\"predictions\":[{\"category\":\"emoji Name\",\"categoryHi\":\"Hindi name\",\"color\":\"#hex\",\"items\":[{\"label\":\"...\",\"labelHi\":\"...\",\"reading\":\"...\",\"readingHi\":\"...\",\"type\":\"current or positive or warning or info\",\"timeline\":\"Mon Year - Mon Year\",\"timelineHi\":\"...\"}]}],\"problems\":[{\"area\":\"...\",\"areaHi\":\"...\",\"issue\":\"...\",\"issueHi\":\"...\",\"severity\":\"mild or moderate or significant\",\"line\":\"...\",\"deepDive\":\"...\"}],\"remedies\":[{\"for\":\"...\",\"forHi\":\"...\",\"type\":\"Mantra or Ritual or Lifestyle or Charity or Vastu\",\"typeHi\":\"...\",\"remedy\":\"...\",\"remedyHi\":\"...\",\"timing\":\"...\",\"timingHi\":\"...\"}],\"gemstones\":[{\"stone\":\"ruby or pearl or coral or emerald or yellow_sapphire or diamond or blue_sapphire or hessonite or cats_eye\",\"reason\":\"...\",\"reasonHi\":\"...\",\"weight\":\"...\",\"metal\":\"...\",\"day_to_wear\":\"...\"}],\"vastu\":[{\"direction\":\"...\",\"en\":\"...\",\"hi\":\"...\"}],\"lifestyle\":[{\"title\":\"...\",\"titleHi\":\"...\",\"en\":\"...\",\"hi\":\"...\"}],\"positive_signs\":[{\"en\":\"...\",\"hi\":\"...\"}]}\n\nInclude 5-7 prediction categories, 4-6 problems, 5-7 remedies, 2-3 gemstones, 5 vastu, 5 lifestyle, 4-5 positive signs."
 
 async function analyzePalm(imageData, mediaType) {
-  const payload = JSON.stringify({
-    model: "claude-opus-4-5",
-    max_tokens: 4000,
-    system: PALM_SYSTEM,
+  // Simple prompt - no JSON schema in system prompt to avoid special char issues
+  const simplePrompt = "You are a Vedic palmistry expert. Analyze this palm image carefully. Study all lines and mounts. Return ONLY a valid JSON object with NO text before or after it. Use ONLY simple ASCII characters in your response - no special quotes, no em-dashes, no unicode punctuation. Use regular apostrophes and hyphens only.\n\nReturn this exact structure with your analysis filled in:\n{\"hand_type\":\"describe hand\",\"hand_typeHi\":\"हस्त विवरण\",\"overall_energy\":\"your reading\",\"overall_energyHi\":\"पठन\",\"lucky_period\":\"next good period\",\"predictions\":[{\"category\":\"Career\",\"categoryHi\":\"करियर\",\"color\":\"#E67E22\",\"items\":[{\"label\":\"Current Status\",\"labelHi\":\"वर्तमान\",\"reading\":\"detail\",\"readingHi\":\"विवरण\",\"type\":\"current\",\"timeline\":\"Month Year\",\"timelineHi\":\"समय\"}]}],\"problems\":[{\"area\":\"area\",\"areaHi\":\"क्षेत्र\",\"issue\":\"problem\",\"issueHi\":\"समस्या\",\"severity\":\"significant\",\"line\":\"which line\",\"deepDive\":\"insight\"}],\"remedies\":[{\"for\":\"problem\",\"forHi\":\"के लिए\",\"type\":\"Mantra\",\"typeHi\":\"मंत्र\",\"remedy\":\"remedy text\",\"remedyHi\":\"उपाय\",\"timing\":\"when\",\"timingHi\":\"समय\"}],\"gemstones\":[{\"stone\":\"blue_sapphire\",\"reason\":\"why\",\"reasonHi\":\"कारण\",\"weight\":\"3-5 carats\",\"metal\":\"Silver\",\"day_to_wear\":\"Saturday\"}],\"vastu\":[{\"direction\":\"Sleeping\",\"en\":\"advice\",\"hi\":\"सलाह\"}],\"lifestyle\":[{\"title\":\"Morning Routine\",\"titleHi\":\"सुबह की दिनचर्या\",\"en\":\"advice\",\"hi\":\"सलाह\"}],\"positive_signs\":[{\"en\":\"positive sign\",\"hi\":\"शुभ संकेत\"}]}";
+
+  const msgPayload = {
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 3000,
     messages: [{ role: "user", content: [
       { type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageData } },
-      { type: "text", text: "Analyze this palm using Samudrik Shastra. Return only the JSON." }
+      { type: "text", text: simplePrompt }
     ]}]
-  });
+  };
+
+  const payloadStr = JSON.stringify(msgPayload);
+
   return new Promise((resolve, reject) => {
     const opts = {
       hostname: "api.anthropic.com", path: "/v1/messages", method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01", "Content-Length": Buffer.byteLength(payload) }
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Length": Buffer.byteLength(payloadStr)
+      }
     };
     const req = https.request(opts, res => {
       const c = []; res.on("data", d => c.push(d));
       res.on("end", () => {
         try {
-          const data = JSON.parse(Buffer.concat(c).toString());
+          const raw = Buffer.concat(c).toString();
+          const data = JSON.parse(raw);
           if (data.error) return reject(new Error(data.error.message));
           const text = data.content?.find(b => b.type === "text")?.text || "";
-          const s = text.indexOf("{"); const e = text.lastIndexOf("}");
-          if (s === -1 || e === -1) return reject(new Error("No JSON in AI response"));
-          resolve(JSON.parse(text.slice(s, e + 1)));
+          
+          // Find JSON boundaries
+          const s = text.indexOf("{");
+          const e = text.lastIndexOf("}");
+          if (s === -1 || e === -1) return reject(new Error("No JSON found in response. Got: " + text.slice(0,200)));
+          
+          let jsonStr = text.slice(s, e + 1);
+          
+          // Clean up common AI JSON mistakes
+          // Replace smart quotes with regular quotes
+          jsonStr = jsonStr
+            .replace(/[‘’]/g, "'")
+            .replace(/[“”]/g, '"')
+            .replace(/[–—]/g, '-')
+            .replace(/[…]/g, '...')
+            .replace(/
+/g, '\n')
+            .replace(/
+/g, '\n')
+            .replace(/	/g, ' ');
+
+          // Remove control characters except escaped ones  
+          jsonStr = jsonStr.replace(/[ -
+-]/g, '');
+
+          try {
+            resolve(JSON.parse(jsonStr));
+          } catch(parseErr) {
+            // Last resort: return a basic reading
+            console.error("JSON parse failed:", parseErr.message);
+            console.error("JSON snippet:", jsonStr.slice(0, 500));
+            reject(new Error("Could not parse AI response as JSON: " + parseErr.message));
+          }
         } catch(e) { reject(e); }
       });
     });
     req.on("error", reject);
-    req.write(payload); req.end();
+    req.write(payloadStr); req.end();
   });
 }
 
