@@ -13,6 +13,8 @@
 
 const http = require("http");
 const https = require("https");
+const fs = require("fs");
+const path = require("path");
 const { URL } = require("url");
 
 const PORT = process.env.PORT || 3001;
@@ -129,6 +131,17 @@ async function analyzePalm(imageData, mediaType) {
 const routes = {
 
   // Health
+  "GET /": async (req, res) => {
+    const filePath = path.join(__dirname, "index.html");
+    if (fs.existsSync(filePath)) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(fs.readFileSync(filePath));
+    } else {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end("<h1>🔮 Samudrik Shastra is running!</h1><p>Upload index.html to this directory.</p>");
+    }
+  },
+
   "GET /health": async (req, res) => {
     json(res, { status: "ok", freeMode: FREE_MODE, hasApiKey: !!API_KEY, hasRazorpay: !!(RZP_ID && RZP_SECRET), readings: DB.readings.length });
   },

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Samudrik Shastra — Vedic Palm Reading</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,400;1,400&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D0A1A;--surface:#1A0D2E;--card:rgba(201,169,110,0.06);
+  --gold:#C9A96E;--gold2:#8B6914;--text:#E8D5B0;--muted:#9B8866;
+  --dim:#6B5B40;--green:#2ECC71;--orange:#E67E22;--red:#E82929;--blue:#2471A3;
+}
+body{min-height:100vh;background:linear-gradient(135deg,#0D0A1A 0%,#1A0D2E 50%,#0D1A2E 100%);color:var(--text);font-family:'Crimson Pro',serif;-webkit-tap-highlight-color:transparent;}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes glow{0%,100%{text-shadow:0 0 20px rgba(201,169,110,0.4)}50%{text-shadow:0 0 40px rgba(201,169,110,0.8)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* ── Screens ── */
+.screen{display:none;min-height:100vh;padding:28px 16px;animation:fadeUp .4s ease;}
+.screen.active{display:flex;flex-direction:column;align-items:center;}
+#screen-loading{justify-content:center;}
+#screen-result{align-items:stretch;padding:16px;}
+
+/* ── Upload ── */
+.logo{font-family:'Cinzel Decorative',cursive;font-size:clamp(20px,5vw,30px);color:var(--gold);animation:glow 3s ease-in-out infinite;text-align:center;margin:8px 0 4px;}
+.subtitle{font-family:'Crimson Pro',serif;font-size:13px;color:var(--muted);font-style:italic;letter-spacing:3px;text-align:center;}
+.upload-zone{border:1px dashed rgba(201,169,110,0.35);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;background:rgba(201,169,110,0.04);transition:all .3s;width:100%;max-width:420px;margin:20px 0;}
+.upload-zone:hover,.upload-zone:active{border-color:var(--gold);background:rgba(201,169,110,0.09);}
+.upload-zone img{max-height:220px;max-width:100%;border-radius:10px;border:1px solid rgba(201,169,110,0.3);}
+.btn-primary{background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold2));border:none;border-radius:50px;padding:15px 44px;color:#0D0A1A;font-family:'Cinzel Decorative',cursive;font-size:13px;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 22px rgba(201,169,110,0.4);width:100%;max-width:420px;transition:opacity .2s;}
+.btn-primary:disabled{opacity:.5;cursor:default;}
+.btn-secondary{background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.28);border-radius:20px;padding:8px 16px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer;}
+.error-box{background:rgba(232,41,41,0.08);border:1px solid rgba(232,41,41,0.25);border-radius:10px;padding:14px 16px;font-size:13px;color:#fca5a5;line-height:1.6;width:100%;max-width:420px;margin-bottom:16px;}
+
+/* ── Loading ── */
+.spinner{width:52px;height:52px;border:2px solid rgba(201,169,110,0.15);border-top:2px solid var(--gold);border-radius:50%;animation:spin 1.2s linear infinite;margin-bottom:24px;}
+.loading-title{font-family:'Cinzel Decorative',cursive;font-size:14px;color:var(--gold);animation:pulse 2s ease-in-out infinite;text-align:center;padding:0 20px;margin-bottom:14px;}
+.loading-note{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:10px;padding:14px 18px;max-width:320px;text-align:center;font-size:13px;color:var(--muted);line-height:1.65;}
+
+/* ── Result top bar ── */
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.topbar-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.lang-toggle{display:flex;border-radius:20px;overflow:hidden;border:1px solid rgba(201,169,110,0.3);}
+.lang-btn{padding:6px 12px;font-size:12px;background:transparent;color:var(--dim);border:none;cursor:pointer;transition:all .2s;font-family:'Crimson Pro',serif;}
+.lang-btn.active{background:rgba(201,169,110,0.25);color:var(--gold);}
+.save-btn{padding:7px 14px;border-radius:20px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#0D0A1A;font-family:'Crimson Pro',serif;font-size:12px;}
+
+/* ── Cards ── */
+.overview-card{background:linear-gradient(135deg,rgba(201,169,110,0.09),rgba(139,105,20,0.04));border:1px solid rgba(201,169,110,0.28);border-radius:13px;padding:18px;margin-bottom:12px;}
+.section-label{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
+.positive-box{background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.18);border-radius:11px;padding:13px;margin-bottom:12px;}
+.pos-label{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:8px;}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:2px;margin-bottom:12px;background:rgba(201,169,110,0.04);border-radius:10px;padding:3px;flex-wrap:wrap;}
+.tab-btn{flex:1;min-width:55px;padding:8px 2px;border-radius:7px;border:none;cursor:pointer;font-family:'Crimson Pro',serif;font-size:11px;background:transparent;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s;}
+.tab-btn.active{background:rgba(201,169,110,0.22);color:var(--gold);border-bottom:2px solid var(--gold);}
+.tab-content{display:none;animation:fadeUp .3s ease;}
+.tab-content.active{display:block;}
+
+/* ── Item cards ── */
+.item-card{border-radius:11px;padding:14px;margin-bottom:10px;transition:transform .18s;}
+.item-card:hover{transform:translateY(-2px);}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:4px;}
+.card-label{font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:2px;}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;text-transform:capitalize;}
+.card-text{font-size:13px;color:var(--text);line-height:1.75;margin:0;}
+.deep-dive{background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 10px;border-left:2px solid rgba(201,169,110,0.3);margin:6px 0;font-size:11px;color:var(--muted);font-style:italic;}
+.card-meta{font-size:11px;color:var(--dim);margin-top:6px;font-style:italic;}
+.timeline-badge{font-size:10px;padding:2px 8px;border-radius:9px;}
+
+/* ── Gem cards ── */
+.gems-grid{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));}
+.gem-card{border-radius:13px;padding:15px;transition:transform .18s;}
+.gem-card:hover{transform:translateY(-2px);}
+.gem-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0;}
+.gem-details div{display:flex;justify-content:space-between;margin-bottom:3px;}
+.gem-details span{font-size:10px;}
+
+/* ── Footer ── */
+.footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);border-radius:9px;text-align:center;font-size:11px;color:#3A2F1F;font-style:italic;line-height:1.7;}
+
+/* ── Mobile ── */
+@media(max-width:480px){
+  .screen{padding:20px 14px;}
+  #screen-result{padding:12px;}
+}
+</style>
+</head>
+<body>
+
+<!-- UPLOAD SCREEN -->
+<div id="screen-upload" class="screen active">
+  <div style="font-size:50px;animation:float 3s ease-in-out infinite;margin-bottom:10px">🔮</div>
+  <h1 class="logo">Samudrik Shastra</h1>
+  <p class="subtitle">✦ Ancient Vedic Palm Reading ✦</p>
+  <p style="font-size:13px;color:rgba(201,169,110,0.7);text-align:center;max-width:380px;line-height:1.7;margin:12px 0 4px;">Upload a clear photo of your dominant hand, palm facing up, in good light.</p>
+
+  <div id="error-box" class="error-box" style="display:none"></div>
+
+  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none"/>
+    <div id="upload-placeholder">
+      <div style="font-size:44px;opacity:.6;margin-bottom:10px">✋</div>
+      <p style="font-family:'Cinzel Decorative',cursive;font-size:12px;color:var(--gold);margin-bottom:6px">Upload Palm Photo</p>
+      <p style="font-size:12px;color:var(--dim)">Tap to take photo or choose from gallery</p>
+    </div>
+    <img id="preview-img" style="display:none"/>
+    <p id="change-hint" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">Tap to change</p>
+  </div>
+
+  <button class="btn-primary" id="read-btn" onclick="startReading()" disabled>✦ Read My Palm ✦</button>
+  <p style="font-size:11px;color:#4A3F2F;text-align:center;margin-top:14px;font-style:italic">Your image is sent securely and never stored.</p>
+</div>
+
+<!-- LOADING SCREEN -->
+<div id="screen-loading" class="screen">
+  <img id="loading-thumb" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,169,110,0.4);margin-bottom:24px;opacity:.7;display:none"/>
+  <div class="spinner"></div>
+  <p class="loading-title" id="loading-msg">Waking up the server…</p>
+  <div class="loading-note">
+    ⏳ <b style="color:var(--gold)">Please be patient.</b><br/>
+    The free server wakes from sleep on first use — this takes <b style="color:var(--gold)">up to 60 seconds.</b><br/><br/>
+    <span style="color:var(--dim);font-style:italic">After the first reading, it will be much faster.</span>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="screen-result" class="screen">
+  <div class="topbar">
+    <button class="btn-secondary" onclick="showScreen('upload');resetApp()">✋ New Palm</button>
+    <div class="topbar-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="lang-hi" onclick="setLang('hi')">हिं</button>
+      </div>
+      <button class="save-btn" onclick="saveReading()">📄 Save</button>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-bottom:14px">
+    <div style="font-size:26px;margin-bottom:5px">🔮</div>
+    <h1 style="font-family:'Cinzel Decorative',cursive;font-size:clamp(15px,4vw,22px);color:var(--gold);margin:0 0 3px">Samudrik Shastra</h1>
+    <p style="font-size:11px;color:var(--muted);font-style:italic;letter-spacing:2px">✦ <span data-en="Your Vedic Palm Reading" data-hi="आपका वैदिक हस्त पठन">Your Vedic Palm Reading</span> ✦</p>
+    <p style="font-size:11px;color:#5B4B30;margin-top:5px">💡 <span data-en="Save → new tab opens → Print → Save as PDF" data-hi="सहेजें → नया टैब → Print → Save as PDF">Save → new tab opens → Print → Save as PDF</span></p>
+  </div>
+
+  <!-- Overview -->
+  <div class="overview-card">
+    <div class="section-label">✦ <span data-en="OVERALL READING" data-hi="समग्र पठन">OVERALL READING</span> ✦</div>
+    <p id="r-overall" style="font-size:14px;line-height:1.8;margin:0 0 8px"></p>
+    <p id="r-handtype" style="font-size:11px;color:var(--muted);font-style:italic;margin:0 0 9px"></p>
+    <div style="padding:8px 12px;background:rgba(201,169,110,0.08);border-radius:8px;border:1px solid rgba(201,169,110,0.18);font-size:12px">
+      🌟 <span data-en="Favorable: " data-hi="अनुकूल: ">Favorable: </span><strong id="r-lucky"></strong>
+    </div>
+  </div>
+
+  <!-- Positive signs -->
+  <div class="positive-box">
+    <div class="pos-label">✦ <span data-en="AUSPICIOUS SIGNS" data-hi="शुभ संकेत">AUSPICIOUS SIGNS</span> ✦</div>
+    <div id="r-positive"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('predictions')">🔮 <span data-en="Predict" data-hi="भविष्य">Predict</span></button>
+    <button class="tab-btn" onclick="setTab('problems')">⚡ <span data-en="Problems" data-hi="समस्या">Problems</span></button>
+    <button class="tab-btn" onclick="setTab('remedies')">🔱 <span data-en="Remedies" data-hi="उपाय">Remedies</span></button>
+    <button class="tab-btn" onclick="setTab('gemstones')">💎 <span data-en="Gems" data-hi="रत्न">Gems</span></button>
+    <button class="tab-btn" onclick="setTab('vastu')">🏠 Vastu</button>
+    <button class="tab-btn" onclick="setTab('lifestyle')">🌿 <span data-en="Life" data-hi="जीवन">Life</span></button>
+  </div>
+
+  <div id="tab-predictions" class="tab-content active"></div>
+  <div id="tab-problems" class="tab-content"></div>
+  <div id="tab-remedies" class="tab-content"></div>
+  <div id="tab-gemstones" class="tab-content"></div>
+  <div id="tab-vastu" class="tab-content"></div>
+  <div id="tab-lifestyle" class="tab-content"></div>
+
+  <div class="footer">
+    <span data-en="For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones."
+          data-hi="केवल आध्यात्मिक मार्गदर्शन के लिए। रत्न धारण करने से पहले योग्य वैदिक ज्योतिषी से परामर्श लें।">
+      For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.
+    </span>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const SERVER = window.location.origin; // Same server hosts this file
+const GEMS_DATA = {
+  ruby:            {name:"Ruby (Manik)",      nameHi:"माणिक",    planet:"Sun",     planetHi:"सूर्य",    color:"#E8294A", finger:"Ring finger, right hand",   fingerHi:"अनामिका, दाहिना हाथ"},
+  pearl:           {name:"Pearl (Moti)",      nameHi:"मोती",     planet:"Moon",    planetHi:"चंद्र",    color:"#C8B89A", finger:"Little finger, right hand",  fingerHi:"कनिष्ठा, दाहिना हाथ"},
+  coral:           {name:"Red Coral (Moonga)",nameHi:"लाल मूंगा",planet:"Mars",    planetHi:"मंगल",     color:"#E8512A", finger:"Ring finger, right hand",   fingerHi:"अनामिका, दाहिना हाथ"},
+  emerald:         {name:"Emerald (Panna)",   nameHi:"पन्ना",    planet:"Mercury", planetHi:"बुध",      color:"#2ECC71", finger:"Little finger, right hand",  fingerHi:"कनिष्ठा, दाहिना हाथ"},
+  yellow_sapphire: {name:"Yellow Sapphire",   nameHi:"पुखराज",   planet:"Jupiter", planetHi:"बृहस्पति", color:"#F4D03F", finger:"Index finger, right hand",  fingerHi:"तर्जनी, दाहिना हाथ"},
+  diamond:         {name:"Diamond (Heera)",   nameHi:"हीरा",     planet:"Venus",   planetHi:"शुक्र",    color:"#85C1E9", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
+  blue_sapphire:   {name:"Blue Sapphire",     nameHi:"नीलम",     planet:"Saturn",  planetHi:"शनि",      color:"#2471A3", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
+  hessonite:       {name:"Hessonite (Gomed)", nameHi:"गोमेद",    planet:"Rahu",    planetHi:"राहु",     color:"#A04000", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
+  cats_eye:        {name:"Cat's Eye",         nameHi:"लहसुनिया", planet:"Ketu",    planetHi:"केतु",     color:"#8E44AD", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
+};
+const TC={current:"#9CA3AF",positive:"#16A085",warning:"#E67E22",info:"#2471A3"};
+const TB={current:"rgba(156,163,175,0.08)",positive:"rgba(22,160,133,0.08)",warning:"rgba(230,126,34,0.08)",info:"rgba(36,113,163,0.08)"};
+const SC={mild:"#F4D03F",moderate:"#E67E22",significant:"#E82929"};
+const SB={mild:"rgba(244,208,63,0.08)",moderate:"rgba(230,126,34,0.08)",significant:"rgba(232,41,41,0.09)"};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let imgData=null, imgUrl=null, currentReading=null, currentLang="en";
+const MSGS=["Waking up the server… (first use takes ~60 seconds)","Scanning your palm lines…","Reading the Fate Line…","Consulting ancient Samudrik texts…","Analysing mounts and markings…","Preparing your complete reading…"];
+
+// ── Screen management ─────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', function(){
+  const file = this.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    imgUrl = e.target.result;
+    const parts = imgUrl.split(',');
+    const m = parts[0].match(/:(.*?);/);
+    imgData = {data: parts[1], mediaType: m?m[1]:'image/jpeg'};
+    document.getElementById('upload-placeholder').style.display='none';
+    const img = document.getElementById('preview-img');
+    img.src = imgUrl; img.style.display='block';
+    document.getElementById('change-hint').style.display='block';
+    document.getElementById('read-btn').disabled=false;
+    document.getElementById('error-box').style.display='none';
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+const uz = document.getElementById('upload-zone');
+uz.addEventListener('dragover', e=>{e.preventDefault();uz.style.borderColor='var(--gold)';});
+uz.addEventListener('dragleave', ()=>{uz.style.borderColor='';});
+uz.addEventListener('drop', e=>{
+  e.preventDefault(); uz.style.borderColor='';
+  const file=e.dataTransfer.files[0];
+  if(file){const dt=new DataTransfer();dt.items.add(file);document.getElementById('file-input').files=dt.files;document.getElementById('file-input').dispatchEvent(new Event('change'));}
+});
+
+// ── Main reading flow ─────────────────────────────────────────────────────────
+async function startReading(){
+  if(!imgData) return;
+  showScreen('loading');
+  if(imgUrl){const t=document.getElementById('loading-thumb');t.src=imgUrl;t.style.display='block';}
+
+  let mi=0;
+  document.getElementById('loading-msg').textContent=MSGS[0];
+  const interval=setInterval(()=>{mi=(mi+1)%MSGS.length;document.getElementById('loading-msg').textContent=MSGS[mi];},3000);
+
+  const fetchWithTimeout=(url,opts,ms)=>{
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),ms);
+    return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));
+  };
+
+  try {
+    // Wake ping
+    try{ await fetchWithTimeout(SERVER+'/health',{method:'GET'},65000); }catch(_){}
+
+    // Read palm — retry once
+    let res,data;
+    for(let attempt=0;attempt<2;attempt++){
+      try{
+        res=await fetchWithTimeout(SERVER+'/read-palm',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({imageData:imgData.data,mediaType:imgData.mediaType})
+        },120000);
+        data=await res.json();
+        break;
+      }catch(e){
+        if(attempt>=1) throw e;
+        document.getElementById('loading-msg').textContent='Retrying…';
+        await new Promise(r=>setTimeout(r,4000));
+      }
+    }
+
+    clearInterval(interval);
+    if(!res.ok||data.error) throw new Error(data.error||'Server error '+res.status);
+    if(!data.reading) throw new Error('Empty response from server');
+    currentReading=data.reading;
+    renderReading(data.reading);
+    showScreen('result');
+  } catch(err){
+    clearInterval(interval);
+    let msg=err.message;
+    if(err.name==='AbortError') msg='Request timed out. The server is waking up — please wait 30 seconds and try again.';
+    else if(msg.includes('Failed to fetch')||msg.includes('NetworkError')) msg='Cannot reach the server. Make sure you are using this app from its direct URL (not from Claude).';
+    showError(msg);
+    showScreen('upload');
+  }
+}
+
+function showError(msg){
+  const box=document.getElementById('error-box');
+  box.textContent='⚠ '+msg;
+  box.style.display='block';
+}
+
+function resetApp(){
+  imgData=null; imgUrl=null; currentReading=null;
+  document.getElementById('preview-img').style.display='none';
+  document.getElementById('upload-placeholder').style.display='block';
+  document.getElementById('change-hint').style.display='none';
+  document.getElementById('read-btn').disabled=true;
+  document.getElementById('error-box').style.display='none';
+  document.getElementById('file-input').value='';
+}
+
+// ── Render reading ────────────────────────────────────────────────────────────
+function t(item,field){
+  const hi=currentLang==='hi';
+  const hiField=field+'Hi';
+  return hi?(item[hiField]||item[field]||''):item[field]||'';
+}
+
+function renderReading(R){
+  // Overview
+  document.getElementById('r-overall').textContent=t(R,'overall_energy');
+  document.getElementById('r-handtype').textContent=(currentLang==='hi'?'हस्त: ':'Hand: ')+t(R,'hand_type');
+  document.getElementById('r-lucky').textContent=R.lucky_period||'';
+
+  // Positive signs
+  const pos=document.getElementById('r-positive');
+  pos.innerHTML=(R.positive_signs||[]).map(s=>`
+    <div style="display:flex;gap:7px;margin-bottom:5px;align-items:flex-start">
+      <span style="color:var(--green);flex-shrink:0;margin-top:3px">◈</span>
+      <span style="font-size:13px;color:#C4D8B0;line-height:1.6">${t(s,'en')}</span>
+    </div>`).join('');
+
+  // Predictions
+  document.getElementById('tab-predictions').innerHTML=(R.predictions||[]).map(cat=>`
+    <div style="margin-bottom:16px">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${cat.color||'var(--gold)'};letter-spacing:2px;border-bottom:1px solid ${cat.color||'var(--gold)'}44;padding-bottom:5px;margin-bottom:9px">${t(cat,'category')}</div>
+      ${(cat.items||[]).map(item=>`
+        <div class="item-card" style="background:${TB[item.type]||'rgba(201,169,110,0.05)'};border:1px solid ${TC[item.type]||'var(--gold)'}33;border-left:3px solid ${TC[item.type]||'var(--gold)'}">
+          <div class="card-header">
+            <span class="card-label" style="color:${TC[item.type]||'var(--gold)'}">${t(item,'label')}</span>
+            ${item.timeline?`<span class="timeline-badge" style="background:${TC[item.type]||'var(--gold)'}22;color:${TC[item.type]||'var(--gold)'}">📅 ${t(item,'timeline')}</span>`:''}
+          </div>
+          <p class="card-text">${t(item,'reading')}</p>
+        </div>`).join('')}
+    </div>`).join('');
+
+  // Problems
+  document.getElementById('tab-problems').innerHTML=(R.problems||[]).map(p=>`
+    <div class="item-card" style="background:${SB[p.severity]||'rgba(201,169,110,0.05)'};border:1px solid ${SC[p.severity]||'var(--gold)'}36;border-left:3px solid ${SC[p.severity]||'var(--gold)'}">
+      <div class="card-header">
+        <span class="card-label" style="color:${SC[p.severity]||'var(--gold)'}">${t(p,'area')}</span>
+        <span class="badge" style="background:${SC[p.severity]||'var(--gold)'}18;color:${SC[p.severity]||'var(--gold)'}">${p.severity}</span>
+      </div>
+      <p class="card-text">${t(p,'issue')}</p>
+      ${p.deepDive?`<div class="deep-dive">🔍 ${p.deepDive}</div>`:''}
+      <p class="card-meta">${currentLang==='hi'?'रेखा: ':'Line: '}${p.line}</p>
+    </div>`).join('');
+
+  // Remedies
+  document.getElementById('tab-remedies').innerHTML=(R.remedies||[]).map(r=>`
+    <div class="item-card" style="background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.18)">
+      <div class="card-header">
+        <span class="card-label" style="color:var(--gold)">${t(r,'type')}</span>
+        <span style="font-size:10px;color:var(--muted);font-style:italic">🕐 ${t(r,'timing')}</span>
+      </div>
+      <p class="card-text">${t(r,'remedy')}</p>
+      <p class="card-meta">${currentLang==='hi'?'के लिए: ':'For: '}${t(r,'for')}</p>
+    </div>`).join('');
+
+  // Gemstones
+  function hexToRgb(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?`${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}`:'201,169,110';}
+  document.getElementById('tab-gemstones').innerHTML=`<div class="gems-grid">${(R.gemstones||[]).map(g=>{
+    const gm=GEMS_DATA[g.stone]||{name:g.stone,nameHi:g.stone,planet:'—',planetHi:'—',color:'#C9A96E',finger:'—',fingerHi:'—'};
+    const hi=currentLang==='hi';
+    return `<div class="gem-card" style="background:linear-gradient(135deg,rgba(${hexToRgb(gm.color)},0.08),rgba(201,169,110,0.03));border:1px solid ${gm.color}36;border-top:3px solid ${gm.color}">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+        <div class="gem-dot" style="background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 13px ${gm.color}50"></div>
+        <div>
+          <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${gm.color};margin-bottom:2px">${hi?gm.nameHi:gm.name}</div>
+          <div style="font-size:10px;color:var(--dim)">${hi?gm.planetHi:gm.planet}</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#C4AD8A;margin:0 0 10px;line-height:1.6">${hi?(g.reasonHi||g.reason):g.reason}</p>
+      <div class="gem-details" style="border-top:1px solid rgba(201,169,110,0.12);padding-top:8px">
+        ${[['Weight','वज़न',g.weight],['Metal','धातु',g.metal],['First Wear','पहली बार',g.day_to_wear],['Finger','उंगली',hi?gm.fingerHi:gm.finger]]
+          .map(([en,h,v])=>`<div><span style="color:var(--dim)">${hi?h:en}</span><span style="color:#C4AD8A">${v||''}</span></div>`).join('')}
+      </div>
+    </div>`;}).join('')}</div>`;
+
+  // Vastu
+  document.getElementById('tab-vastu').innerHTML=(R.vastu||[]).map(v=>`
+    <div class="item-card" style="background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.2);border-left:3px solid var(--gold)">
+      <div class="card-label" style="color:var(--gold);margin-bottom:6px">🧭 ${v.direction.toUpperCase()}</div>
+      <p class="card-text">${currentLang==='hi'?(v.hi||v.en):v.en}</p>
+    </div>`).join('');
+
+  // Lifestyle
+  document.getElementById('tab-lifestyle').innerHTML=(R.lifestyle||[]).map(l=>`
+    <div class="item-card" style="background:rgba(46,204,113,0.04);border:1px solid rgba(46,204,113,0.15);border-left:3px solid var(--green)">
+      <div class="card-label" style="color:var(--green);margin-bottom:6px">🌿 ${(currentLang==='hi'?(l.titleHi||l.title):l.title).toUpperCase()}</div>
+      <p class="card-text">${currentLang==='hi'?(l.hi||l.en):l.en}</p>
+    </div>`).join('');
+
+  updateLangDisplay();
+}
+
+// ── Language ──────────────────────────────────────────────────────────────────
+function setLang(lang){
+  currentLang=lang;
+  document.getElementById('lang-en').classList.toggle('active',lang==='en');
+  document.getElementById('lang-hi').classList.toggle('active',lang==='hi');
+  if(currentReading) renderReading(currentReading);
+  updateLangDisplay();
+}
+
+function updateLangDisplay(){
+  const hi=currentLang==='hi';
+  document.querySelectorAll('[data-en]').forEach(el=>{
+    el.textContent=hi?(el.dataset.hi||el.dataset.en):el.dataset.en;
+  });
+  const hf=hi?"'Noto Sans Devanagari',sans-serif":"'Crimson Pro',serif";
+  document.querySelectorAll('.card-text,.card-meta,.loading-note').forEach(el=>el.style.fontFamily=hf);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function setTab(name){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    const tabs=['predictions','problems','remedies','gemstones','vastu','lifestyle'];
+    b.classList.toggle('active',tabs[i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── Save as HTML/PDF ──────────────────────────────────────────────────────────
+function saveReading(){
+  if(!currentReading) return;
+  const R=currentReading;
+  const isHi=currentLang==='hi';
+  const tx=(item,field)=>{ const hf=field+'Hi'; return isHi?(item[hf]||item[field]||''):item[field]||''; };
+  const SC2={mild:"#b45309",moderate:"#c2410c",significant:"#b91c1c"};
+  const bf=isHi?"'Noto Sans Devanagari',sans-serif":"Georgia,serif";
+  const date=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+
+  function card(content,style=''){return `<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:14px;margin-bottom:10px;page-break-inside:avoid;${style}">${content}</div>`;}
+  function sec(title,body){return `<div style="margin-bottom:26px"><div style="font-family:'Cinzel Decorative',cursive;font-size:11px;color:#78350f;letter-spacing:3px;border-bottom:2px solid #fcd34d;padding-bottom:7px;margin-bottom:12px">${title}</div>${body}</div>`;}
+
+  const predHTML=(R.predictions||[]).map(cat=>`<div style="margin-bottom:20px">
+    <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${cat.color||'#92400e'};letter-spacing:2px;border-bottom:2px solid ${cat.color||'#92400e'}33;padding-bottom:5px;margin-bottom:10px">${tx(cat,'category')}</div>
+    ${(cat.items||[]).map(item=>card(`
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+        <b style="font-size:10px;color:${TC[item.type]||'#92400e'}">${tx(item,'label')}</b>
+        ${item.timeline?`<span style="font-size:10px;background:${TC[item.type]||'#92400e'}22;color:${TC[item.type]||'#92400e'};padding:2px 8px;border-radius:8px">📅 ${tx(item,'timeline')}</span>`:''}
+      </div>
+      <p style="font-size:13px;line-height:1.75;margin:0;color:#1c1917">${tx(item,'reading')}`,
+      `border-left:3px solid ${TC[item.type]||'#92400e'}`)).join('')}
+    </div>`).join('');
+
+  const probHTML=(R.problems||[]).map(p=>card(`
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+      <b style="font-size:10px;color:${SC2[p.severity]||'#92400e'}">${tx(p,'area')}</b>
+      <span style="font-size:10px;background:${SC2[p.severity]||'#92400e'}22;color:${SC2[p.severity]||'#92400e'};padding:2px 8px;border-radius:8px">${p.severity}</span>
+    </div>
+    <p style="font-size:13px;line-height:1.75;margin:5px 0;color:#1c1917">${tx(p,'issue')}</p>
+    ${!isHi&&p.deepDive?`<p style="font-size:11px;color:#78716c;font-style:italic;background:#f5f5f4;padding:7px;border-radius:4px;margin-top:7px">🔍 ${p.deepDive}</p>`:''}`,
+    `border-left:4px solid ${SC2[p.severity]||'#92400e'}`)).join('');
+
+  const remHTML=(R.remedies||[]).map(r=>card(`
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:3px;margin-bottom:6px">
+      <b style="font-size:10px;color:#92400e">${tx(r,'type')}</b>
+      <span style="font-size:10px;color:#78716c;font-style:italic">🕐 ${tx(r,'timing')}</span>
+    </div>
+    <p style="font-size:13px;line-height:1.75;margin:5px 0;color:#1c1917">${tx(r,'remedy')}</p>
+    <p style="font-size:11px;color:#78716c;font-style:italic;margin:0">${isHi?'के लिए: ':'For: '}${tx(r,'for')}</p>`)).join('');
+
+  function hexToRgb(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?`${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}`:'201,169,110';}
+  const gemHTML=(R.gemstones||[]).map(g=>{
+    const gm=GEMS_DATA[g.stone]||{name:g.stone,nameHi:g.stone,planet:'—',planetHi:'—',color:'#C9A96E',finger:'—',fingerHi:'—'};
+    return card(`
+      <b style="font-size:11px;color:${gm.color}">${isHi?gm.nameHi:gm.name}</b>
+      <span style="font-size:10px;color:#78716c;margin-left:8px">${isHi?gm.planetHi:gm.planet}</span>
+      <p style="font-size:13px;line-height:1.75;margin:8px 0;color:#1c1917">${isHi?(g.reasonHi||g.reason):g.reason}</p>
+      <table style="width:100%;font-size:11px;border-collapse:collapse">
+        ${[['Weight','वज़न',g.weight],['Metal','धातु',g.metal],['First Wear','पहली बार',g.day_to_wear],['Finger','उंगली',isHi?gm.fingerHi:gm.finger]]
+          .map(([en,h,v])=>`<tr><td style="padding:2px 0;color:#78716c">${isHi?h:en}</td><td style="text-align:right;color:#44403c">${v||''}</td></tr>`).join('')}
+      </table>`,`border-top:3px solid ${gm.color}`);}).join('');
+
+  const vastuHTML=(R.vastu||[]).map(v=>card(`
+    <b style="font-size:10px;color:#92400e">🧭 ${v.direction.toUpperCase()}</b>
+    <p style="font-size:13px;line-height:1.75;margin:6px 0 0;color:#1c1917">${isHi?(v.hi||v.en):v.en}</p>`,
+    'border-left:4px solid #92400e')).join('');
+
+  const lifeHTML=(R.lifestyle||[]).map(l=>`
+    <div style="border:1px solid #86efac;border-left:4px solid #166534;background:#f0fdf4;border-radius:8px;padding:13px;margin-bottom:10px;page-break-inside:avoid">
+      <b style="font-size:10px;color:#166534">🌿 ${(isHi?(l.titleHi||l.title):l.title).toUpperCase()}</b>
+      <p style="font-size:13px;line-height:1.75;margin:6px 0 0;color:#1c1917">${isHi?(l.hi||l.en):l.en}</p>
+    </div>`).join('');
+
+  const posHTML=(R.positive_signs||[]).map(s=>`
+    <div style="display:flex;gap:8px;margin-bottom:7px">
+      <span style="color:#16a34a;flex-shrink:0">◈</span>
+      <p style="font-size:13px;line-height:1.7;margin:0;color:#1c1917">${isHi?(s.hi||s.en):s.en}</p>
+    </div>`).join('');
+
+  const html=`<!DOCTYPE html><html lang="${isHi?'hi':'en'}"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Samudrik Shastra Reading – ${date}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:${bf};background:#fff;color:#1c1917;max-width:720px;margin:0 auto;padding:32px 20px;font-size:14px;line-height:1.75}.pbtn{display:block;margin:14px auto;padding:12px 28px;background:linear-gradient(135deg,#78350f,#b45309);color:#fff;border:none;border-radius:22px;font-size:14px;cursor:pointer;font-family:inherit}@media print{.pbtn{display:none}}</style>
+</head><body>
+<h1 style="font-family:'Cinzel Decorative',cursive;font-size:22px;color:#78350f;text-align:center;margin-bottom:5px">🔮 Samudrik Shastra</h1>
+<p style="text-align:center;color:#92400e;font-size:11px;letter-spacing:3px;margin-bottom:3px">✦ Ancient Vedic Palm Reading ✦</p>
+<p style="text-align:center;color:#a8a29e;font-size:11px;margin-bottom:10px">${date} · ${isHi?'हिंदी':'English'}</p>
+<button class="pbtn" onclick="window.print()">${isHi?'🖨️ Print → Save as PDF':'🖨️ Print → Save as PDF'}</button>
+<hr style="border:none;border-top:1px solid #fde68a;margin:18px 0"/>
+<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:20px;margin-bottom:18px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#92400e;letter-spacing:3px;margin-bottom:9px">✦ ${isHi?'समग्र पठन':'OVERALL READING'} ✦</div>
+  <p style="font-size:14px;line-height:1.8;color:#1c1917">${tx(R,'overall_energy')}</p>
+  <p style="font-size:11px;color:#78716c;font-style:italic;margin-top:8px">${isHi?'हस्त: ':'Hand: '}${tx(R,'hand_type')}</p>
+  <div style="background:#fef3c7;border-radius:6px;padding:8px 12px;margin-top:10px;font-size:13px">🌟 ${isHi?'अनुकूल: ':'Favorable: '}<strong>${R.lucky_period||''}</strong></div>
+</div>
+<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;margin-bottom:18px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#166534;letter-spacing:3px;margin-bottom:9px">✦ ${isHi?'शुभ संकेत':'AUSPICIOUS SIGNS'} ✦</div>${posHTML}
+</div>
+${sec(`🔮 ${isHi?'जीवन भविष्यवाणियां':'LIFE PREDICTIONS & TIMELINES'}`,predHTML)}
+${sec(`⚡ ${isHi?'समस्याएं':'PROBLEMS IDENTIFIED'}`,probHTML)}
+${sec(`🔱 ${isHi?'वैदिक उपाय':'VEDIC REMEDIES'}`,remHTML)}
+${sec(`💎 ${isHi?'रत्न':'GEMSTONES'}`,gemHTML)}
+${sec(`🧭 ${isHi?'वास्तु':'VASTU DIRECTIONS'}`,vastuHTML)}
+${sec(`🌿 ${isHi?'जीवनशैली':'LIFESTYLE PRACTICES'}`,lifeHTML)}
+<p style="text-align:center;font-size:11px;color:#a8a29e;font-style:italic;margin-top:28px;padding-top:14px;border-top:1px solid #e7e5e4">
+  ${isHi?'केवल आध्यात्मिक मार्गदर्शन के लिए। रत्न धारण करने से पहले योग्य वैदिक ज्योतिषी से परामर्श लें।':'For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.'}
+</p></body></html>`;
+
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download='Palm-Reading.html';a.click();}
+}
+</script>
+</body>
+</html>
