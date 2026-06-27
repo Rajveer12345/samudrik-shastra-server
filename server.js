@@ -363,7 +363,7 @@ async function analyzePalm(imageData, mediaType, name, dob, gender, concerns) {
     const retryPrompt = `You are a Vedic palmistry expert. Based on these palm observations:
 ${plainReading.slice(0, 800)}
 
-Person: ${name}, Age: ${age}, DOB: ${dob}, Stage: ${stage}
+Person: ${name}, Age: ${age}, DOB: ${dob}
 Dasha: ${dasha.maha} Mahadasha, ${dasha.antar} Antardasha
 
 Return ONLY valid JSON (no text before or after):
