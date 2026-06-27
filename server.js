@@ -237,15 +237,62 @@ PALM READING INSTRUCTIONS:
 6. For each Shubh Lagna window: calculate using current Dasha + palm upswing timing
 
 CRITICAL OUTPUT RULES:
-- Use ONLY plain ASCII characters (a-z A-Z 0-9 spaces hyphens periods commas)
-- No Hindi text, no smart quotes, no em-dashes, no special symbols
-- Keep each string value under 300 characters
-- Respond with ONLY the JSON object, nothing before or after
+- ASCII characters only - no Hindi, no smart quotes, no em-dashes, no apostrophes, no special symbols
+- Use simple straight quotes only inside JSON strings
+- Every string value must be under 250 characters
+- Numbers must be actual numbers not strings
+- Respond with ONLY valid JSON - absolutely nothing before or after the JSON object
+- Do not add comments or explanations
+- Do not use apostrophes in any text - write "do not" not "don't", "person is" not "person's"
 
-JSON structure to return:
-{"hand_type":"value","overall_energy":"value","lucky_period":"value","life_stage_reading":"specific reading for ${stage} - what does this palm say specifically for someone at this age and stage","dasha_summary":"what does ${dasha.maha} Mahadasha and ${dasha.antar} Antardasha mean for this specific ${stage} person","afflicted_planet":"${dasha.maha}","shubh_lagnas":[{"number":1,"window":"Month Year to Month Year","probability":"High","what_will_happen":"specific prediction relevant to ${stage}","remedy_before":"exact remedy to activate this window","if_missed":"what happens if missed and when is next window"},{"number":2,"window":"Month Year to Month Year","probability":"Medium","what_will_happen":"specific prediction","remedy_before":"exact remedy","if_missed":"value"},{"number":3,"window":"Month Year to Month Year","probability":"Certain","what_will_happen":"specific prediction","remedy_before":"exact remedy","if_missed":"value"}],"problems":[{"area":"value","issue":"value relevant to ${stage}","severity":"significant OR moderate OR mild","line":"which palm line shows this","deepDive":"deeper insight","dasha_connection":"how current ${dasha.maha} Dasha relates"}],"remedies":[{"for":"value","type":"Mantra OR Ritual OR Lifestyle OR Charity","remedy":"value","timing":"value","planet_target":"which planet"}],"gemstones":[{"stone":"ruby OR pearl OR coral OR emerald OR yellow_sapphire OR diamond OR blue_sapphire OR hessonite OR cats_eye","reason":"why this stone for this person at this age","weight":"value","metal":"Gold OR Silver OR Copper","day_to_wear":"value","test_first":"yes OR no","mantra":"mantra before wearing"}],"vastu":[{"direction":"value","en":"specific vastu advice for ${stage}"}],"lifestyle":[{"title":"value","en":"specific lifestyle advice for ${stage}"}],"positive_signs":[{"en":"value"}]}
-
-Include: 3 shubh lagnas, 4-5 problems relevant to ${stage}, 4-5 remedies, 2 gemstones, 4 vastu tips, 4 lifestyle practices, 4 positive signs.`;
+Return this exact JSON structure with your reading filled in:
+{
+  "hand_type": "describe the hand type here",
+  "overall_energy": "overall reading paragraph here",
+  "lucky_period": "Month Year to Month Year",
+  "life_stage_reading": "reading specific to this persons age and stage",
+  "dasha_summary": "what the current dasha means for this person",
+  "afflicted_planet": "${dasha.maha}",
+  "shubh_lagnas": [
+    {"number": 1, "window": "Month Year to Month Year", "probability": "High", "what_will_happen": "prediction here", "remedy_before": "remedy here", "if_missed": "next window info"},
+    {"number": 2, "window": "Month Year to Month Year", "probability": "Medium", "what_will_happen": "prediction here", "remedy_before": "remedy here", "if_missed": "next window info"},
+    {"number": 3, "window": "Month Year to Month Year", "probability": "Certain", "what_will_happen": "prediction here", "remedy_before": "remedy here", "if_missed": "later window"}
+  ],
+  "problems": [
+    {"area": "Career", "issue": "description of career issue", "severity": "significant", "line": "Fate Line", "deepDive": "deeper insight", "dasha_connection": "dasha connection"},
+    {"area": "Finance", "issue": "description", "severity": "moderate", "line": "Life Line", "deepDive": "insight", "dasha_connection": "connection"},
+    {"area": "Health", "issue": "description", "severity": "mild", "line": "Health Line", "deepDive": "insight", "dasha_connection": "connection"},
+    {"area": "Relationships", "issue": "description", "severity": "moderate", "line": "Heart Line", "deepDive": "insight", "dasha_connection": "connection"}
+  ],
+  "remedies": [
+    {"for": "career", "type": "Mantra", "remedy": "mantra text here 108 times", "timing": "Every Thursday morning", "planet_target": "Jupiter"},
+    {"for": "protection", "type": "Ritual", "remedy": "ritual description here", "timing": "Every Saturday", "planet_target": "${dasha.maha}"},
+    {"for": "health", "type": "Lifestyle", "remedy": "lifestyle practice here", "timing": "Daily morning", "planet_target": "Sun"},
+    {"for": "prosperity", "type": "Charity", "remedy": "charity action here", "timing": "Every Thursday", "planet_target": "Jupiter"}
+  ],
+  "gemstones": [
+    {"stone": "yellow_sapphire", "reason": "reason this stone suits this person", "weight": "4-5 carats", "metal": "Gold", "day_to_wear": "Thursday morning", "test_first": "no", "mantra": "Om Brim Brihaspataye Namah"},
+    {"stone": "pearl", "reason": "reason this stone suits this person", "weight": "5-6 carats", "metal": "Silver", "day_to_wear": "Monday evening", "test_first": "no", "mantra": "Om Som Somaya Namah"}
+  ],
+  "vastu": [
+    {"direction": "North", "en": "vastu advice for north zone"},
+    {"direction": "Sleeping Direction", "en": "head toward south or east never north"},
+    {"direction": "Work Desk", "en": "face east or north while working"},
+    {"direction": "Prayer Corner", "en": "northeast corner for prayer and meditation"}
+  ],
+  "lifestyle": [
+    {"title": "Morning Routine", "en": "morning practice advice here"},
+    {"title": "Exercise", "en": "physical exercise advice here"},
+    {"title": "Diet", "en": "dietary advice here"},
+    {"title": "Sleep", "en": "sleep advice here"}
+  ],
+  "positive_signs": [
+    {"en": "first positive sign observed in palm"},
+    {"en": "second positive sign observed"},
+    {"en": "third positive sign observed"},
+    {"en": "fourth positive sign observed"}
+  ]
+}`;
 }
 
 // ── Call Claude API ───────────────────────────────────────────────────────────
@@ -335,22 +382,31 @@ async function analyzePalm(imageData, mediaType, name, dob, gender, concerns) {
   // Step 2: Build full contextual reading with Dasha correlation
   const fullPrompt = prompt + "\n\nPalm observations from image analysis:\n" + plainReading.slice(0, 1500);
 
-  const jsonResponse = await callClaude(fullPrompt, null, null, 2500);
+  const jsonResponse = await callClaude(fullPrompt, null, null, 3500);
 
   // Extract and clean JSON — robust parser
   function extractJSON(text) {
+    // Find outermost JSON object
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
     if (start === -1 || end === -1) throw new Error("No JSON found in AI response");
-    const raw = text.slice(start, end + 1);
+    let raw = text.slice(start, end + 1);
+    // Remove any markdown code fences
+    raw = raw.replace(/```json/g, "").replace(/```/g, "");
     let safe = "";
     for (let i = 0; i < raw.length; i++) {
       const c = raw.charCodeAt(i);
+      // Allow tabs/newlines/carriage returns as spaces
       if (c === 9 || c === 10 || c === 13) { safe += " "; }
+      // Allow all printable ASCII
       else if (c >= 32 && c <= 126) { safe += raw[i]; }
+      // Drop everything else (non-ASCII like Hindi, smart quotes etc)
     }
-    // Fix common JSON issues — trailing commas
-    safe = safe.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+    // Fix common JSON issues
+    safe = safe.replace(/,\s*}/g, "}");   // trailing comma before }
+    safe = safe.replace(/,\s*]/g, "]");   // trailing comma before ]
+    safe = safe.replace(/:\s*,/g, ": null,"); // empty values
+    safe = safe.replace(/"\s*:\s*"/g, '": "'); // normalize spacing
     return JSON.parse(safe);
   }
 
