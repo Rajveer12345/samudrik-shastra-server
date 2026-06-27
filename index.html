@@ -147,7 +147,7 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
     <div style="font-size:52px;animation:float 3s ease-in-out infinite;display:inline-block;margin-bottom:10px">🔮</div>
     <div style="font-family:'Cinzel Decorative',cursive;font-size:clamp(22px,5vw,32px);color:var(--gold);animation:glow 3s ease-in-out infinite;margin-bottom:4px">HastRekha</div>
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;font-style:italic;margin-bottom:6px">✦ Ancient Vedic Palm Reading ✦</div>
-    <div style="font-size:12px;color:var(--dim);margin-bottom:4px">Powered by Samudrik Shastra &amp; Hasta Rahasya</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:4px">✦ Ancient Wisdom · Modern Clarity ✦</div>
   </div>
 
   <!-- Ask Jyotishi CTA -->
@@ -166,11 +166,11 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
   <div class="form-card">
     <label class="form-label">SELECT READING ENGINE</label>
     <div class="engine-toggle">
-      <button class="engine-btn active" id="engine-ss" onclick="setEngine('samudrik')">✦ Samudrik<br/>Shastra</button>
-      <button class="engine-btn" id="engine-hr" onclick="setEngine('hasta')">✦ Hasta<br/>Rahasya</button>
+      <button class="engine-btn active" id="engine-ss" onclick="setEngine('samudrik')">✦ Classical<br/>Reading</button>
+      <button class="engine-btn" id="engine-hr" onclick="setEngine('hasta')">✦ Ancient<br/>Texts</button>
       <button class="engine-btn" id="engine-both" onclick="setEngine('both')">⚖ Compare<br/>Both</button>
     </div>
-    <div class="engine-desc" id="engine-desc">Classical Samudrik Shastra — the standard Vedic palmistry system with Dasha calculation</div>
+    <div class="engine-desc" id="engine-desc">Classical Vedic palmistry system with Vimshottari Dasha calculation</div>
   </div>
 
   <div class="form-card">
@@ -251,12 +251,12 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
     <div style="text-align:center;margin-bottom:14px">
       <div style="font-size:28px;margin-bottom:5px">🔮</div>
       <h1 style="font-family:'Cinzel Decorative',cursive;font-size:clamp(16px,4vw,22px);color:var(--gold);margin:0 0 3px">HastRekha</h1>
-      <p style="font-size:11px;color:var(--muted);font-style:italic;letter-spacing:2px" id="engine-result-label">✦ Samudrik Shastra Reading ✦</p>
+      <p style="font-size:11px;color:var(--muted);font-style:italic;letter-spacing:2px" id="engine-result-label">✦ Classical Vedic Reading ✦</p>
     </div>
 
     <div id="comp-bar" style="display:none" class="comparison-bar">
-      <button class="comp-btn active" onclick="showEngine('ss')">✦ Samudrik Shastra</button>
-      <button class="comp-btn" onclick="showEngine('hr')">✦ Hasta Rahasya</button>
+      <button class="comp-btn active" onclick="showEngine('ss')">✦ Classical</button>
+      <button class="comp-btn" onclick="showEngine('hr')">✦ Ancient Texts</button>
       <button class="comp-btn" onclick="showEngine('compare')">⚖ Compare</button>
     </div>
 
@@ -347,86 +347,170 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
 const SERVER = window.location.origin;
 const JYOTISHI_EMAIL = 'jyotishi@hastrekhha.com'; // CHANGE THIS to actual email
 
-// ── GALAXY BACKGROUND ─────────────────────────────────────────
-(function initGalaxy(){
+// ── UNIVERSE BACKGROUND — slow, cinematic, deep space ────────
+(function initUniverse(){
   const canvas = document.getElementById('galaxy-canvas');
   const ctx = canvas.getContext('2d');
-  let W, H, stars = [], nebulae = [];
+  let W, H;
   function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
   resize(); window.addEventListener('resize', resize);
-  // Generate stars
-  for(let i = 0; i < 220; i++){
+
+  // Distant stars — tiny, very slow parallax drift
+  const stars = [];
+  for(let i=0;i<180;i++){
     stars.push({
-      x: Math.random(), y: Math.random(),
-      r: Math.random() * 1.4 + 0.2,
-      opacity: Math.random() * 0.8 + 0.2,
-      speed: Math.random() * 0.003 + 0.001,
-      phase: Math.random() * Math.PI * 2,
-      color: ['#C9A96E','#E8D5B0','#A0B8FF','#FFD4A0','#FFFACD','#FFE4C4','#B8D4FF'][Math.floor(Math.random()*7)]
+      x: Math.random()*2-0.5,  // wider than screen for drift
+      y: Math.random(),
+      r: Math.random()*1.1+0.15,
+      op: Math.random()*0.55+0.15,
+      twinkleSpeed: Math.random()*0.0008+0.0002,
+      twinklePhase: Math.random()*Math.PI*2,
+      driftSpeed: (Math.random()-0.5)*0.000015  // very slow horizontal drift
     });
   }
-  // Nebula blobs
-  for(let i = 0; i < 5; i++){
-    nebulae.push({
-      x: Math.random(), y: Math.random(),
-      rx: 80 + Math.random()*120, ry: 60 + Math.random()*80,
-      color: ['rgba(139,69,19,','rgba(72,20,100,','rgba(20,50,100,','rgba(100,30,60,'][Math.floor(Math.random()*4)],
-      phase: Math.random()*Math.PI*2, speed: 0.0004 + Math.random()*0.0003
-    });
+
+  // Large distant planets — slow, majestic, in background
+  const bgPlanets = [
+    { x:0.12, y:0.18, r:28, c1:'#4A3560', c2:'#7B5EA0', c3:'#2A1540', glowC:'rgba(120,80,180,', rings:false, driftX:0.000006, driftY:0.000002 },
+    { x:0.85, y:0.72, r:38, c1:'#603A1A', c2:'#C87A30', c3:'#3A1A05', glowC:'rgba(200,120,40,', rings:true,  driftX:-0.000005, driftY:0.0000015 },
+    { x:0.70, y:0.08, r:16, c1:'#1A3A4A', c2:'#3A7A9A', c3:'#0A1A2A', glowC:'rgba(60,130,170,', rings:false, driftX:0.000008, driftY:0.000003 },
+    { x:0.02, y:0.62, r:22, c1:'#3A1A1A', c2:'#8A3030', c3:'#1A0808', glowC:'rgba(140,50,50,',  rings:false, driftX:0.000004, driftY:-0.000002 }
+  ];
+
+  // Nebula clouds — very slow breathing colour washes
+  const nebulae = [
+    { x:0.25, y:0.30, rx:W*0.35, ry:H*0.28, c:'rgba(80,20,120,', phase:0.0,    speed:0.00018 },
+    { x:0.75, y:0.65, rx:W*0.40, ry:H*0.30, c:'rgba(20,50,100,', phase:2.1,    speed:0.00014 },
+    { x:0.50, y:0.15, rx:W*0.30, ry:H*0.20, c:'rgba(100,30,60,',  phase:4.2,    speed:0.00020 },
+    { x:0.10, y:0.80, rx:W*0.28, ry:H*0.22, c:'rgba(20,80,80,',   phase:1.05,   speed:0.00016 },
+  ];
+
+  // Milky way band — diagonal smear across screen
+  function drawMilkyWay(){
+    const g = ctx.createLinearGradient(0, H*0.2, W, H*0.8);
+    g.addColorStop(0,   'rgba(60,40,100,0)');
+    g.addColorStop(0.3, 'rgba(80,60,120,0.045)');
+    g.addColorStop(0.5, 'rgba(100,80,150,0.07)');
+    g.addColorStop(0.7, 'rgba(80,60,120,0.045)');
+    g.addColorStop(1,   'rgba(60,40,100,0)');
+    ctx.fillStyle=g;
+    ctx.fillRect(0,0,W,H);
   }
+
   let t = 0;
+  // Animate planet drift positions
+  bgPlanets.forEach(p=>{ p.cx=p.x; p.cy=p.y; });
+
   function draw(){
-    ctx.clearRect(0,0,W,H);
-    // Dark gradient base
-    const grad = ctx.createRadialGradient(W*0.5,H*0.4,0,W*0.5,H*0.4,Math.max(W,H)*0.7);
-    grad.addColorStop(0,'rgba(26,13,46,0.95)');
-    grad.addColorStop(0.5,'rgba(13,10,26,0.98)');
-    grad.addColorStop(1,'rgba(13,26,46,1)');
-    ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
-    // Nebulae
+    // ── Base: very dark deep space ──
+    ctx.fillStyle='#06040F';
+    ctx.fillRect(0,0,W,H);
+
+    // ── Milky Way diagonal band ──
+    drawMilkyWay();
+
+    // ── Nebula colour washes — very slow breathing ──
     nebulae.forEach(n=>{
-      const a = 0.12 + 0.08*Math.sin(t*n.speed*100+n.phase);
-      const g2 = ctx.createRadialGradient(n.x*W,n.y*H,0,n.x*W,n.y*H,n.rx);
-      g2.addColorStop(0,n.color+a+')');
-      g2.addColorStop(1,n.color+'0)');
-      ctx.fillStyle=g2;
+      const a = 0.045 + 0.025*Math.sin(t*n.speed*100+n.phase);
+      const g = ctx.createRadialGradient(n.x*W,n.y*H,0,n.x*W,n.y*H,Math.max(n.rx,n.ry));
+      g.addColorStop(0, n.c+(a*1.4)+')');
+      g.addColorStop(0.4, n.c+(a*0.7)+')');
+      g.addColorStop(1,   n.c+'0)');
+      ctx.fillStyle=g;
       ctx.beginPath();
-      ctx.ellipse(n.x*W,n.y*H,n.rx,n.ry,t*n.speed,0,Math.PI*2);
+      ctx.ellipse(n.x*W, n.y*H, n.rx*(0.98+0.04*Math.sin(t*n.speed*80)), n.ry*(0.98+0.04*Math.cos(t*n.speed*80)), 0, 0, Math.PI*2);
       ctx.fill();
     });
-    // Stars
+
+    // ── Distant stars with very slow drift ──
     stars.forEach(s=>{
-      const op = s.opacity * (0.6 + 0.4*Math.sin(t*s.speed*200+s.phase));
-      ctx.globalAlpha = op;
-      ctx.fillStyle = s.color;
+      s.x += s.driftSpeed;
+      if(s.x > 1.5) s.x = -0.5;
+      if(s.x < -0.5) s.x = 1.5;
+      const tw = s.op * (0.65 + 0.35*Math.sin(t*s.twinkleSpeed*100+s.twinklePhase));
+      ctx.globalAlpha = tw;
+      ctx.fillStyle = '#E8D5B0';
       ctx.beginPath();
       ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
       ctx.fill();
-      // Glow for brighter stars
-      if(s.r > 1.0){
-        const glow = ctx.createRadialGradient(s.x*W,s.y*H,0,s.x*W,s.y*H,s.r*4);
-        // Convert hex to rgba safely
-        const hx=s.color.replace('#','');
-        const rr=parseInt(hx.slice(0,2),16)||200,gg=parseInt(hx.slice(2,4),16)||180,bb=parseInt(hx.slice(4,6),16)||140;
-        glow.addColorStop(0,'rgba('+rr+','+gg+','+bb+',0.35)');
-        glow.addColorStop(1,'rgba('+rr+','+gg+','+bb+',0)');
-        ctx.fillStyle=glow;
+    });
+    ctx.globalAlpha=1;
+
+    // ── Background planets — large, slow, majestic ──
+    bgPlanets.forEach(p=>{
+      // Very slow drift
+      p.cx += p.driftX;
+      p.cy += p.driftY;
+      if(p.cx>1.15) p.cx=1.15; if(p.cx<-0.15) p.cx=-0.15;
+      if(p.cy>0.95) p.cy=0.95; if(p.cy<0.05)  p.cy=0.05;
+      const px=p.cx*W, py=p.cy*H;
+
+      // Atmospheric glow
+      const atmospherePulse = 0.12 + 0.04*Math.sin(t*0.0003+p.x*5);
+      const atm = ctx.createRadialGradient(px,py,p.r*0.5,px,py,p.r*2.8);
+      atm.addColorStop(0, p.glowC+atmospherePulse+')');
+      atm.addColorStop(0.5, p.glowC+(atmospherePulse*0.4)+')');
+      atm.addColorStop(1, p.glowC+'0)');
+      ctx.fillStyle=atm;
+      ctx.beginPath();
+      ctx.arc(px,py,p.r*2.8,0,Math.PI*2);
+      ctx.fill();
+
+      // Planet surface — gradient sphere
+      const surf = ctx.createRadialGradient(px-p.r*0.35,py-p.r*0.35,p.r*0.05,px,py,p.r);
+      surf.addColorStop(0, p.c2);
+      surf.addColorStop(0.45, p.c1);
+      surf.addColorStop(1, p.c3);
+      ctx.fillStyle=surf;
+      ctx.beginPath();
+      ctx.arc(px,py,p.r,0,Math.PI*2);
+      ctx.fill();
+
+      // Subtle cloud bands
+      ctx.globalAlpha=0.12;
+      for(let b=0;b<3;b++){
+        const by = py - p.r*0.5 + b*p.r*0.5 + Math.sin(t*0.0001+b)*p.r*0.08;
+        const bh = p.r*0.12;
+        ctx.fillStyle=p.c2;
         ctx.beginPath();
-        ctx.arc(s.x*W,s.y*H,s.r*4,0,Math.PI*2);
+        ctx.ellipse(px,by,p.r*0.95,bh,0,0,Math.PI*2);
         ctx.fill();
       }
+      ctx.globalAlpha=1;
+
+      // Saturn-style rings for the orange planet
+      if(p.rings){
+        ctx.globalAlpha=0.22;
+        const ringG = ctx.createLinearGradient(px-p.r*2.5,py,px+p.r*2.5,py);
+        ringG.addColorStop(0,'rgba(200,150,60,0)');
+        ringG.addColorStop(0.3,'rgba(200,150,60,0.5)');
+        ringG.addColorStop(0.5,'rgba(220,170,80,0.7)');
+        ringG.addColorStop(0.7,'rgba(200,150,60,0.5)');
+        ringG.addColorStop(1,'rgba(200,150,60,0)');
+        ctx.strokeStyle=ringG;
+        ctx.lineWidth=5;
+        ctx.beginPath();
+        ctx.ellipse(px,py,p.r*2.3,p.r*0.38,0.08,0,Math.PI*2);
+        ctx.stroke();
+        ctx.lineWidth=2.5;
+        ctx.beginPath();
+        ctx.ellipse(px,py,p.r*2.8,p.r*0.46,0.08,0,Math.PI*2);
+        ctx.stroke();
+        ctx.globalAlpha=1;
+      }
+
+      // Specular highlight — light reflection
+      ctx.globalAlpha=0.18;
+      const hi=ctx.createRadialGradient(px-p.r*0.38,py-p.r*0.38,0,px-p.r*0.38,py-p.r*0.38,p.r*0.55);
+      hi.addColorStop(0,'rgba(255,255,255,0.9)');
+      hi.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=hi;
+      ctx.beginPath();
+      ctx.arc(px-p.r*0.38,py-p.r*0.38,p.r*0.55,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha=1;
     });
-    ctx.globalAlpha = 1;
-    // Shooting star occasionally
-    if(Math.floor(t*0.3)%400===0){
-      const sx=Math.random()*W, sy=Math.random()*H*0.5;
-      const trail = ctx.createLinearGradient(sx,sy,sx+80,sy+30);
-      trail.addColorStop(0,'rgba(201,169,110,0)');
-      trail.addColorStop(0.5,'rgba(201,169,110,0.6)');
-      trail.addColorStop(1,'rgba(255,255,255,0.9)');
-      ctx.strokeStyle=trail; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+80,sy+30); ctx.stroke();
-    }
+
     t++;
     requestAnimationFrame(draw);
   }
@@ -452,9 +536,9 @@ const LC={1:{color:"#16A085",bg:"rgba(22,160,133,0.08)"},2:{color:"#E67E22",bg:"
 const MSGS=["Studying your palm lines…","Reading the Fate Line…","Consulting ancient texts…","Calculating your Dasha period…","Identifying Shubh Lagna windows…","Almost ready…"];
 
 const ENGINE_DESCS={
-  samudrik:"Classical Samudrik Shastra — standard Vedic palmistry with Vimshottari Dasha calculation",
-  hasta:"Hasta Rahasya — reading based on 35 ancient palmistry books including Indian Palmistry (1895), Cheiro, Benham and more",
-  both:"Compare Both — see where Samudrik Shastra and Hasta Rahasya agree (high confidence) and where they differ"
+  samudrik:"Classical Vedic palmistry with Vimshottari Dasha calculation",
+  hasta:"Ancient texts reading — based on 35 rare palmistry books including Indian, Cheiro and Benham traditions",
+  both:"Compare Both — see where Classical and Ancient Text readings agree (high confidence) and where they differ"
 };
 
 // Gemstone-to-concern mapping — THIS IS THE CORE LOGIC
@@ -624,7 +708,7 @@ function showEngine(view){
 }
 
 function renderReading(R,HR,dasha,age,stage){
-  const engineLabels={samudrik:"✦ Samudrik Shastra Reading ✦",hasta:"✦ Hasta Rahasya Reading ✦",both:"✦ Dual Engine Reading ✦"};
+  const engineLabels={samudrik:"✦ Classical Vedic Reading ✦",hasta:"✦ Ancient Texts Reading ✦",both:"✦ Complete Vedic Reading ✦"};
   document.getElementById("engine-result-label").textContent=engineLabels[currentEngine]||engineLabels.samudrik;
   document.getElementById("comp-bar").style.display=currentEngine==="both"?"flex":"none";
   document.getElementById("r-overall").textContent=R.overall_energy||"";
@@ -823,7 +907,7 @@ body{font-family:'Crimson Pro',Georgia,serif;background:linear-gradient(135deg,#
 <!-- NAME BANNER -->
 <div style="background:linear-gradient(135deg,rgba(201,169,110,0.12),rgba(139,105,20,0.06));border:1px solid rgba(201,169,110,0.3);border-radius:12px;padding:16px 20px;margin-bottom:24px;text-align:center">
   <p style="font-family:'Cinzel Decorative',cursive;font-size:14px;color:#C9A96E;letter-spacing:2px;margin-bottom:5px">${M.name||""}</p>
-  <p style="font-size:12px;color:#9B8866">Age: ${M.age||""} years · ${M.stage||""} · Engine: ${currentEngine==="both"?"Both Engines":currentEngine==="hasta"?"Hasta Rahasya":"Samudrik Shastra"}</p>
+  <p style="font-size:12px;color:#9B8866">Age: ${M.age||""} years · ${M.stage||""} · Engine: ${currentEngine==="both"?"Both Engines":currentEngine==="hasta"?"Ancient Texts":"Classical Vedic"}</p>
   ${(M.concerns||[]).length>0?`<p style="font-size:11px;color:#6B5B40;margin-top:5px">Concerns: ${M.concerns.join(", ")}</p>`:""}
 </div>
 
