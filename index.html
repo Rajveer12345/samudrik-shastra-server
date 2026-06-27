@@ -8,185 +8,200 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --gold:#C9A96E;--gold2:#8B6914;--bg:#0D0A1A;--surface:#1A0D2E;
+  --gold:#C9A96E;--gold2:#8B6914;--bg:#06040F;
   --text:#E8D5B0;--muted:#9B8866;--dim:#6B5B40;
   --green:#2ECC71;--orange:#E67E22;--red:#E82929;--blue:#2471A3;--purple:#8E44AD;
-  --teal:#16A085;
 }
-body{min-height:100vh;background:#0D0A1A;color:var(--text);font-family:'Crimson Pro',serif;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Crimson Pro',serif;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes glow{0%,100%{text-shadow:0 0 20px rgba(201,169,110,0.4)}50%{text-shadow:0 0 50px rgba(201,169,110,1),0 0 80px rgba(201,169,110,0.5)}}
+@keyframes glow{0%,100%{text-shadow:0 0 18px rgba(201,169,110,0.4)}50%{text-shadow:0 0 50px rgba(201,169,110,1),0 0 80px rgba(201,169,110,0.4)}}
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
-@keyframes twinkle{0%,100%{opacity:0;transform:scale(0.5)}50%{opacity:1;transform:scale(1)}}
-@keyframes orbit{from{transform:rotate(0deg) translateX(120px) rotate(0deg)}to{transform:rotate(360deg) translateX(120px) rotate(-360deg)}}
-@keyframes nebula{0%,100%{opacity:0.15;transform:scale(1)}50%{opacity:0.35;transform:scale(1.05)}}
 
-/* ── GALAXY BACKGROUND ── */
-#galaxy-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
-.screen{display:none;min-height:100vh;padding:24px 16px;position:relative;z-index:1}
-.screen.active{display:block}
+/* Canvas */
+#universe{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* Screens */
+.screen{display:none;min-height:100vh;padding:20px 16px 40px;position:relative;z-index:1}
+.screen.active{display:block;animation:fadeUp .4s ease}
+
+/* Cards */
+.card{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.18);border-radius:14px;padding:16px;margin:10px 0}
+.gold-label{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:2px;display:block;margin-bottom:8px}
+
+/* Inputs */
+.inp{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(201,169,110,0.22);border-radius:9px;padding:11px 14px;color:var(--text);font-family:'Crimson Pro',serif;font-size:15px;-webkit-appearance:none;outline:none}
+.inp:focus{border-color:var(--gold)}
+.sel{width:100%;background:#0D0820;border:1px solid rgba(201,169,110,0.22);border-radius:9px;padding:11px 14px;color:var(--text);font-family:'Crimson Pro',serif;font-size:15px;-webkit-appearance:none;outline:none}
 
 /* Engine toggle */
-.engine-toggle{display:flex;background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:12px;padding:4px;margin:12px 0;gap:4px}
-.engine-btn{flex:1;padding:10px 6px;border-radius:9px;border:none;cursor:pointer;font-family:'Cinzel Decorative',cursive;font-size:8px;letter-spacing:1px;background:transparent;color:var(--dim);transition:all .25s;text-align:center;line-height:1.4}
-.engine-btn.active{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#0D0A1A}
-.engine-desc{font-size:11px;color:var(--muted);text-align:center;padding:4px 8px 10px;font-style:italic;line-height:1.5}
+.eng-wrap{display:flex;gap:4px;background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.15);border-radius:11px;padding:4px}
+.eng-btn{flex:1;padding:10px 4px;border-radius:8px;border:none;cursor:pointer;font-family:'Cinzel Decorative',cursive;font-size:8px;letter-spacing:1px;background:transparent;color:var(--dim);transition:all .25s;text-align:center;line-height:1.5}
+.eng-btn.active{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#060410}
+.eng-desc{font-size:11px;color:var(--muted);text-align:center;padding:6px 8px 2px;font-style:italic;line-height:1.5}
 
-/* Form */
-.form-card{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:14px;padding:16px;margin:12px 0}
-.form-label{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:2px;display:block;margin-bottom:6px}
-.form-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(201,169,110,0.25);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'Crimson Pro',serif;font-size:14px;-webkit-appearance:none}
-.form-input:focus{outline:none;border-color:var(--gold)}
-.form-select{width:100%;background:#1A0D2E;border:1px solid rgba(201,169,110,0.25);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'Crimson Pro',serif;font-size:14px;-webkit-appearance:none}
-.upload-zone{border:1px dashed rgba(201,169,110,0.35);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;background:rgba(201,169,110,0.04);transition:all .3s;margin:10px 0}
-.upload-zone:hover,.upload-zone:active{border-color:var(--gold);background:rgba(201,169,110,0.09)}
-.upload-zone img{max-height:200px;max-width:100%;border-radius:10px;border:1px solid rgba(201,169,110,0.3)}
-.btn-primary{background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold2));border:none;border-radius:50px;padding:15px;color:#0D0A1A;font-family:'Cinzel Decorative',cursive;font-size:13px;cursor:pointer;letter-spacing:2px;width:100%;box-shadow:0 4px 22px rgba(201,169,110,0.4)}
-.btn-primary:disabled{opacity:.4;cursor:default}
-.error-box{background:rgba(232,41,41,0.08);border:1px solid rgba(232,41,41,0.25);border-radius:10px;padding:12px 14px;font-size:13px;color:#fca5a5;margin-bottom:14px;line-height:1.6}
+/* Upload zone */
+.upload-zone{border:1px dashed rgba(201,169,110,0.3);border-radius:13px;padding:22px 16px;text-align:center;cursor:pointer;background:rgba(201,169,110,0.03);transition:all .3s;margin:8px 0}
+.upload-zone:active{border-color:var(--gold);background:rgba(201,169,110,0.08)}
+.upload-zone img{max-height:190px;max-width:100%;border-radius:10px;border:1px solid rgba(201,169,110,0.28)}
 
-/* Ask Jyotishi */
-.jyotishi-bar{background:linear-gradient(135deg,rgba(142,68,173,0.15),rgba(201,169,110,0.1));border:1px solid rgba(142,68,173,0.3);border-radius:12px;padding:14px 16px;margin:12px 0;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .3s}
-.jyotishi-bar:hover{border-color:rgba(142,68,173,0.6);background:linear-gradient(135deg,rgba(142,68,173,0.25),rgba(201,169,110,0.15))}
-.jyotishi-icon{font-size:28px;flex-shrink:0;animation:float 4s ease-in-out infinite}
-.jyotishi-text{flex:1}
-.jyotishi-title{font-family:'Cinzel Decorative',cursive;font-size:11px;color:var(--purple);letter-spacing:1px;margin-bottom:3px}
-.jyotishi-sub{font-size:12px;color:var(--muted);line-height:1.5}
-.jyotishi-arrow{color:var(--gold);font-size:18px}
+/* Buttons */
+.btn-main{background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold2));border:none;border-radius:50px;padding:15px;color:#060410;font-family:'Cinzel Decorative',cursive;font-size:13px;cursor:pointer;letter-spacing:2px;width:100%;box-shadow:0 4px 24px rgba(201,169,110,0.35);margin-top:6px}
+.btn-main:disabled{opacity:.35;cursor:default}
+.btn-sm{background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.25);border-radius:20px;padding:7px 14px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer}
+.btn-gold{padding:7px 14px;border-radius:20px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#060410;font-family:'Crimson Pro',serif;font-size:12px;font-weight:600}
 
-/* Right hand note */
-.hand-note{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:10px;padding:10px 14px;margin-top:8px;display:flex;align-items:flex-start;gap:10px}
-.hand-note-icon{font-size:20px;flex-shrink:0}
-.hand-note-text{font-size:12px;color:var(--muted);line-height:1.6}
-.hand-why-link{color:var(--gold);cursor:pointer;text-decoration:underline;font-size:11px;display:inline-block;margin-top:4px}
+/* Concerns grid */
+.concerns-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px}
+.concern-btn{padding:9px 10px;border-radius:9px;border:1px solid rgba(201,169,110,0.18);background:transparent;color:var(--muted);font-family:'Crimson Pro',serif;font-size:12px;cursor:pointer;text-align:left;transition:all .2s;line-height:1.3}
+.concern-btn.selected{background:rgba(201,169,110,0.14);color:var(--gold);border-color:var(--gold)}
 
-/* Right hand explanation modal */
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.active{display:flex}
-.modal-box{background:linear-gradient(135deg,#1A0D2E,#0D1A2E);border:1px solid rgba(201,169,110,0.3);border-radius:16px;padding:24px;max-width:400px;width:100%;animation:fadeUp .3s ease}
-.modal-title{font-family:'Cinzel Decorative',cursive;font-size:13px;color:var(--gold);margin-bottom:14px;text-align:center}
-.modal-text{font-size:13px;color:var(--text);line-height:1.75;margin-bottom:14px}
-.modal-close{background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);border-radius:20px;padding:8px 20px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer;width:100%}
+/* Jyotishi bar */
+.jbar{background:linear-gradient(135deg,rgba(142,68,173,0.12),rgba(201,169,110,0.08));border:1px solid rgba(142,68,173,0.28);border-radius:13px;padding:13px 15px;margin:10px 0;display:flex;align-items:center;gap:12px;cursor:pointer}
+.jbar-icon{font-size:26px;animation:float 4s ease-in-out infinite;flex-shrink:0}
+.jbar-title{font-family:'Cinzel Decorative',cursive;font-size:10px;color:#C084FC;letter-spacing:1px;margin-bottom:3px}
+.jbar-sub{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* Hand note */
+.hand-note{background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.13);border-radius:10px;padding:10px 13px;margin-top:8px;display:flex;align-items:flex-start;gap:10px}
+.why-link{color:var(--gold);cursor:pointer;text-decoration:underline;font-size:11px;display:inline-block;margin-top:5px}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:999;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal-box{background:linear-gradient(135deg,#1A0D2E,#0D1828);border:1px solid rgba(201,169,110,0.28);border-radius:16px;padding:24px;max-width:400px;width:100%;animation:fadeUp .3s ease}
+.modal-title{font-family:'Cinzel Decorative',cursive;font-size:12px;color:var(--gold);margin-bottom:14px;text-align:center}
+.modal-close{background:rgba(201,169,110,0.12);border:1px solid rgba(201,169,110,0.28);border-radius:20px;padding:9px 20px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer;width:100%;margin-top:14px}
+
+/* Error */
+.err{background:rgba(232,41,41,0.07);border:1px solid rgba(232,41,41,0.22);border-radius:10px;padding:12px 14px;font-size:13px;color:#fca5a5;margin-bottom:12px;line-height:1.6;display:none}
 
 /* Loading */
-.loading-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-.spinner{width:52px;height:52px;border:2px solid rgba(201,169,110,0.15);border-top:2px solid var(--gold);border-radius:50%;animation:spin 1.2s linear infinite;margin-bottom:22px}
-.loading-title{font-family:'Cinzel Decorative',cursive;font-size:14px;color:var(--gold);animation:pulse 2s ease-in-out infinite;text-align:center;padding:0 20px;margin-bottom:12px}
+.loading-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+.spinner{width:50px;height:50px;border:2px solid rgba(201,169,110,0.12);border-top:2px solid var(--gold);border-radius:50%;animation:spin 1.2s linear infinite;margin-bottom:22px}
+.loading-msg{font-family:'Cinzel Decorative',cursive;font-size:13px;color:var(--gold);animation:pulse 2s ease-in-out infinite;padding:0 20px;margin-bottom:14px}
+.loading-note{background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.13);border-radius:10px;padding:14px 18px;max-width:300px;font-size:12px;color:var(--muted);line-height:1.7}
 
 /* Result */
-.result-wrap{max-width:860px;margin:0 auto;animation:fadeUp .5s ease}
+.result-wrap{max-width:860px;margin:0 auto}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
-.btn-back{background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.28);border-radius:20px;padding:7px 14px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer}
-.btn-save{padding:7px 14px;border-radius:20px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#0D0A1A;font-family:'Crimson Pro',serif;font-size:12px}
-.comparison-bar{display:flex;gap:3px;margin-bottom:14px;background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.15);border-radius:12px;padding:3px}
-.comp-btn{flex:1;padding:9px 4px;border-radius:9px;border:none;cursor:pointer;font-family:'Cinzel Decorative',cursive;font-size:8px;letter-spacing:1px;background:transparent;color:var(--dim);transition:all .2s;text-align:center}
-.comp-btn.active{color:var(--gold);background:rgba(201,169,110,0.15)}
-.overview-card{background:linear-gradient(135deg,rgba(201,169,110,0.09),rgba(139,105,20,0.04));border:1px solid rgba(201,169,110,0.28);border-radius:14px;padding:20px;margin-bottom:14px}
-.section-mini{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:3px;margin-bottom:8px}
-.dasha-card{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:12px;padding:16px;margin-bottom:14px}
-.dasha-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.dasha-item{background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px}
-.dasha-key{font-size:10px;color:var(--dim);margin-bottom:3px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px}
-.dasha-val{font-size:14px;color:var(--gold);font-weight:600}
-.lagna-card{border-radius:11px;padding:14px;margin-bottom:10px;border-left:3px solid}
-.lagna-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px}
+.sec-title{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:3px;margin-bottom:10px}
+.overview-card{background:linear-gradient(135deg,rgba(201,169,110,0.08),rgba(139,105,20,0.03));border:1px solid rgba(201,169,110,0.25);border-radius:14px;padding:18px;margin-bottom:12px}
+.dasha-card{background:rgba(74,29,150,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:13px;padding:16px;margin-bottom:12px}
+.dasha-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.dasha-item{background:rgba(0,0,0,0.22);border-radius:8px;padding:9px 11px}
+.dasha-key{font-size:9px;color:var(--dim);margin-bottom:3px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px}
+.dasha-val{font-size:13px;color:#A78BFA;font-weight:600}
+
+/* Lagnas */
+.lagna{border-radius:11px;padding:14px;margin-bottom:10px;border-left:3px solid}
+.lagna-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px}
 .lagna-num{font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:2px}
-.lagna-date{font-size:10px;padding:2px 9px;border-radius:9px;font-weight:500}
-.lagna-text{font-size:13px;color:var(--text);line-height:1.7;margin-bottom:8px}
-.lagna-remedy{background:rgba(0,0,0,0.2);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--muted);line-height:1.6}
-.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-@media(max-width:480px){.compare-grid{grid-template-columns:1fr}}
-.compare-panel{background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.15);border-radius:11px;padding:14px}
-.agree-box{background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.2);border-radius:10px;padding:12px;margin-bottom:10px}
-.differ-box{background:rgba(230,126,34,0.07);border:1px solid rgba(230,126,34,0.2);border-radius:10px;padding:12px;margin-bottom:10px}
-.positive-box{background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.18);border-radius:11px;padding:14px;margin-bottom:14px}
-.tabs{display:flex;gap:2px;margin-bottom:12px;background:rgba(201,169,110,0.04);border-radius:10px;padding:3px;flex-wrap:wrap}
-.tab-btn{flex:1;min-width:44px;padding:8px 2px;border-radius:7px;border:none;cursor:pointer;font-family:'Crimson Pro',serif;font-size:10px;background:transparent;color:var(--dim);transition:all .2s}
-.tab-btn.active{background:rgba(201,169,110,0.22);color:var(--gold)}
-.tab-content{display:none}
-.tab-content.active{display:block;animation:fadeUp .3s ease}
-.item-card{border-radius:11px;padding:14px;margin-bottom:10px}
-.card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:4px}
-.clabel{font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:2px}
-.cbadge{font-size:10px;padding:2px 8px;border-radius:20px}
-.ctext{font-size:13px;color:var(--text);line-height:1.7;margin:0}
-.cdive{background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 10px;border-left:2px solid rgba(201,169,110,0.3);margin:6px 0;font-size:11px;color:var(--muted);font-style:italic}
-.cmeta{font-size:11px;color:var(--dim);margin-top:6px;font-style:italic}
-.gem-grid{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
-.gem-card{border-radius:13px;padding:15px}
-.gem-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0}
-/* Gem stones banner linking */
-.stone-concern-tag{display:inline-block;background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);border-radius:10px;padding:2px 8px;font-size:10px;color:var(--gold);margin:3px 2px}
-footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);border-radius:9px;text-align:center;font-size:11px;color:#4A3F2F;font-style:italic;line-height:1.7}
+.lagna-date{font-size:10px;padding:2px 9px;border-radius:9px}
+.lagna-body{font-size:13px;line-height:1.7;margin-bottom:8px}
+.lagna-rem{background:rgba(0,0,0,0.2);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--muted);line-height:1.6}
+
+/* Positive box */
+.pos-box{background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.16);border-radius:12px;padding:14px;margin-bottom:12px}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:rgba(201,169,110,0.03);border-radius:10px;padding:3px;flex-wrap:wrap;margin-bottom:10px}
+.tab-btn{flex:1;min-width:40px;padding:8px 2px;border-radius:7px;border:none;cursor:pointer;font-family:'Crimson Pro',serif;font-size:10px;background:transparent;color:var(--dim);transition:all .2s;text-align:center}
+.tab-btn.active{background:rgba(201,169,110,0.18);color:var(--gold)}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fadeUp .3s ease}
+
+/* Item cards */
+.item{border-radius:11px;padding:13px;margin-bottom:9px}
+.item-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:4px}
+.item-label{font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:2px}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px}
+.item-text{font-size:13px;color:var(--text);line-height:1.7}
+.dive{background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 10px;border-left:2px solid rgba(201,169,110,0.28);margin:6px 0;font-size:11px;color:var(--muted);font-style:italic}
+.dasha-conn{background:rgba(74,29,150,0.1);border-radius:6px;padding:7px 10px;border-left:2px solid rgba(139,92,246,0.4);margin:6px 0;font-size:11px;color:#A78BFA}
+.item-meta{font-size:11px;color:var(--dim);margin-top:6px;font-style:italic}
+
+/* Gems */
+.gem-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.gem-card{border-radius:13px;padding:14px}
+.gem-dot{width:32px;height:32px;border-radius:50%;flex-shrink:0}
+
+/* Compare */
+.agree-box{background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.18);border-radius:10px;padding:12px;margin-bottom:10px}
+.diff-box{background:rgba(230,126,34,0.06);border:1px solid rgba(230,126,34,0.18);border-radius:10px;padding:12px;margin-bottom:10px}
+.comp-bar{display:flex;gap:3px;margin-bottom:12px;background:rgba(201,169,110,0.03);border:1px solid rgba(201,169,110,0.13);border-radius:11px;padding:3px}
+.comp-btn{flex:1;padding:8px 3px;border-radius:8px;border:none;cursor:pointer;font-family:'Cinzel Decorative',cursive;font-size:8px;letter-spacing:1px;background:transparent;color:var(--dim);transition:all .2s;text-align:center}
+.comp-btn.active{color:var(--gold);background:rgba(201,169,110,0.13)}
+
+/* Stone concern tag */
+.stone-tag{display:inline-block;background:rgba(201,169,110,0.12);border:1px solid rgba(201,169,110,0.28);border-radius:9px;padding:2px 7px;font-size:10px;color:var(--gold);margin:2px}
+
+footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);border-radius:9px;text-align:center;font-size:11px;color:#3A2F1F;font-style:italic;line-height:1.7}
 </style>
 </head>
 <body>
+<canvas id="universe"></canvas>
 
-<!-- GALAXY CANVAS -->
-<canvas id="galaxy-canvas"></canvas>
-
-<!-- RIGHT HAND MODAL -->
-<div class="modal-overlay" id="hand-modal">
+<!-- MODAL — Why Right Hand -->
+<div class="modal-bg" id="modal-hand">
   <div class="modal-box">
     <div class="modal-title">✦ Why Right Hand? ✦</div>
-    <div class="modal-text">
-      In Vedic palmistry, the <strong style="color:var(--gold)">right hand is the active hand</strong> — it represents the life you are actively creating through your choices, actions, and karma earned in this lifetime.<br/><br/>
-      The right hand shows <strong style="color:var(--gold)">what you are doing with what you were given</strong> — your current destiny, career path, relationships, and the events unfolding in your life right now.<br/><br/>
-      This is why we always read the right hand — it gives the most accurate and current reading regardless of gender. The left hand shows inherited tendencies from birth, which is secondary information.<br/><br/>
-      <span style="color:var(--muted);font-style:italic;font-size:12px">For best results: palm facing up, fingers relaxed, natural position. Good lighting.</span>
+    <div style="font-size:13px;color:var(--text);line-height:1.8">
+      In Vedic palmistry, the <strong style="color:var(--gold)">right hand is the active hand</strong> — it represents the life you are actively living, creating and earning through your karma in this lifetime.<br/><br/>
+      The right hand shows your <strong style="color:var(--gold)">current destiny, career, relationships and unfolding events</strong>. This is why we always read the right hand — it gives the most accurate and current reading regardless of gender.<br/><br/>
+      <span style="color:var(--muted);font-size:12px;font-style:italic">Best results: palm facing up, fingers relaxed, good natural light.</span>
     </div>
-    <button class="modal-close" onclick="document.getElementById('hand-modal').classList.remove('active')">I Understand — Close</button>
+    <button class="modal-close" onclick="closeModal('modal-hand')">I Understand — Close</button>
   </div>
 </div>
 
-<!-- UPLOAD SCREEN -->
-<div id="screen-upload" class="screen active">
-  <div style="padding:20px 0 6px;text-align:center">
-    <div style="font-size:52px;animation:float 3s ease-in-out infinite;display:inline-block;margin-bottom:10px">🔮</div>
-    <div style="font-family:'Cinzel Decorative',cursive;font-size:clamp(22px,5vw,32px);color:var(--gold);animation:glow 3s ease-in-out infinite;margin-bottom:4px">HastRekha</div>
-    <div style="font-size:11px;color:var(--muted);letter-spacing:3px;font-style:italic;margin-bottom:6px">✦ Ancient Vedic Palm Reading ✦</div>
-    <div style="font-size:12px;color:var(--dim);margin-bottom:4px">✦ Ancient Wisdom · Modern Clarity ✦</div>
+<!-- SCREEN: UPLOAD -->
+<div id="scr-upload" class="screen active">
+  <div style="text-align:center;padding:18px 0 8px">
+    <div style="font-size:50px;animation:float 3.5s ease-in-out infinite;display:inline-block;margin-bottom:8px">🔮</div>
+    <div style="font-family:'Cinzel Decorative',cursive;font-size:clamp(22px,5vw,30px);color:var(--gold);animation:glow 3s ease-in-out infinite;margin-bottom:4px">HastRekha</div>
+    <div style="font-size:11px;color:var(--muted);letter-spacing:3px;font-style:italic;margin-bottom:3px">✦ Ancient Vedic Palm Reading ✦</div>
+    <div style="font-size:11px;color:var(--dim)">✦ Ancient Wisdom · Modern Clarity ✦</div>
   </div>
 
-  <!-- Ask Jyotishi CTA -->
-  <div class="jyotishi-bar" onclick="askJyotishi()">
-    <div class="jyotishi-icon">🧙‍♂️</div>
-    <div class="jyotishi-text">
-      <div class="jyotishi-title">Ask Our Jyotishi</div>
-      <div class="jyotishi-sub">Have a specific question? Get a personalised consultation from our expert Vedic astrologer.</div>
+  <div class="jbar" onclick="askJyotishi()">
+    <div class="jbar-icon">🧙‍♂️</div>
+    <div style="flex:1">
+      <div class="jbar-title">Ask Our Jyotishi</div>
+      <div class="jbar-sub">Have a specific question? Get a personalised consultation from our expert Vedic astrologer.</div>
     </div>
-    <div class="jyotishi-arrow">›</div>
+    <div style="color:var(--gold);font-size:18px">›</div>
   </div>
 
-  <div id="error-box" class="error-box" style="display:none"></div>
+  <div class="err" id="err-box"></div>
 
-  <!-- Engine Selection -->
-  <div class="form-card">
-    <label class="form-label">SELECT READING ENGINE</label>
-    <div class="engine-toggle">
-      <button class="engine-btn active" id="engine-ss" onclick="setEngine('samudrik')">✦ Classical<br/>Reading</button>
-      <button class="engine-btn" id="engine-hr" onclick="setEngine('hasta')">✦ Ancient<br/>Texts</button>
-      <button class="engine-btn" id="engine-both" onclick="setEngine('both')">⚖ Compare<br/>Both</button>
+  <div class="card">
+    <span class="gold-label">SELECT READING ENGINE</span>
+    <div class="eng-wrap">
+      <button class="eng-btn active" id="ebtn-ss" onclick="setEngine('samudrik')">✦ Classical<br/>Reading</button>
+      <button class="eng-btn" id="ebtn-hr" onclick="setEngine('hasta')">✦ Ancient<br/>Texts</button>
+      <button class="eng-btn" id="ebtn-both" onclick="setEngine('both')">⚖ Compare<br/>Both</button>
     </div>
-    <div class="engine-desc" id="engine-desc">Classical Vedic palmistry system with Vimshottari Dasha calculation</div>
+    <div class="eng-desc" id="eng-desc">Classical Vedic palmistry with Vimshottari Dasha calculation</div>
   </div>
 
-  <div class="form-card">
-    <label class="form-label">YOUR NAME</label>
-    <input id="inp-name" class="form-input" type="text" placeholder="Enter your full name"/>
+  <div class="card">
+    <span class="gold-label">YOUR FULL NAME</span>
+    <input id="inp-name" class="inp" type="text" placeholder="Enter your full name"/>
   </div>
 
-  <div class="form-card">
-    <label class="form-label">DATE OF BIRTH</label>
-    <input id="inp-dob" class="form-input" type="date"/>
+  <div class="card">
+    <span class="gold-label">DATE OF BIRTH</span>
+    <input id="inp-dob" class="inp" type="date"/>
     <p style="font-size:11px;color:var(--dim);margin-top:6px">Required for accurate Dasha period calculation</p>
   </div>
 
-  <div class="form-card">
-    <label class="form-label">GENDER</label>
-    <select id="inp-gender" class="form-select">
+  <div class="card">
+    <span class="gold-label">GENDER</span>
+    <select id="inp-gender" class="sel">
       <option value="">Select gender</option>
       <option value="male">Male</option>
       <option value="female">Female</option>
@@ -194,88 +209,87 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
     </select>
   </div>
 
-  <!-- Concerns — EXPANDED LIST -->
-  <div class="form-card">
-    <label class="form-label">YOUR PRIMARY CONCERNS <span style="font-size:9px;color:var(--dim)">(SELECT UP TO 3)</span></label>
-    <div id="concerns-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px"></div>
+  <div class="card">
+    <span class="gold-label">YOUR PRIMARY CONCERNS <span style="color:var(--dim);font-size:9px">(SELECT UP TO 3)</span></span>
+    <div class="concerns-grid" id="concerns-grid"></div>
   </div>
 
-  <!-- Palm Upload -->
-  <div class="form-card">
-    <label class="form-label">UPLOAD YOUR RIGHT PALM</label>
+  <div class="card">
+    <span class="gold-label">UPLOAD YOUR RIGHT PALM</span>
     <div class="hand-note">
-      <div class="hand-note-icon">✋</div>
-      <div class="hand-note-text">
+      <div style="font-size:20px;flex-shrink:0">✋</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">
         Please upload your <strong style="color:var(--gold)">right hand</strong> — palm facing the camera, fingers relaxed, in good light.
-        <br/><span class="hand-why-link" onclick="document.getElementById('hand-modal').classList.add('active')">Why right hand? Tap to learn more →</span>
+        <br/><span class="why-link" onclick="openModal('modal-hand')">Why right hand? Tap to learn more →</span>
       </div>
     </div>
-    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" style="margin-top:10px">
-      <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none"/>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-inp').click()" style="margin-top:10px">
+      <input type="file" id="file-inp" accept="image/*" capture="environment" style="display:none"/>
       <div id="upload-placeholder">
-        <div style="font-size:44px;opacity:.6;margin-bottom:10px">✋</div>
-        <p style="font-family:'Cinzel Decorative',cursive;font-size:12px;color:var(--gold);margin-bottom:5px">Tap to Upload Palm Photo</p>
+        <div style="font-size:42px;opacity:.55;margin-bottom:9px">✋</div>
+        <p style="font-family:'Cinzel Decorative',cursive;font-size:11px;color:var(--gold);margin-bottom:5px">Tap to Upload Palm Photo</p>
         <p style="font-size:12px;color:var(--dim)">Take photo or choose from gallery</p>
       </div>
       <img id="preview-img" style="display:none"/>
-      <p id="change-hint" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">Tap to change photo</p>
+      <p id="change-hint" style="display:none;font-size:11px;color:var(--dim);margin-top:7px">Tap to change photo</p>
     </div>
   </div>
 
-  <button class="btn-primary" id="read-btn" onclick="startReading()" disabled>✦ Read My Palm ✦</button>
-  <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:14px;font-style:italic;padding-bottom:30px">Your image is analysed securely and never stored permanently.</p>
+  <button class="btn-main" id="read-btn" onclick="startReading()" disabled>✦ Read My Palm ✦</button>
+  <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:12px;font-style:italic">Your image is analysed securely and never stored permanently.</p>
 </div>
 
-<!-- LOADING SCREEN -->
-<div id="screen-loading" class="screen">
+<!-- SCREEN: LOADING -->
+<div id="scr-loading" class="screen">
   <div class="loading-wrap">
-    <img id="loading-thumb" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,169,110,0.4);margin-bottom:24px;opacity:.7;display:none"/>
+    <img id="loading-thumb" style="width:76px;height:76px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,169,110,0.35);margin-bottom:22px;opacity:.65;display:none"/>
     <div class="spinner"></div>
-    <p class="loading-title" id="loading-msg">Analysing your palm…</p>
-    <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:10px;padding:14px 18px;max-width:320px;text-align:center;font-size:13px;color:var(--muted);line-height:1.65">
-      ⏳ <b style="color:var(--gold)">Please be patient.</b><br/>
-      Consulting ancient texts and<br/>calculating your Dasha period.<br/><br/>
+    <p class="loading-msg" id="loading-msg">Studying your palm…</p>
+    <div class="loading-note">
+      ⏳ <strong style="color:var(--gold)">Please be patient.</strong><br/>
+      Consulting ancient texts and calculating your Dasha period.<br/><br/>
       <span style="color:var(--dim);font-style:italic">This may take 60–90 seconds.</span>
     </div>
   </div>
 </div>
 
-<!-- RESULT SCREEN -->
-<div id="screen-result" class="screen">
+<!-- SCREEN: RESULT -->
+<div id="scr-result" class="screen">
   <div class="result-wrap">
     <div class="topbar">
-      <button class="btn-back" onclick="resetApp()">✋ New Reading</button>
-      <button class="btn-save" onclick="saveReading()">📄 Save PDF</button>
+      <button class="btn-sm" onclick="resetApp()">✋ New Reading</button>
+      <button class="btn-gold" onclick="savePDF()">📄 Save PDF</button>
     </div>
 
-    <div style="text-align:center;margin-bottom:14px">
-      <div style="font-size:28px;margin-bottom:5px">🔮</div>
-      <h1 style="font-family:'Cinzel Decorative',cursive;font-size:clamp(16px,4vw,22px);color:var(--gold);margin:0 0 3px">HastRekha</h1>
-      <p style="font-size:11px;color:var(--muted);font-style:italic;letter-spacing:2px" id="engine-result-label">✦ Classical Vedic Reading ✦</p>
+    <div style="text-align:center;margin-bottom:12px">
+      <div style="font-size:26px;margin-bottom:5px">🔮</div>
+      <h1 style="font-family:'Cinzel Decorative',cursive;font-size:clamp(15px,4vw,21px);color:var(--gold);margin:0 0 3px">HastRekha</h1>
+      <p id="result-engine-label" style="font-size:11px;color:var(--muted);font-style:italic;letter-spacing:2px">✦ Vedic Palm Reading ✦</p>
     </div>
 
-    <div id="comp-bar" style="display:none" class="comparison-bar">
-      <button class="comp-btn active" onclick="showEngine('ss')">✦ Classical</button>
-      <button class="comp-btn" onclick="showEngine('hr')">✦ Ancient Texts</button>
-      <button class="comp-btn" onclick="showEngine('compare')">⚖ Compare</button>
+    <!-- Compare bar — only shown when engine=both -->
+    <div id="comp-bar" style="display:none" class="comp-bar">
+      <button class="comp-btn active" onclick="showEngineView('ss')">✦ Classical</button>
+      <button class="comp-btn" onclick="showEngineView('hr')">✦ Ancient Texts</button>
+      <button class="comp-btn" onclick="showEngineView('compare')">⚖ Compare</button>
     </div>
 
     <!-- Overview -->
-    <div class="overview-card" id="ss-overview">
-      <div class="section-mini">✦ OVERALL READING ✦</div>
+    <div class="overview-card" id="r-overview">
+      <div class="sec-title">✦ OVERALL READING ✦</div>
       <p id="r-overall" style="font-size:14px;line-height:1.8;margin:0 0 8px"></p>
       <p id="r-handtype" style="font-size:11px;color:var(--muted);font-style:italic;margin:0 0 10px"></p>
-      <div style="padding:8px 12px;background:rgba(201,169,110,0.08);border-radius:8px;border:1px solid rgba(201,169,110,0.18);font-size:12px">
+      <div style="padding:8px 12px;background:rgba(201,169,110,0.07);border-radius:8px;border:1px solid rgba(201,169,110,0.16);font-size:12px">
         🌟 <span style="color:var(--gold)">Most Favorable Period: </span><strong id="r-lucky"></strong>
       </div>
     </div>
 
     <!-- Dasha -->
-    <div class="dasha-card" id="ss-dasha">
-      <div class="section-mini">✦ YOUR VEDIC DASHA ✦</div>
+    <div class="dasha-card" id="r-dasha">
+      <div class="sec-title" style="color:#A78BFA">✦ YOUR VEDIC DASHA ✦</div>
       <p id="r-dasha-summary" style="font-size:13px;line-height:1.7;margin-bottom:10px"></p>
       <div class="dasha-grid">
-        <div class="dasha-item"><div class="dasha-key">LIFE STAGE</div><div class="dasha-val" id="d-lifestage"></div></div>
+        <div class="dasha-item"><div class="dasha-key">LIFE STAGE</div><div class="dasha-val" id="d-stage"></div></div>
         <div class="dasha-item"><div class="dasha-key">AGE</div><div class="dasha-val" id="d-age"></div></div>
         <div class="dasha-item"><div class="dasha-key">MAHADASHA</div><div class="dasha-val" id="d-maha"></div></div>
         <div class="dasha-item"><div class="dasha-key">ANTARDASHA</div><div class="dasha-val" id="d-antar"></div></div>
@@ -284,32 +298,29 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
       </div>
     </div>
 
-    <!-- HR Overview -->
-    <div class="overview-card" id="hr-overview" style="display:none;border-color:rgba(142,68,173,0.35)">
-      <div class="section-mini" style="color:var(--purple)">✦ HASTA RAHASYA READING ✦</div>
+    <!-- HR overview — only when engine=hasta or both -->
+    <div class="overview-card" id="r-hr-overview" style="display:none;border-color:rgba(142,68,173,0.3)">
+      <div class="sec-title" style="color:#C084FC">✦ ANCIENT TEXTS READING ✦</div>
       <p id="r-hr-overall" style="font-size:14px;line-height:1.8;margin:0 0 8px"></p>
-      <p id="r-hr-handtype" style="font-size:11px;color:var(--muted);font-style:italic;margin:0 0 10px"></p>
-      <div style="padding:8px 12px;background:rgba(142,68,173,0.08);border-radius:8px;border:1px solid rgba(142,68,173,0.18);font-size:12px">
-        📚 <span style="color:var(--purple)">Book Source: </span><strong id="r-hr-source" style="color:var(--text)"></strong>
-      </div>
+      <p id="r-hr-handtype" style="font-size:11px;color:var(--muted);font-style:italic"></p>
     </div>
 
-    <!-- Compare View -->
-    <div id="compare-view" style="display:none">
-      <div class="section-mini" style="margin-bottom:10px">⚖ WHERE BOTH ENGINES AGREE</div>
-      <div class="agree-box" id="agree-content"></div>
-      <div class="section-mini" style="margin-bottom:10px;color:var(--orange)">⚡ WHERE THEY DIFFER</div>
-      <div class="differ-box" id="differ-content"></div>
+    <!-- Compare view -->
+    <div id="r-compare-view" style="display:none">
+      <div class="sec-title" style="margin-bottom:8px">⚖ WHERE BOTH AGREE — HIGH CONFIDENCE</div>
+      <div class="agree-box" id="r-agree"></div>
+      <div class="sec-title" style="margin-bottom:8px;color:var(--orange)">⚡ WHERE THEY DIFFER</div>
+      <div class="diff-box" id="r-differ"></div>
     </div>
 
-    <!-- Shubh Lagna -->
-    <div id="lagna-section">
-      <div class="section-mini" style="margin-bottom:12px">✦ SHUBH LAGNA WINDOWS ✦</div>
+    <!-- Shubh Lagnas -->
+    <div id="r-lagnas-section">
+      <div class="sec-title" style="margin-bottom:10px">✦ SHUBH LAGNA WINDOWS ✦</div>
       <div id="r-lagnas"></div>
     </div>
 
     <!-- Positive signs -->
-    <div class="positive-box">
+    <div class="pos-box">
       <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:9px">✦ AUSPICIOUS SIGNS IN YOUR PALM ✦</div>
       <div id="r-positive"></div>
     </div>
@@ -322,20 +333,19 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
       <button class="tab-btn" onclick="setTab('vastu')">🏠 Vastu</button>
       <button class="tab-btn" onclick="setTab('lifestyle')">🌿 Life</button>
     </div>
-    <div id="tab-problems" class="tab-content active"></div>
-    <div id="tab-remedies" class="tab-content"></div>
-    <div id="tab-gemstones" class="tab-content"></div>
-    <div id="tab-vastu" class="tab-content"></div>
-    <div id="tab-lifestyle" class="tab-content"></div>
+    <div id="tab-problems" class="tab-panel active"></div>
+    <div id="tab-remedies" class="tab-panel"></div>
+    <div id="tab-gemstones" class="tab-panel"></div>
+    <div id="tab-vastu" class="tab-panel"></div>
+    <div id="tab-lifestyle" class="tab-panel"></div>
 
-    <!-- Ask Jyotishi bottom -->
-    <div class="jyotishi-bar" onclick="askJyotishi()" style="margin-top:16px">
-      <div class="jyotishi-icon">🧙‍♂️</div>
-      <div class="jyotishi-text">
-        <div class="jyotishi-title">Questions About Your Reading?</div>
-        <div class="jyotishi-sub">Our Jyotishi can clarify and guide you further.</div>
+    <div class="jbar" onclick="askJyotishi()" style="margin-top:14px">
+      <div class="jbar-icon">🧙‍♂️</div>
+      <div style="flex:1">
+        <div class="jbar-title">Questions About Your Reading?</div>
+        <div class="jbar-sub">Our Jyotishi can provide a personalised consultation.</div>
       </div>
-      <div class="jyotishi-arrow">›</div>
+      <div style="color:var(--gold);font-size:18px">›</div>
     </div>
 
     <footer>For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>✦ HastRekha ✦ — Ancient Vedic Palm Reading</footer>
@@ -343,621 +353,727 @@ footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);bord
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// GLOBAL STATE — all variables declared here so every
+// function can access them without scope errors
+// ═══════════════════════════════════════════════════════════
 const SERVER = window.location.origin;
-const JYOTISHI_EMAIL = 'jyotishi@hastrekhha.com'; // CHANGE THIS to actual email
+const JYOTISHI_EMAIL = 'jyotish@hast-rekha.com';
 
-// ── UNIVERSE BACKGROUND — slow, cinematic, deep space ────────
-(function initUniverse(){
-  const canvas = document.getElementById('galaxy-canvas');
+// Reading state
+let imgData = null;
+let imgUrl = null;
+let currentReading = null;
+let hrReading = null;
+let selectedConcerns = [];
+let currentEngine = 'samudrik';
+let currentEngineView = 'ss';
+let currentTab = 'problems';
+
+// Computed from form — global so all functions can access
+let g_name = '';
+let g_dob = '';
+let g_gender = '';
+let g_age = 0;
+let g_stage = '';
+let g_dasha = null;
+
+// ── CONCERNS ─────────────────────────────────────────────
+const CONCERNS = [
+  'Career & Job','Marriage & Partnership','Finance & Wealth',
+  'Property & Home','Health & Wellbeing','Family Conflicts',
+  'Education & Studies','Foreign Travel & Settlement',
+  'Business & Entrepreneurship','Child & Parenthood',
+  'Legal Matters','Relationship & Love',
+  'Fertility & Conception','Mental Peace & Anxiety',
+  'Spiritual Growth','Debt & Financial Recovery'
+];
+
+// Gemstone → concern mapping
+const STONE_MAP = {
+  'Career & Job':['yellow_sapphire','blue_sapphire'],
+  'Marriage & Partnership':['diamond','pearl','emerald'],
+  'Finance & Wealth':['yellow_sapphire','hessonite','emerald'],
+  'Property & Home':['coral','ruby'],
+  'Health & Wellbeing':['ruby','pearl','coral'],
+  'Family Conflicts':['pearl','coral'],
+  'Education & Studies':['emerald','yellow_sapphire'],
+  'Foreign Travel & Settlement':['hessonite','cats_eye'],
+  'Business & Entrepreneurship':['emerald','yellow_sapphire','ruby'],
+  'Child & Parenthood':['pearl','coral','cats_eye'],
+  'Legal Matters':['yellow_sapphire','ruby'],
+  'Relationship & Love':['diamond','pearl'],
+  'Fertility & Conception':['pearl','coral','ruby'],
+  'Mental Peace & Anxiety':['pearl','blue_sapphire','cats_eye'],
+  'Spiritual Growth':['cats_eye','hessonite','yellow_sapphire'],
+  'Debt & Financial Recovery':['hessonite','blue_sapphire','yellow_sapphire']
+};
+
+const GEMS = {
+  ruby:{name:'Ruby (Manik)',planet:'Sun',color:'#E8294A',finger:'Ring finger, right hand'},
+  pearl:{name:'Pearl (Moti)',planet:'Moon',color:'#C8B89A',finger:'Little finger'},
+  coral:{name:'Red Coral (Moonga)',planet:'Mars',color:'#E8512A',finger:'Ring finger'},
+  emerald:{name:'Emerald (Panna)',planet:'Mercury',color:'#2ECC71',finger:'Little finger'},
+  yellow_sapphire:{name:'Yellow Sapphire (Pukhraj)',planet:'Jupiter',color:'#F4D03F',finger:'Index finger'},
+  diamond:{name:'Diamond (Heera)',planet:'Venus',color:'#85C1E9',finger:'Middle finger'},
+  blue_sapphire:{name:'Blue Sapphire (Neelam)',planet:'Saturn',color:'#2471A3',finger:'Middle finger'},
+  hessonite:{name:'Hessonite (Gomed)',planet:'Rahu',color:'#A04000',finger:'Middle finger'},
+  cats_eye:{name:"Cat's Eye (Lehsunia)",planet:'Ketu',color:'#8E44AD',finger:'Middle finger'}
+};
+
+const SC = {significant:'#E82929',moderate:'#E67E22',mild:'#F4D03F'};
+const SB = {significant:'rgba(232,41,41,0.07)',moderate:'rgba(230,126,34,0.07)',mild:'rgba(244,208,63,0.05)'};
+const LC = {
+  1:{color:'#16A085',bg:'rgba(22,160,133,0.07)'},
+  2:{color:'#E67E22',bg:'rgba(230,126,34,0.07)'},
+  3:{color:'#2471A3',bg:'rgba(36,113,163,0.07)'}
+};
+
+const ENG_DESCS = {
+  samudrik:'Classical Vedic palmistry with Vimshottari Dasha calculation',
+  hasta:'Ancient texts reading — based on 35 rare palmistry books including Indian, Cheiro and Benham traditions',
+  both:'Compare Both — see where Classical and Ancient Text readings agree (high confidence) and where they differ'
+};
+
+const LOAD_MSGS = [
+  'Studying your palm lines…',
+  'Reading the Fate Line…',
+  'Consulting ancient texts…',
+  'Calculating your Dasha period…',
+  'Identifying Shubh Lagna windows…',
+  'Almost ready…'
+];
+
+// ── UNIVERSE BACKGROUND ──────────────────────────────────
+(function(){
+  const canvas = document.getElementById('universe');
   const ctx = canvas.getContext('2d');
   let W, H;
   function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
   resize(); window.addEventListener('resize', resize);
 
-  // Distant stars — tiny, very slow parallax drift
   const stars = [];
-  for(let i=0;i<180;i++){
-    stars.push({
-      x: Math.random()*2-0.5,  // wider than screen for drift
-      y: Math.random(),
-      r: Math.random()*1.1+0.15,
-      op: Math.random()*0.55+0.15,
-      twinkleSpeed: Math.random()*0.0008+0.0002,
-      twinklePhase: Math.random()*Math.PI*2,
-      driftSpeed: (Math.random()-0.5)*0.000015  // very slow horizontal drift
-    });
-  }
+  for(let i=0;i<180;i++) stars.push({
+    x:Math.random()*2-0.5, y:Math.random(),
+    r:Math.random()*1.0+0.15, op:Math.random()*0.5+0.12,
+    ts:Math.random()*0.0008+0.0002, tp:Math.random()*Math.PI*2,
+    dx:(Math.random()-0.5)*0.000012
+  });
 
-  // Large distant planets — slow, majestic, in background
-  const bgPlanets = [
-    { x:0.12, y:0.18, r:28, c1:'#4A3560', c2:'#7B5EA0', c3:'#2A1540', glowC:'rgba(120,80,180,', rings:false, driftX:0.000006, driftY:0.000002 },
-    { x:0.85, y:0.72, r:38, c1:'#603A1A', c2:'#C87A30', c3:'#3A1A05', glowC:'rgba(200,120,40,', rings:true,  driftX:-0.000005, driftY:0.0000015 },
-    { x:0.70, y:0.08, r:16, c1:'#1A3A4A', c2:'#3A7A9A', c3:'#0A1A2A', glowC:'rgba(60,130,170,', rings:false, driftX:0.000008, driftY:0.000003 },
-    { x:0.02, y:0.62, r:22, c1:'#3A1A1A', c2:'#8A3030', c3:'#1A0808', glowC:'rgba(140,50,50,',  rings:false, driftX:0.000004, driftY:-0.000002 }
+  const PLANETS = [
+    {cx:0.12,cy:0.16,r:30,c1:'#4A3560',c2:'#7B5EA0',c3:'#2A1540',gc:'rgba(110,70,170,',rings:false,dx:0.0000055,dy:0.0000018},
+    {cx:0.86,cy:0.74,r:42,c1:'#603A1A',c2:'#C87A30',c3:'#3A1A05',gc:'rgba(200,120,40,',rings:true, dx:-0.0000045,dy:0.0000014},
+    {cx:0.72,cy:0.07,r:18,c1:'#1A3A4A',c2:'#3A7A9A',c3:'#0A1A2A',gc:'rgba(60,130,170,',rings:false,dx:0.0000070,dy:0.0000025},
+    {cx:0.03,cy:0.65,r:24,c1:'#3A1A1A',c2:'#8A3030',c3:'#1A0808',gc:'rgba(140,50,50,', rings:false,dx:0.0000038,dy:-0.0000018}
   ];
 
-  // Nebula clouds — very slow breathing colour washes
-  const nebulae = [
-    { x:0.25, y:0.30, rx:W*0.35, ry:H*0.28, c:'rgba(80,20,120,', phase:0.0,    speed:0.00018 },
-    { x:0.75, y:0.65, rx:W*0.40, ry:H*0.30, c:'rgba(20,50,100,', phase:2.1,    speed:0.00014 },
-    { x:0.50, y:0.15, rx:W*0.30, ry:H*0.20, c:'rgba(100,30,60,',  phase:4.2,    speed:0.00020 },
-    { x:0.10, y:0.80, rx:W*0.28, ry:H*0.22, c:'rgba(20,80,80,',   phase:1.05,   speed:0.00016 },
+  const NEBULAE = [
+    {x:0.25,y:0.30,rx:0,ry:0,c:'rgba(80,20,120,',ph:0.0,sp:0.00018},
+    {x:0.75,y:0.65,rx:0,ry:0,c:'rgba(20,50,100,',ph:2.1,sp:0.00014},
+    {x:0.50,y:0.12,rx:0,ry:0,c:'rgba(100,30,60,', ph:4.2,sp:0.00020},
+    {x:0.08,y:0.82,rx:0,ry:0,c:'rgba(20,80,80,',  ph:1.05,sp:0.00016}
   ];
 
-  // Milky way band — diagonal smear across screen
-  function drawMilkyWay(){
-    const g = ctx.createLinearGradient(0, H*0.2, W, H*0.8);
-    g.addColorStop(0,   'rgba(60,40,100,0)');
-    g.addColorStop(0.3, 'rgba(80,60,120,0.045)');
-    g.addColorStop(0.5, 'rgba(100,80,150,0.07)');
-    g.addColorStop(0.7, 'rgba(80,60,120,0.045)');
-    g.addColorStop(1,   'rgba(60,40,100,0)');
-    ctx.fillStyle=g;
-    ctx.fillRect(0,0,W,H);
-  }
-
-  let t = 0;
-  // Animate planet drift positions
-  bgPlanets.forEach(p=>{ p.cx=p.x; p.cy=p.y; });
-
+  let t=0;
   function draw(){
-    // ── Base: very dark deep space ──
-    ctx.fillStyle='#06040F';
-    ctx.fillRect(0,0,W,H);
+    // Deep space
+    ctx.fillStyle='#06040F'; ctx.fillRect(0,0,W,H);
 
-    // ── Milky Way diagonal band ──
-    drawMilkyWay();
+    // Update nebula sizes based on screen
+    NEBULAE.forEach(n=>{ n.rx=W*0.36; n.ry=H*0.28; });
 
-    // ── Nebula colour washes — very slow breathing ──
-    nebulae.forEach(n=>{
-      const a = 0.045 + 0.025*Math.sin(t*n.speed*100+n.phase);
-      const g = ctx.createRadialGradient(n.x*W,n.y*H,0,n.x*W,n.y*H,Math.max(n.rx,n.ry));
-      g.addColorStop(0, n.c+(a*1.4)+')');
-      g.addColorStop(0.4, n.c+(a*0.7)+')');
-      g.addColorStop(1,   n.c+'0)');
+    // Milky Way band
+    const mw=ctx.createLinearGradient(0,H*0.15,W,H*0.85);
+    mw.addColorStop(0,'rgba(60,40,100,0)');
+    mw.addColorStop(0.35,'rgba(80,60,130,0.04)');
+    mw.addColorStop(0.5,'rgba(100,80,160,0.065)');
+    mw.addColorStop(0.65,'rgba(80,60,130,0.04)');
+    mw.addColorStop(1,'rgba(60,40,100,0)');
+    ctx.fillStyle=mw; ctx.fillRect(0,0,W,H);
+
+    // Nebulae
+    NEBULAE.forEach(n=>{
+      const a=0.04+0.022*Math.sin(t*n.sp*100+n.ph);
+      const g=ctx.createRadialGradient(n.x*W,n.y*H,0,n.x*W,n.y*H,Math.max(n.rx,n.ry));
+      g.addColorStop(0,n.c+(a*1.35)+')');
+      g.addColorStop(0.4,n.c+(a*0.6)+')');
+      g.addColorStop(1,n.c+'0)');
       ctx.fillStyle=g;
       ctx.beginPath();
-      ctx.ellipse(n.x*W, n.y*H, n.rx*(0.98+0.04*Math.sin(t*n.speed*80)), n.ry*(0.98+0.04*Math.cos(t*n.speed*80)), 0, 0, Math.PI*2);
+      ctx.ellipse(n.x*W,n.y*H,n.rx*(0.97+0.04*Math.sin(t*n.sp*80)),n.ry*(0.97+0.04*Math.cos(t*n.sp*75)),0,0,Math.PI*2);
       ctx.fill();
     });
 
-    // ── Distant stars with very slow drift ──
+    // Stars
     stars.forEach(s=>{
-      s.x += s.driftSpeed;
-      if(s.x > 1.5) s.x = -0.5;
-      if(s.x < -0.5) s.x = 1.5;
-      const tw = s.op * (0.65 + 0.35*Math.sin(t*s.twinkleSpeed*100+s.twinklePhase));
-      ctx.globalAlpha = tw;
-      ctx.fillStyle = '#E8D5B0';
-      ctx.beginPath();
-      ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
-      ctx.fill();
+      s.x+=s.dx; if(s.x>1.5)s.x=-0.5; if(s.x<-0.5)s.x=1.5;
+      const tw=s.op*(0.6+0.4*Math.sin(t*s.ts*100+s.tp));
+      ctx.globalAlpha=tw;
+      ctx.fillStyle='#E8D5B0';
+      ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2); ctx.fill();
     });
     ctx.globalAlpha=1;
 
-    // ── Background planets — large, slow, majestic ──
-    bgPlanets.forEach(p=>{
-      // Very slow drift
-      p.cx += p.driftX;
-      p.cy += p.driftY;
-      if(p.cx>1.15) p.cx=1.15; if(p.cx<-0.15) p.cx=-0.15;
-      if(p.cy>0.95) p.cy=0.95; if(p.cy<0.05)  p.cy=0.05;
+    // Planets
+    PLANETS.forEach(p=>{
+      p.cx+=p.dx; p.cy+=p.dy;
+      if(p.cx>1.15)p.cx=1.15; if(p.cx<-0.15)p.cx=-0.15;
+      if(p.cy>0.94)p.cy=0.94; if(p.cy<0.04)p.cy=0.04;
       const px=p.cx*W, py=p.cy*H;
 
-      // Atmospheric glow
-      const atmospherePulse = 0.12 + 0.04*Math.sin(t*0.0003+p.x*5);
-      const atm = ctx.createRadialGradient(px,py,p.r*0.5,px,py,p.r*2.8);
-      atm.addColorStop(0, p.glowC+atmospherePulse+')');
-      atm.addColorStop(0.5, p.glowC+(atmospherePulse*0.4)+')');
-      atm.addColorStop(1, p.glowC+'0)');
-      ctx.fillStyle=atm;
-      ctx.beginPath();
-      ctx.arc(px,py,p.r*2.8,0,Math.PI*2);
-      ctx.fill();
+      // Atmosphere
+      const ap=0.11+0.035*Math.sin(t*0.00028+p.cx*5);
+      const atm=ctx.createRadialGradient(px,py,p.r*0.5,px,py,p.r*2.9);
+      atm.addColorStop(0,p.gc+ap+')');
+      atm.addColorStop(0.5,p.gc+(ap*0.35)+')');
+      atm.addColorStop(1,p.gc+'0)');
+      ctx.fillStyle=atm; ctx.beginPath(); ctx.arc(px,py,p.r*2.9,0,Math.PI*2); ctx.fill();
 
-      // Planet surface — gradient sphere
-      const surf = ctx.createRadialGradient(px-p.r*0.35,py-p.r*0.35,p.r*0.05,px,py,p.r);
-      surf.addColorStop(0, p.c2);
-      surf.addColorStop(0.45, p.c1);
-      surf.addColorStop(1, p.c3);
-      ctx.fillStyle=surf;
-      ctx.beginPath();
-      ctx.arc(px,py,p.r,0,Math.PI*2);
-      ctx.fill();
+      // Surface
+      const sf=ctx.createRadialGradient(px-p.r*0.35,py-p.r*0.35,p.r*0.05,px,py,p.r);
+      sf.addColorStop(0,p.c2); sf.addColorStop(0.45,p.c1); sf.addColorStop(1,p.c3);
+      ctx.fillStyle=sf; ctx.beginPath(); ctx.arc(px,py,p.r,0,Math.PI*2); ctx.fill();
 
-      // Subtle cloud bands
-      ctx.globalAlpha=0.12;
+      // Cloud bands
+      ctx.globalAlpha=0.10;
       for(let b=0;b<3;b++){
-        const by = py - p.r*0.5 + b*p.r*0.5 + Math.sin(t*0.0001+b)*p.r*0.08;
-        const bh = p.r*0.12;
-        ctx.fillStyle=p.c2;
-        ctx.beginPath();
-        ctx.ellipse(px,by,p.r*0.95,bh,0,0,Math.PI*2);
-        ctx.fill();
+        const by=py-p.r*0.45+b*p.r*0.48+Math.sin(t*0.00009+b)*p.r*0.07;
+        ctx.fillStyle=p.c2; ctx.beginPath();
+        ctx.ellipse(px,by,p.r*0.94,p.r*0.10,0,0,Math.PI*2); ctx.fill();
       }
       ctx.globalAlpha=1;
 
-      // Saturn-style rings for the orange planet
+      // Saturn rings
       if(p.rings){
-        ctx.globalAlpha=0.22;
-        const ringG = ctx.createLinearGradient(px-p.r*2.5,py,px+p.r*2.5,py);
-        ringG.addColorStop(0,'rgba(200,150,60,0)');
-        ringG.addColorStop(0.3,'rgba(200,150,60,0.5)');
-        ringG.addColorStop(0.5,'rgba(220,170,80,0.7)');
-        ringG.addColorStop(0.7,'rgba(200,150,60,0.5)');
-        ringG.addColorStop(1,'rgba(200,150,60,0)');
-        ctx.strokeStyle=ringG;
-        ctx.lineWidth=5;
-        ctx.beginPath();
-        ctx.ellipse(px,py,p.r*2.3,p.r*0.38,0.08,0,Math.PI*2);
-        ctx.stroke();
+        ctx.globalAlpha=0.20;
+        ctx.strokeStyle='#C8A850'; ctx.lineWidth=5;
+        ctx.beginPath(); ctx.ellipse(px,py,p.r*2.4,p.r*0.36,0.07,0,Math.PI*2); ctx.stroke();
         ctx.lineWidth=2.5;
-        ctx.beginPath();
-        ctx.ellipse(px,py,p.r*2.8,p.r*0.46,0.08,0,Math.PI*2);
-        ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(px,py,p.r*2.95,p.r*0.45,0.07,0,Math.PI*2); ctx.stroke();
         ctx.globalAlpha=1;
       }
 
-      // Specular highlight — light reflection
-      ctx.globalAlpha=0.18;
-      const hi=ctx.createRadialGradient(px-p.r*0.38,py-p.r*0.38,0,px-p.r*0.38,py-p.r*0.38,p.r*0.55);
-      hi.addColorStop(0,'rgba(255,255,255,0.9)');
-      hi.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle=hi;
-      ctx.beginPath();
-      ctx.arc(px-p.r*0.38,py-p.r*0.38,p.r*0.55,0,Math.PI*2);
-      ctx.fill();
+      // Specular highlight
+      ctx.globalAlpha=0.16;
+      const hi=ctx.createRadialGradient(px-p.r*0.37,py-p.r*0.37,0,px-p.r*0.37,py-p.r*0.37,p.r*0.52);
+      hi.addColorStop(0,'rgba(255,255,255,0.85)'); hi.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=hi; ctx.beginPath(); ctx.arc(px-p.r*0.37,py-p.r*0.37,p.r*0.52,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
     });
 
-    t++;
-    requestAnimationFrame(draw);
+    t++; requestAnimationFrame(draw);
   }
   draw();
 })();
 
-// ── CONCERNS LIST — EXPANDED ──────────────────────────────────
-const CONCERNS = [
-  "Career & Job","Marriage & Partnership","Finance & Wealth",
-  "Property & Home","Health & Wellbeing","Family Conflicts",
-  "Education & Studies","Foreign Travel & Settlement",
-  "Business & Entrepreneurship","Child & Parenthood",
-  "Legal Matters","Relationship & Love",
-  "Fertility & Conception","Mental Peace & Anxiety",
-  "Spiritual Growth","Debt & Financial Recovery"
-];
+// ── BUILD CONCERNS GRID ──────────────────────────────────
+(function(){
+  const grid = document.getElementById('concerns-grid');
+  CONCERNS.forEach(c=>{
+    const btn = document.createElement('button');
+    btn.className = 'concern-btn';
+    btn.textContent = c;
+    btn.onclick = function(){
+      if(selectedConcerns.includes(c)){
+        selectedConcerns = selectedConcerns.filter(x=>x!==c);
+        btn.classList.remove('selected');
+      } else if(selectedConcerns.length < 3){
+        selectedConcerns.push(c);
+        btn.classList.add('selected');
+      }
+    };
+    grid.appendChild(btn);
+  });
+})();
 
-const GEMS={ruby:{name:"Ruby (Manik)",planet:"Sun",color:"#E8294A",finger:"Ring finger, right hand"},pearl:{name:"Pearl (Moti)",planet:"Moon",color:"#C8B89A",finger:"Little finger"},coral:{name:"Red Coral (Moonga)",planet:"Mars",color:"#E8512A",finger:"Ring finger"},emerald:{name:"Emerald (Panna)",planet:"Mercury",color:"#2ECC71",finger:"Little finger"},yellow_sapphire:{name:"Yellow Sapphire (Pukhraj)",planet:"Jupiter",color:"#F4D03F",finger:"Index finger"},diamond:{name:"Diamond (Heera)",planet:"Venus",color:"#85C1E9",finger:"Middle finger"},blue_sapphire:{name:"Blue Sapphire (Neelam)",planet:"Saturn",color:"#2471A3",finger:"Middle finger"},hessonite:{name:"Hessonite (Gomed)",planet:"Rahu",color:"#A04000",finger:"Middle finger"},cats_eye:{name:"Cat's Eye (Lehsunia)",planet:"Ketu",color:"#8E44AD",finger:"Middle finger"}};
+// ── HELPERS ──────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function showErr(msg){ const b=document.getElementById('err-box'); b.textContent='⚠ '+msg; b.style.display='block'; }
+function hideErr(){ document.getElementById('err-box').style.display='none'; }
 
-const SC={significant:"#E82929",moderate:"#E67E22",mild:"#F4D03F"};
-const SB={significant:"rgba(232,41,41,0.08)",moderate:"rgba(230,126,34,0.08)",mild:"rgba(244,208,63,0.06)"};
-const LC={1:{color:"#16A085",bg:"rgba(22,160,133,0.08)"},2:{color:"#E67E22",bg:"rgba(230,126,34,0.08)"},3:{color:"#2471A3",bg:"rgba(36,113,163,0.08)"}};
-const MSGS=["Studying your palm lines…","Reading the Fate Line…","Consulting ancient texts…","Calculating your Dasha period…","Identifying Shubh Lagna windows…","Almost ready…"];
-
-const ENGINE_DESCS={
-  samudrik:"Classical Vedic palmistry with Vimshottari Dasha calculation",
-  hasta:"Ancient texts reading — based on 35 rare palmistry books including Indian, Cheiro and Benham traditions",
-  both:"Compare Both — see where Classical and Ancient Text readings agree (high confidence) and where they differ"
-};
-
-// Gemstone-to-concern mapping — THIS IS THE CORE LOGIC
-// Stones change based on what concerns user selected
-const CONCERN_STONE_MAP = {
-  "Career & Job":            ["yellow_sapphire","blue_sapphire"],
-  "Marriage & Partnership":  ["diamond","pearl","emerald"],
-  "Finance & Wealth":        ["yellow_sapphire","hessonite","emerald"],
-  "Property & Home":         ["coral","ruby"],
-  "Health & Wellbeing":      ["ruby","pearl","coral"],
-  "Family Conflicts":        ["pearl","coral"],
-  "Education & Studies":     ["emerald","yellow_sapphire"],
-  "Foreign Travel & Settlement":["hessonite","cats_eye"],
-  "Business & Entrepreneurship":["emerald","yellow_sapphire","ruby"],
-  "Child & Parenthood":      ["pearl","coral","cats_eye"],
-  "Legal Matters":           ["yellow_sapphire","ruby"],
-  "Relationship & Love":     ["diamond","pearl"],
-  "Fertility & Conception":  ["pearl","coral","ruby"],
-  "Mental Peace & Anxiety":  ["pearl","blue_sapphire","cats_eye"],
-  "Spiritual Growth":        ["cats_eye","hessonite","yellow_sapphire"],
-  "Debt & Financial Recovery":["hessonite","blue_sapphire","yellow_sapphire"]
-};
-
-let imgData=null,imgUrl=null,currentReading=null,hrReading=null;
-let selectedConcerns=[],currentEngine="samudrik",currentResultView="ss";
-
-// Build concerns grid
-const grid=document.getElementById("concerns-grid");
-CONCERNS.forEach(c=>{
-  const btn=document.createElement("button");
-  btn.textContent=c;
-  btn.style.cssText="padding:9px 10px;border-radius:8px;border:1px solid rgba(201,169,110,0.2);background:transparent;color:#9B8866;font-family:'Crimson Pro',serif;font-size:12px;cursor:pointer;text-align:left;transition:all .2s;line-height:1.3";
-  btn.onclick=function(){
-    if(selectedConcerns.includes(c)){
-      selectedConcerns=selectedConcerns.filter(x=>x!==c);
-      btn.style.background="transparent";btn.style.color="#9B8866";btn.style.borderColor="rgba(201,169,110,0.2)";
-    } else if(selectedConcerns.length<3){
-      selectedConcerns.push(c);
-      btn.style.background="rgba(201,169,110,0.15)";btn.style.color="#C9A96E";btn.style.borderColor="#C9A96E";
-    }
-  };
-  grid.appendChild(btn);
-});
-
-function setEngine(e){
-  currentEngine=e;
-  document.getElementById("engine-ss").classList.toggle("active",e==="samudrik");
-  document.getElementById("engine-hr").classList.toggle("active",e==="hasta");
-  document.getElementById("engine-both").classList.toggle("active",e==="both");
-  document.getElementById("engine-desc").textContent=ENGINE_DESCS[e];
+function calcAge(dob){
+  const b=new Date(dob), n=new Date();
+  let y=n.getFullYear()-b.getFullYear();
+  if(n.getMonth()-b.getMonth()<0||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate())) y--;
+  return y;
+}
+function getStage(age){
+  if(age<=12) return 'Child (0-12)';
+  if(age<=18) return 'Teenager (13-18)';
+  if(age<=25) return 'Young Adult (19-25)';
+  if(age<=45) return 'Working Professional (26-45)';
+  if(age<=60) return 'Middle Age (46-60)';
+  return 'Senior (60+)';
+}
+function calcDasha(dob){
+  const planets=['Ketu','Venus','Sun','Moon','Mars','Rahu','Jupiter','Saturn','Mercury'];
+  const years=[7,20,6,10,7,18,16,19,17];
+  const b=new Date(dob), now=new Date();
+  const ageYrs=(now-b)/(1000*60*60*24*365.25);
+  const bf=(b.getMonth()*30+b.getDate())/365;
+  let cum=(bf*120)%120, idx=0;
+  while(cum>years[idx]){cum-=years[idx];idx=(idx+1)%9;}
+  let elapsed=ageYrs, ci=idx, rem=years[idx]-cum;
+  if(elapsed<rem){
+    const e=new Date(now.getTime()+rem*365.25*24*3600*1000);
+    return{maha:planets[ci],antar:planets[(ci+1)%9],mahaEnds:e.toLocaleDateString('en-IN',{month:'short',year:'numeric'}),remaining:Math.round(rem*10)/10};
+  }
+  elapsed-=rem; ci=(ci+1)%9;
+  while(elapsed>years[ci]){elapsed-=years[ci];ci=(ci+1)%9;}
+  const remaining=years[ci]-elapsed;
+  const mahaEnds=new Date(now.getTime()+remaining*365.25*24*3600*1000);
+  return{maha:planets[ci],antar:planets[(ci+1)%9],mahaEnds:mahaEnds.toLocaleDateString('en-IN',{month:'short',year:'numeric'}),remaining:Math.round(remaining*10)/10};
 }
 
-document.getElementById("file-input").addEventListener("change",function(){
-  const file=this.files[0];if(!file)return;
+function getRecommendedStones(){
+  if(!selectedConcerns.length) return [];
+  const counts={};
+  selectedConcerns.forEach(c=>{ (STONE_MAP[c]||[]).forEach(s=>{ counts[s]=(counts[s]||0)+1; }); });
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+}
+
+function h2rgba(hex, alpha){
+  const h=hex.replace('#','');
+  const r=parseInt(h.slice(0,2),16)||200;
+  const g=parseInt(h.slice(2,4),16)||180;
+  const b=parseInt(h.slice(4,6),16)||140;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ── ENGINE TOGGLE ────────────────────────────────────────
+function setEngine(e){
+  currentEngine=e;
+  document.getElementById('ebtn-ss').classList.toggle('active',e==='samudrik');
+  document.getElementById('ebtn-hr').classList.toggle('active',e==='hasta');
+  document.getElementById('ebtn-both').classList.toggle('active',e==='both');
+  document.getElementById('eng-desc').textContent=ENG_DESCS[e];
+}
+
+// ── FILE UPLOAD ──────────────────────────────────────────
+document.getElementById('file-inp').addEventListener('change',function(){
+  const file=this.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
     imgUrl=e.target.result;
-    const parts=imgUrl.split(",");const m=parts[0].match(/:(.*?);/);
-    imgData={data:parts[1],mediaType:m?m[1]:"image/jpeg"};
-    document.getElementById("upload-placeholder").style.display="none";
-    const img=document.getElementById("preview-img");img.src=imgUrl;img.style.display="block";
-    document.getElementById("change-hint").style.display="block";
-    document.getElementById("read-btn").disabled=false;
-    document.getElementById("error-box").style.display="none";
+    const parts=imgUrl.split(',');
+    const m=parts[0].match(/:(.*?);/);
+    imgData={data:parts[1],mediaType:m?m[1]:'image/jpeg'};
+    document.getElementById('upload-placeholder').style.display='none';
+    const img=document.getElementById('preview-img');
+    img.src=imgUrl; img.style.display='block';
+    document.getElementById('change-hint').style.display='block';
+    document.getElementById('read-btn').disabled=false;
+    hideErr();
   };
   reader.readAsDataURL(file);
 });
 
-function showScreen(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById("screen-"+id).classList.add("active");window.scrollTo(0,0);}
-function calcAge(dob){const b=new Date(dob),n=new Date();let y=n.getFullYear()-b.getFullYear();if(n.getMonth()-b.getMonth()<0||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))y--;return y;}
-function lifeStage(age){return age<=12?"Child (0-12)":age<=18?"Teenager (13-18)":age<=25?"Young Adult (19-25)":age<=45?"Working Professional (26-45)":age<=60?"Middle Age (46-60)":"Senior (60+)";}
-function calcDasha(dob){
-  const planets=["Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury"];
-  const years=[7,20,6,10,7,18,16,19,17];
-  const b=new Date(dob),now=new Date();
-  const ageYears=(now-b)/(1000*60*60*24*365.25);
-  const birthFraction=(b.getMonth()*30+b.getDate())/365;
-  let cumulative=(birthFraction*120)%120,idx=0;
-  while(cumulative>years[idx]){cumulative-=years[idx];idx=(idx+1)%9;}
-  let elapsed=ageYears,currentIdx=idx,remainingInFirst=years[idx]-cumulative;
-  if(elapsed<remainingInFirst){const e=new Date(now.getTime()+remainingInFirst*365.25*24*3600*1000);return{maha:planets[currentIdx],antar:planets[(currentIdx+1)%9],mahaEnds:e.toLocaleDateString("en-IN",{month:"short",year:"numeric"}),mahaRemainingYears:Math.round(remainingInFirst*10)/10};}
-  elapsed-=remainingInFirst;currentIdx=(currentIdx+1)%9;
-  while(elapsed>years[currentIdx]){elapsed-=years[currentIdx];currentIdx=(currentIdx+1)%9;}
-  const remaining=years[currentIdx]-elapsed;
-  const mahaEnds=new Date(now.getTime()+remaining*365.25*24*3600*1000);
-  return{maha:planets[currentIdx],antar:planets[(currentIdx+1)%9],mahaEnds:mahaEnds.toLocaleDateString("en-IN",{month:"short",year:"numeric"}),mahaRemainingYears:Math.round(remaining*10)/10};
-}
-
-// Get recommended stones based on concerns selected
-function getRecommendedStones(){
-  if(selectedConcerns.length===0) return null;
-  const counts={};
-  selectedConcerns.forEach(c=>{
-    (CONCERN_STONE_MAP[c]||[]).forEach(s=>{counts[s]=(counts[s]||0)+1;});
-  });
-  // Sort by frequency — stone that appears most across selected concerns comes first
-  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
-}
-
+// ── ASK JYOTISHI ────────────────────────────────────────
 function askJyotishi(){
-  const name=document.getElementById("inp-name").value||"";
-  const dob=document.getElementById("inp-dob").value||"";
-  const concerns=selectedConcerns.join(", ")||"General enquiry";
-  const subject=encodeURIComponent("HastRekha — Consultation Request");
-  const body=encodeURIComponent(`Namaste,
-
-I would like to request a personalised consultation.
-
-Name: ${name}
-Date of Birth: ${dob}
-Primary Concerns: ${concerns}
-
-Please let me know the next steps.
-
-Thank you`);
+  const name=document.getElementById('inp-name').value||g_name||'';
+  const dob=document.getElementById('inp-dob').value||g_dob||'';
+  const concerns=selectedConcerns.join(', ')||'General enquiry';
+  const readingSummary=currentReading?
+    `\n\n---- MY READING SUMMARY ----\nHand Type: ${currentReading.hand_type||''}\nFavorable Period: ${currentReading.lucky_period||''}\nAfflicted Planet: ${currentReading.afflicted_planet||''}\nDasha: ${g_dasha?g_dasha.maha+' Mahadasha, '+g_dasha.antar+' Antardasha':''}\n`:'';
+  const subject=encodeURIComponent('HastRekha — Consultation Request');
+  const body=encodeURIComponent(`Namaste,\n\nI would like to request a personalised consultation.\n\nName: ${name}\nDate of Birth: ${dob}\nConcerns: ${concerns}${readingSummary}\nMy Question:\n[Please type your specific question here]\n\nThank you`);
   window.location.href=`mailto:${JYOTISHI_EMAIL}?subject=${subject}&body=${body}`;
 }
 
+// ── START READING ────────────────────────────────────────
 async function startReading(){
-  if(!imgData)return;
-  const name=document.getElementById("inp-name").value.trim()||"You";
-  const dob=document.getElementById("inp-dob").value;
-  const gender=document.getElementById("inp-gender").value;
-  if(!dob){showError("Please enter your date of birth for accurate Dasha calculation");return;}
-  const age=calcAge(dob);const stage=lifeStage(age);const dasha=calcDasha(dob);
-  showScreen("loading");
-  if(imgUrl){const t=document.getElementById("loading-thumb");t.src=imgUrl;t.style.display="block";}
-  let mi=0;document.getElementById("loading-msg").textContent=MSGS[0];
-  const interval=setInterval(()=>{mi=(mi+1)%MSGS.length;document.getElementById("loading-msg").textContent=MSGS[mi];},3500);
-  const fetchTO=(url,opts,ms)=>{const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(url,{...opts,signal:c.signal}).finally(()=>clearTimeout(t));};
+  if(!imgData) return;
+  g_name=document.getElementById('inp-name').value.trim()||'You';
+  g_dob=document.getElementById('inp-dob').value;
+  g_gender=document.getElementById('inp-gender').value;
+  if(!g_dob){ showErr('Please enter your date of birth for accurate Dasha calculation'); return; }
+  g_age=calcAge(g_dob);
+  g_stage=getStage(g_age);
+  g_dasha=calcDasha(g_dob);
+  hideErr();
+  showScreen('scr-loading');
+  if(imgUrl){
+    const t=document.getElementById('loading-thumb');
+    t.src=imgUrl; t.style.display='block';
+  }
+  let mi=0;
+  document.getElementById('loading-msg').textContent=LOAD_MSGS[0];
+  const interval=setInterval(()=>{
+    mi=(mi+1)%LOAD_MSGS.length;
+    document.getElementById('loading-msg').textContent=LOAD_MSGS[mi];
+  },3500);
+
+  function fetchTO(url,opts,ms){
+    const c=new AbortController();
+    const t=setTimeout(()=>c.abort(),ms);
+    return fetch(url,{...opts,signal:c.signal}).finally(()=>clearTimeout(t));
+  }
+
   try{
-    try{await fetchTO(SERVER+"/health",{method:"GET"},65000);}catch(_){}
-    let res,data;
+    // Wake up server
+    try{ await fetchTO(SERVER+'/health',{method:'GET'},60000); }catch(_){}
+    let res, data;
     for(let attempt=0;attempt<2;attempt++){
       try{
-        res=await fetchTO(SERVER+"/read-palm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageData:imgData.data,mediaType:imgData.mediaType,name,dob,gender,concerns:selectedConcerns,engine:currentEngine})},130000);
-        data=await res.json();break;
-      }catch(e){if(attempt>=1)throw e;await new Promise(r=>setTimeout(r,4000));}
+        res=await fetchTO(SERVER+'/read-palm',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            imageData:imgData.data,
+            mediaType:imgData.mediaType,
+            name:g_name, dob:g_dob, gender:g_gender,
+            concerns:selectedConcerns,
+            engine:currentEngine
+          })
+        },130000);
+        data=await res.json();
+        break;
+      }catch(e){
+        if(attempt>=1) throw e;
+        await new Promise(r=>setTimeout(r,4000));
+      }
     }
     clearInterval(interval);
-    if(!res.ok||data.error)throw new Error(data.error||"Server error "+res.status);
-    if(!data.reading)throw new Error("Empty reading from server");
-    // Attach metadata
-    data.reading._meta={name,age,stage,dob,dasha,concerns:selectedConcerns,engine:currentEngine};
-    currentReading=data.reading;hrReading=data.hrReading||null;
-    renderReading(data.reading,data.hrReading,dasha,age,stage);
-    showScreen("result");
+    if(!res.ok||data.error) throw new Error(data.error||'Server error '+res.status);
+    if(!data.reading) throw new Error('Empty reading from server');
+    currentReading=data.reading;
+    hrReading=data.hrReading||null;
+    renderReading();
+    showScreen('scr-result');
   }catch(err){
     clearInterval(interval);
     let msg=err.message;
-    if(err.name==="AbortError")msg="Request timed out. Please wait 30 seconds and try again.";
-    else if(msg.includes("Failed to fetch"))msg="Cannot reach server. Please try again.";
-    showError(msg);showScreen("upload");
+    if(err.name==='AbortError') msg='Request timed out. Please try again.';
+    else if(msg.includes('Failed to fetch')) msg='Cannot reach server. Please try again.';
+    showErr(msg);
+    showScreen('scr-upload');
   }
 }
 
-function showError(msg){const b=document.getElementById("error-box");b.textContent="⚠ "+msg;b.style.display="block";}
+// ── RENDER READING ───────────────────────────────────────
+function renderReading(){
+  const R=currentReading;
+  const HR=hrReading;
 
-function showEngine(view){
-  currentResultView=view;
-  document.querySelectorAll(".comp-btn").forEach((b,i)=>{b.classList.toggle("active",["ss","hr","compare"][i]===view);});
-  document.getElementById("ss-overview").style.display=view==="hr"?"none":"block";
-  document.getElementById("ss-dasha").style.display=view==="hr"?"none":"block";
-  document.getElementById("hr-overview").style.display=view==="ss"?"none":"block";
-  document.getElementById("compare-view").style.display=view==="compare"?"block":"none";
-  document.getElementById("lagna-section").style.display=view==="compare"?"none":"block";
-}
+  // Engine label
+  const labels={samudrik:'✦ Classical Vedic Reading ✦',hasta:'✦ Ancient Texts Reading ✦',both:'✦ Complete Vedic Reading ✦'};
+  document.getElementById('result-engine-label').textContent=labels[currentEngine]||labels.samudrik;
 
-function renderReading(R,HR,dasha,age,stage){
-  const engineLabels={samudrik:"✦ Classical Vedic Reading ✦",hasta:"✦ Ancient Texts Reading ✦",both:"✦ Complete Vedic Reading ✦"};
-  document.getElementById("engine-result-label").textContent=engineLabels[currentEngine]||engineLabels.samudrik;
-  document.getElementById("comp-bar").style.display=currentEngine==="both"?"flex":"none";
-  document.getElementById("r-overall").textContent=R.overall_energy||"";
-  document.getElementById("r-handtype").textContent="Hand: "+(R.hand_type||"")+(R.life_stage_reading?" | "+R.life_stage_reading:"");
-  document.getElementById("r-lucky").textContent=R.lucky_period||"";
-  document.getElementById("r-dasha-summary").textContent=R.dasha_summary||"";
-  document.getElementById("d-lifestage").textContent=stage;
-  document.getElementById("d-age").textContent=age+" years";
-  document.getElementById("d-maha").textContent=(dasha.maha||"")+" Dasha";
-  document.getElementById("d-antar").textContent=(dasha.antar||"")+" Antar";
-  document.getElementById("d-afflicted").textContent=R.afflicted_planet||dasha.maha;
-  document.getElementById("d-ends").textContent=dasha.mahaEnds;
+  // Compare bar
+  document.getElementById('comp-bar').style.display=currentEngine==='both'?'flex':'none';
+
+  // Overview
+  document.getElementById('r-overall').textContent=R.overall_energy||'';
+  document.getElementById('r-handtype').textContent='Hand: '+(R.hand_type||'')+(R.life_stage_reading?' | '+R.life_stage_reading:'');
+  document.getElementById('r-lucky').textContent=R.lucky_period||'';
+
+  // Dasha
+  document.getElementById('r-dasha-summary').textContent=R.dasha_summary||'';
+  document.getElementById('d-stage').textContent=g_stage;
+  document.getElementById('d-age').textContent=g_age+' years';
+  document.getElementById('d-maha').textContent=(g_dasha.maha||'')+' Dasha';
+  document.getElementById('d-antar').textContent=(g_dasha.antar||'')+' Antar';
+  document.getElementById('d-afflicted').textContent=R.afflicted_planet||g_dasha.maha;
+  document.getElementById('d-ends').textContent=g_dasha.mahaEnds;
+
+  // HR overview
   if(HR){
-    document.getElementById("r-hr-overall").textContent=HR.overall_energy||"";
-    document.getElementById("r-hr-handtype").textContent="Hand: "+(HR.hand_type||"");
-    document.getElementById("r-hr-source").textContent=HR.book_source||"35 Ancient Palmistry Books";
+    document.getElementById('r-hr-overall').textContent=HR.overall_energy||'';
+    document.getElementById('r-hr-handtype').textContent='Hand: '+(HR.hand_type||'');
     buildComparison(R,HR);
   }
+
   // Shubh Lagnas
-  const lc=document.getElementById("r-lagnas");lc.innerHTML="";
-  (R.shubh_lagnas||[]).forEach(l=>{const c=LC[l.number]||LC[1];lc.innerHTML+=`<div class="lagna-card" style="background:${c.bg};border-left-color:${c.color}"><div class="lagna-header"><span class="lagna-num" style="color:${c.color}">SHUBH LAGNA ${l.number} — ${l.probability||""}</span><span class="lagna-date" style="background:${c.color}22;color:${c.color}">📅 ${l.window||""}</span></div><p class="lagna-text">${l.what_will_happen||""}</p><div class="lagna-remedy"><b style="color:${c.color}">Remedy before window:</b> ${l.remedy_before||""}<br/><b style="color:#9CA3AF">If missed:</b> ${l.if_missed||""}</div></div>`;});
-  // Positive
-  const pb=document.getElementById("r-positive");pb.innerHTML="";
-  (R.positive_signs||[]).forEach(s=>{pb.innerHTML+=`<div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start"><span style="color:var(--green);flex-shrink:0">◈</span><span style="font-size:13px;color:#C4D8B0;line-height:1.6">${s.en}</span></div>`;});
+  const lc=document.getElementById('r-lagnas');
+  lc.innerHTML='';
+  (R.shubh_lagnas||[]).forEach(l=>{
+    const c=LC[l.number]||LC[1];
+    lc.innerHTML+=`<div class="lagna" style="background:${c.bg};border-left-color:${c.color}">
+      <div class="lagna-hdr">
+        <span class="lagna-num" style="color:${c.color}">SHUBH LAGNA ${l.number} — ${l.probability||''}</span>
+        <span class="lagna-date" style="background:${c.color}22;color:${c.color}">📅 ${l.window||''}</span>
+      </div>
+      <p class="lagna-body" style="color:var(--text)">${l.what_will_happen||''}</p>
+      <div class="lagna-rem"><b style="color:${c.color}">Remedy before window:</b> ${l.remedy_before||''}<br/><b style="color:#9CA3AF">If missed:</b> ${l.if_missed||''}</div>
+    </div>`;
+  });
+
+  // Positive signs
+  const pb=document.getElementById('r-positive');
+  pb.innerHTML='';
+  (R.positive_signs||[]).forEach(s=>{
+    pb.innerHTML+=`<div style="display:flex;gap:8px;margin-bottom:7px;align-items:flex-start"><span style="color:var(--green);flex-shrink:0">◈</span><span style="font-size:13px;color:#C4D8B0;line-height:1.6">${s.en}</span></div>`;
+  });
+
   // Problems
-  document.getElementById("tab-problems").innerHTML=(R.problems||[]).map(p=>`<div class="item-card" style="background:${SB[p.severity]||"rgba(201,169,110,0.05)"};border:1px solid ${SC[p.severity]||"#C9A96E"}36;border-left:3px solid ${SC[p.severity]||"#C9A96E"}"><div class="card-hdr"><span class="clabel" style="color:${SC[p.severity]}">${(p.area||"").toUpperCase()}</span><span class="cbadge" style="background:${SC[p.severity]}18;color:${SC[p.severity]}">${p.severity}</span></div><p class="ctext">${p.issue||""}</p>${p.deepDive?`<div class="cdive">🔍 ${p.deepDive}</div>`:""}${p.dasha_connection?`<div class="cdive" style="border-color:var(--gold)">🪐 ${p.dasha_connection}</div>`:""}<p class="cmeta">${p.line||""}</p></div>`).join("");
+  document.getElementById('tab-problems').innerHTML=(R.problems||[]).map(p=>`
+    <div class="item" style="background:${SB[p.severity]||'rgba(201,169,110,0.05)'};border:1px solid ${SC[p.severity]||'#C9A96E'}33;border-left:3px solid ${SC[p.severity]||'#C9A96E'}">
+      <div class="item-hdr">
+        <span class="item-label" style="color:${SC[p.severity]}">${(p.area||'').toUpperCase()}</span>
+        <span class="badge" style="background:${SC[p.severity]}15;color:${SC[p.severity]}">${p.severity}</span>
+      </div>
+      <p class="item-text">${p.issue||''}</p>
+      ${p.deepDive?`<div class="dive">🔍 ${p.deepDive}</div>`:''}
+      ${p.dasha_connection?`<div class="dasha-conn">🪐 ${p.dasha_connection}</div>`:''}
+      <p class="item-meta">${p.line||''}</p>
+    </div>`).join('');
+
   // Remedies
-  document.getElementById("tab-remedies").innerHTML=(R.remedies||[]).map(r=>`<div class="item-card" style="background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.18)"><div class="card-hdr"><span class="clabel" style="color:var(--gold)">${r.type||""}</span><span style="font-size:10px;color:var(--muted)">🕐 ${r.timing||""}</span></div><p class="ctext">${r.remedy||""}</p>${r.planet_target?`<p class="cmeta">Targets: ${r.planet_target} | For: ${r.for||""}</p>`:""}</div>`).join("");
+  document.getElementById('tab-remedies').innerHTML=(R.remedies||[]).map(r=>`
+    <div class="item" style="background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.16)">
+      <div class="item-hdr">
+        <span class="item-label" style="color:var(--gold)">${r.type||''}</span>
+        <span style="font-size:10px;color:var(--muted)">🕐 ${r.timing||''}</span>
+      </div>
+      <p class="item-text">${r.remedy||''}</p>
+      ${r.planet_target?`<p class="item-meta">Targets: ${r.planet_target} | For: ${r.for||''}</p>`:''}
+    </div>`).join('');
 
-  // GEMSTONES — concern-aware prioritisation
-  const recommendedStones = getRecommendedStones();
-  function h2r(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?parseInt(r[1],16)+","+parseInt(r[2],16)+","+parseInt(r[3],16):"201,169,110";}
-  const gemsToShow = R.gemstones || [];
-  // Add concern tags showing WHY this stone was recommended
-  function getConcernTagsForStone(stoneKey){
-    return selectedConcerns.filter(c=>(CONCERN_STONE_MAP[c]||[]).includes(stoneKey))
-      .map(c=>`<span class="stone-concern-tag">${c}</span>`).join("");
+  // Gemstones
+  const recommended=getRecommendedStones();
+  document.getElementById('tab-gemstones').innerHTML=
+    (recommended.length?`<div style="background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.18);border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.6"><b style="color:var(--gold)">✦ Personalised</b> based on your concerns: <b style="color:var(--text)">${selectedConcerns.join(', ')||'General reading'}</b></div>`:'')+
+    `<div class="gem-grid">${(R.gemstones||[]).map(g=>{
+      const gm=GEMS[g.stone]||{name:g.stone,planet:'—',color:'#C9A96E',finger:'—'};
+      const isTop=recommended.indexOf(g.stone)<2 && recommended.length>0;
+      const tags=selectedConcerns.filter(c=>(STONE_MAP[c]||[]).includes(g.stone)).map(c=>`<span class="stone-tag">${c}</span>`).join('');
+      return `<div class="gem-card" style="background:linear-gradient(135deg,${h2rgba(gm.color,0.07)},rgba(0,0,0,0.2));border:1px solid ${gm.color}33;border-top:3px solid ${gm.color}">
+        ${isTop?`<div style="font-size:9px;color:${gm.color};font-family:'Cinzel Decorative',cursive;letter-spacing:1px;margin-bottom:6px">★ PRIMARY</div>`:''}
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+          <div class="gem-dot" style="background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 12px ${gm.color}44"></div>
+          <div>
+            <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${gm.color};margin-bottom:2px">${gm.name}</div>
+            <div style="font-size:10px;color:var(--dim)">${gm.planet}</div>
+          </div>
+        </div>
+        ${tags?`<div style="margin-bottom:7px">${tags}</div>`:''}
+        <p style="font-size:12px;color:#C4AD8A;margin:0 0 9px;line-height:1.6">${g.reason||''}</p>
+        ${g.test_first==='yes'?`<div style="background:rgba(232,41,41,0.07);border-radius:6px;padding:5px 8px;font-size:11px;color:#fca5a5;margin-bottom:7px">⚠ Test before wearing</div>`:''}
+        ${g.mantra?`<div style="background:rgba(201,169,110,0.06);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--gold);margin-bottom:7px">🕉 ${g.mantra}</div>`:''}
+        <div style="border-top:1px solid rgba(201,169,110,0.1);padding-top:7px">
+          ${[['Weight',g.weight],['Metal',g.metal],['First Wear',g.day_to_wear],['Finger',gm.finger]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--dim)">${k}</span><span style="font-size:10px;color:#C4AD8A">${v||''}</span></div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+
+  // Vastu
+  document.getElementById('tab-vastu').innerHTML=(R.vastu||[]).map(v=>`
+    <div class="item" style="background:rgba(201,169,110,0.03);border:1px solid rgba(201,169,110,0.16);border-left:3px solid var(--gold)">
+      <div class="item-label" style="color:var(--gold);margin-bottom:6px">🧭 ${(v.direction||'').toUpperCase()}</div>
+      <p class="item-text">${v.en||''}</p>
+    </div>`).join('');
+
+  // Lifestyle
+  document.getElementById('tab-lifestyle').innerHTML=(R.lifestyle||[]).map(l=>`
+    <div class="item" style="background:rgba(46,204,113,0.03);border:1px solid rgba(46,204,113,0.14);border-left:3px solid var(--green)">
+      <div class="item-label" style="color:var(--green);margin-bottom:6px">🌿 ${(l.title||'').toUpperCase()}</div>
+      <p class="item-text">${l.en||''}</p>
+    </div>`).join('');
+
+  // Show correct view if both engines
+  if(currentEngine==='both' && HR){
+    showEngineView('ss');
+  } else {
+    document.getElementById('r-hr-overview').style.display='none';
+    document.getElementById('r-compare-view').style.display='none';
   }
-  document.getElementById("tab-gemstones").innerHTML=`
-    ${recommendedStones&&recommendedStones.length>0?`<div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.6">
-      <b style="color:var(--gold)">✦ Stones below are personalised</b> based on your selected concerns: <b style="color:var(--text)">${selectedConcerns.join(", ")||"General reading"}</b>. The palm reading further refines which stones suit you.
-    </div>`:""}
-    <div class="gem-grid">${gemsToShow.map(g=>{const gm=GEMS[g.stone]||{name:g.stone,planet:"—",color:"#C9A96E",finger:"—"};const concernTags=getConcernTagsForStone(g.stone);const isRecommended=recommendedStones&&recommendedStones.indexOf(g.stone)<2;return`<div class="gem-card" style="background:linear-gradient(135deg,rgba(${h2r(gm.color)},0.08),rgba(201,169,110,0.03));border:1px solid ${gm.color}36;border-top:3px solid ${gm.color}${isRecommended?' box-shadow:0 0 20px '+gm.color+'20':''}">
-      ${isRecommended?`<div style="font-size:9px;color:${gm.color};font-family:'Cinzel Decorative',cursive;letter-spacing:1px;margin-bottom:6px">★ PRIMARY RECOMMENDATION</div>`:""}
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><div class="gem-dot" style="background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 13px ${gm.color}50"></div><div><div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${gm.color};margin-bottom:2px">${gm.name}</div><div style="font-size:10px;color:var(--dim)">${gm.planet}</div></div></div>
-      ${concernTags?`<div style="margin-bottom:8px">${concernTags}</div>`:""}
-      <p style="font-size:12px;color:#C4AD8A;margin:0 0 10px;line-height:1.6">${g.reason||""}</p>
-      ${g.test_first==="yes"?`<div style="background:rgba(232,41,41,0.08);border-radius:6px;padding:6px 8px;font-size:11px;color:#fca5a5;margin-bottom:8px">⚠ Test before wearing — keep under pillow on Saturday night first</div>`:""}
-      ${g.mantra?`<div style="background:rgba(201,169,110,0.06);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--gold);margin-bottom:8px">🕉 ${g.mantra}</div>`:""}
-      <div style="border-top:1px solid rgba(201,169,110,0.12);padding-top:8px">${[["Weight",g.weight],["Metal",g.metal],["First Wear",g.day_to_wear],["Finger",gm.finger]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--dim)">${k}</span><span style="font-size:10px;color:#C4AD8A">${v||""}</span></div>`).join("")}</div>
-    </div>`}).join("")}</div>`;
-
-  document.getElementById("tab-vastu").innerHTML=(R.vastu||[]).map(v=>`<div class="item-card" style="background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.2);border-left:3px solid var(--gold)"><div class="clabel" style="color:var(--gold);margin-bottom:6px">🧭 ${(v.direction||"").toUpperCase()}</div><p class="ctext">${v.en||""}</p></div>`).join("");
-  document.getElementById("tab-lifestyle").innerHTML=(R.lifestyle||[]).map(l=>`<div class="item-card" style="background:rgba(46,204,113,0.04);border:1px solid rgba(46,204,113,0.15);border-left:3px solid var(--green)"><div class="clabel" style="color:var(--green);margin-bottom:6px">🌿 ${(l.title||"").toUpperCase()}</div><p class="ctext">${l.en||""}</p></div>`).join("");
 }
 
 function buildComparison(R,HR){
-  if(!HR)return;
   const agree=[],differ=[];
-  if(R.hand_type&&HR.hand_type){if(R.hand_type.slice(0,6).toLowerCase()===HR.hand_type.slice(0,6).toLowerCase())agree.push(`✅ Hand Type: Both engines agree — ${R.hand_type}`);else differ.push(`✋ Hand Type:<br/>Samudrik: ${R.hand_type}<br/>Hasta Rahasya: ${HR.hand_type}`);}
-  const rAreas=(R.problems||[]).map(p=>p.area.toLowerCase());const hrAreas=(HR.problems||[]).map(p=>p.area.toLowerCase());
-  const common=rAreas.filter(a=>hrAreas.some(h=>h.slice(0,5)===a.slice(0,5)));
-  if(common.length>0)agree.push(`✅ Problem Areas: Both identify issues in — ${common.join(", ")}`);
-  if(R.lucky_period&&HR.lucky_period){if(R.lucky_period.slice(0,8)===HR.lucky_period.slice(0,8))agree.push(`✅ Favorable Period: Both agree — ${R.lucky_period}`);else differ.push(`📅 Favorable Period:<br/>Samudrik: ${R.lucky_period}<br/>Hasta Rahasya: ${HR.lucky_period}`);}
-  document.getElementById("agree-content").innerHTML=agree.length?agree.map(a=>`<p style="font-size:13px;color:#C4D8B0;margin-bottom:8px;line-height:1.65">${a}</p>`).join(""):`<p style="font-size:13px;color:var(--muted)">Run both engines to see agreements.</p>`;
-  document.getElementById("differ-content").innerHTML=differ.length?differ.map(d=>`<p style="font-size:13px;color:#E8D5B0;margin-bottom:10px;line-height:1.65">${d}</p>`).join(""):`<p style="font-size:13px;color:var(--muted)">No significant differences — high confidence reading.</p>`;
+  if(R.hand_type&&HR.hand_type){
+    if(R.hand_type.slice(0,6).toLowerCase()===HR.hand_type.slice(0,6).toLowerCase())
+      agree.push(`✅ Hand Type: Both agree — ${R.hand_type}`);
+    else differ.push(`✋ Hand Type:<br/>Classical: ${R.hand_type}<br/>Ancient Texts: ${HR.hand_type}`);
+  }
+  const ra=(R.problems||[]).map(p=>p.area.toLowerCase());
+  const ha=(HR.problems||[]).map(p=>p.area.toLowerCase());
+  const common=ra.filter(a=>ha.some(h=>h.slice(0,5)===a.slice(0,5)));
+  if(common.length) agree.push(`✅ Problem Areas: Both identify — ${common.join(', ')}`);
+  if(R.lucky_period&&HR.lucky_period){
+    if(R.lucky_period.slice(0,8)===HR.lucky_period.slice(0,8))
+      agree.push(`✅ Favorable Period: Both agree — ${R.lucky_period}`);
+    else differ.push(`📅 Favorable Period:<br/>Classical: ${R.lucky_period}<br/>Ancient Texts: ${HR.lucky_period}`);
+  }
+  document.getElementById('r-agree').innerHTML=agree.length?agree.map(a=>`<p style="font-size:13px;color:#C4D8B0;margin-bottom:7px;line-height:1.65">${a}</p>`).join(''):`<p style="font-size:13px;color:var(--muted)">Run both engines to see agreements.</p>`;
+  document.getElementById('r-differ').innerHTML=differ.length?differ.map(d=>`<p style="font-size:13px;color:var(--text);margin-bottom:9px;line-height:1.65">${d}</p>`).join(''):`<p style="font-size:13px;color:var(--muted)">No significant differences — high confidence.</p>`;
+}
+
+function showEngineView(view){
+  currentEngineView=view;
+  document.querySelectorAll('.comp-btn').forEach((b,i)=>b.classList.toggle('active',['ss','hr','compare'][i]===view));
+  document.getElementById('r-overview').style.display=view==='hr'?'none':'block';
+  document.getElementById('r-dasha').style.display=view==='hr'?'none':'block';
+  document.getElementById('r-hr-overview').style.display=view==='ss'?'none':'block';
+  document.getElementById('r-compare-view').style.display=view==='compare'?'block':'none';
+  document.getElementById('r-lagnas-section').style.display=view==='compare'?'none':'block';
 }
 
 function setTab(name){
-  const tabs=["problems","remedies","gemstones","vastu","lifestyle"];
-  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",tabs[i]===name));
-  document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
-  document.getElementById("tab-"+name).classList.add("active");
+  const tabs=['problems','remedies','gemstones','vastu','lifestyle'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  currentTab=name;
 }
 
 function resetApp(){
-  imgData=null;imgUrl=null;currentReading=null;hrReading=null;selectedConcerns=[];
-  document.getElementById("preview-img").style.display="none";
-  document.getElementById("upload-placeholder").style.display="block";
-  document.getElementById("change-hint").style.display="none";
-  document.getElementById("read-btn").disabled=true;
-  document.getElementById("error-box").style.display="none";
-  document.getElementById("file-input").value="";
-  document.querySelectorAll("#concerns-grid button").forEach(b=>{b.style.background="transparent";b.style.color="#9B8866";b.style.borderColor="rgba(201,169,110,0.2)";});
-  showScreen("upload");
+  imgData=null; imgUrl=null; currentReading=null; hrReading=null;
+  selectedConcerns=[]; currentEngine='samudrik'; g_name=''; g_dob=''; g_age=0; g_stage=''; g_dasha=null;
+  document.getElementById('preview-img').style.display='none';
+  document.getElementById('upload-placeholder').style.display='block';
+  document.getElementById('change-hint').style.display='none';
+  document.getElementById('read-btn').disabled=true;
+  document.getElementById('file-inp').value='';
+  document.querySelectorAll('.concern-btn').forEach(b=>b.classList.remove('selected'));
+  setEngine('samudrik');
+  hideErr();
+  showScreen('scr-upload');
 }
 
-// ── PDF GENERATION — DARK MYSTICAL THEME ─────────────────────
-function saveReading(){
-  if(!currentReading)return;
-  const R=currentReading;const M=R._meta||{};
-  const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
-  const LC2={1:"#16A085",2:"#D4A017",3:"#2471A3"};
-  const SC2={significant:"#C0392B",moderate:"#D35400",mild:"#B7950B"};
+// ── SAVE PDF ─────────────────────────────────────────────
+function savePDF(){
+  if(!currentReading) return;
+  const R=currentReading;
+  const date=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  const LC2={1:'#16A085',2:'#D4A017',3:'#2471A3'};
+  const SC2={significant:'#C0392B',moderate:'#D35400',mild:'#B7950B'};
 
   function sec(emoji,title,content){
-    return`<div style="margin-bottom:32px;page-break-inside:avoid">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <span style="font-size:20px">${emoji}</span>
-        <div style="flex:1;border-bottom:1px solid rgba(201,169,110,0.4);padding-bottom:6px">
-          <span style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:#C9A96E;letter-spacing:3px">${title}</span>
-        </div>
-      </div>
-      ${content}
-    </div>`;
+    return `<div style="margin-bottom:28px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:18px">${emoji}</span><div style="flex:1;border-bottom:1px solid rgba(201,169,110,0.35);padding-bottom:5px"><span style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:#C9A96E;letter-spacing:3px">${title}</span></div></div>${content}</div>`;
   }
 
-  const lagnaHTML=(R.shubh_lagnas||[]).map(l=>{const c=LC2[l.number]||"#C9A96E";return`<div style="background:rgba(255,255,255,0.04);border:1px solid ${c}55;border-left:4px solid ${c};border-radius:10px;padding:16px;margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;flex-wrap:wrap;gap:6px">
-      <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${c};letter-spacing:2px">SHUBH LAGNA ${l.number} — ${l.probability}</span>
-      <span style="font-size:11px;background:${c}22;color:${c};padding:3px 10px;border-radius:10px">📅 ${l.window}</span>
-    </div>
-    <p style="font-size:13px;line-height:1.8;color:#E8D5B0;margin:0 0 10px">${l.what_will_happen}</p>
-    <div style="background:rgba(0,0,0,0.3);border-radius:7px;padding:10px 12px;font-size:12px;color:#9B8866;line-height:1.65">
-      <b style="color:${c}">Remedy before window:</b> ${l.remedy_before}<br/>
-      <b style="color:#6B5B40">If missed:</b> ${l.if_missed}
-    </div>
-  </div>`}).join("");
-
-  const probHTML=(R.problems||[]).map(p=>`<div style="background:rgba(255,255,255,0.03);border:1px solid ${SC2[p.severity]||"#C9A96E"}44;border-left:3px solid ${SC2[p.severity]||"#C9A96E"};border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center">
-      <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${SC2[p.severity]};letter-spacing:2px">${p.area}</span>
-      <span style="font-size:10px;background:${SC2[p.severity]}22;color:${SC2[p.severity]};padding:2px 9px;border-radius:9px">${p.severity}</span>
-    </div>
-    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 8px">${p.issue}</p>
-    ${p.deepDive?`<div style="background:rgba(0,0,0,0.25);border-radius:6px;border-left:2px solid rgba(201,169,110,0.3);padding:8px 10px;font-size:11px;color:#9B8866;font-style:italic;margin-bottom:6px">🔍 ${p.deepDive}</div>`:""}
-    ${p.dasha_connection?`<div style="background:rgba(0,0,0,0.2);border-radius:6px;border-left:2px solid rgba(201,169,110,0.5);padding:8px 10px;font-size:11px;color:#C9A96E;">🪐 ${p.dasha_connection}</div>`:""}
-    <p style="font-size:11px;color:#6B5B40;margin-top:7px;font-style:italic">${p.line}</p>
-  </div>`).join("");
-
-  const remHTML=(R.remedies||[]).map(r=>`<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.2);border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px">${r.type}</span>
-      <span style="font-size:10px;color:#6B5B40">🕐 ${r.timing}</span>
-    </div>
-    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 6px">${r.remedy}</p>
-    ${r.planet_target?`<p style="font-size:11px;color:#9B8866;margin:0">Targets: ${r.planet_target}</p>`:""}
-  </div>`).join("");
-
-  function h2r(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?parseInt(r[1],16)+","+parseInt(r[2],16)+","+parseInt(r[3],16):"201,169,110";}
-  const gemHTML=(R.gemstones||[]).map(g=>{const gm=GEMS[g.stone]||{name:g.stone,planet:"—",color:"#C9A96E",finger:"—"};return`<div style="background:linear-gradient(135deg,rgba(${h2r(gm.color)},0.08),rgba(0,0,0,0.2));border:1px solid ${gm.color}44;border-top:3px solid ${gm.color};border-radius:12px;padding:16px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-      <div style="width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 14px ${gm.color}66;flex-shrink:0"></div>
-      <div>
-        <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${gm.color};margin-bottom:2px">${gm.name}</div>
-        <div style="font-size:11px;color:#6B5B40">Planet: ${gm.planet}</div>
+  const lagnaHTML=(R.shubh_lagnas||[]).map(l=>{
+    const c=LC2[l.number]||'#C9A96E';
+    return `<div style="background:rgba(255,255,255,0.03);border:1px solid ${c}44;border-left:4px solid ${c};border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center;flex-wrap:wrap;gap:5px">
+        <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${c};letter-spacing:2px">SHUBH LAGNA ${l.number} — ${l.probability}</span>
+        <span style="font-size:11px;background:${c}22;color:${c};padding:2px 9px;border-radius:9px">📅 ${l.window}</span>
       </div>
-    </div>
-    <p style="font-size:13px;color:#E8D5B0;line-height:1.7;margin:0 0 12px">${g.reason}</p>
-    ${g.mantra?`<div style="background:rgba(201,169,110,0.08);border-radius:7px;padding:8px 12px;font-size:11px;color:#C9A96E;margin-bottom:10px">🕉 ${g.mantra}</div>`:""}
-    ${g.test_first==="yes"?`<div style="background:rgba(220,38,38,0.1);border-radius:7px;padding:8px 12px;font-size:11px;color:#FCA5A5;margin-bottom:10px">⚠ Test before wearing</div>`:""}
-    <table style="width:100%;font-size:11px;border-collapse:collapse">
-      ${[["Weight",g.weight],["Metal",g.metal],["First Wear",g.day_to_wear],["Finger",gm.finger]].map(([k,v])=>`<tr><td style="padding:4px 0;color:#6B5B40;width:80px">${k}</td><td style="padding:4px 0;color:#C4AD8A">${v||""}</td></tr>`).join("")}
-    </table>
-  </div>`}).join("");
+      <p style="font-size:13px;line-height:1.8;color:#E8D5B0;margin:0 0 9px">${l.what_will_happen}</p>
+      <div style="background:rgba(0,0,0,0.3);border-radius:7px;padding:9px 11px;font-size:12px;color:#9B8866;line-height:1.65">
+        <b style="color:${c}">Remedy before window:</b> ${l.remedy_before}<br/>
+        <b style="color:#6B5B40">If missed:</b> ${l.if_missed}
+      </div>
+    </div>`;
+  }).join('');
 
-  const vastuHTML=(R.vastu||[]).map(v=>`<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.2);border-left:3px solid #C9A96E;border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px;margin-bottom:8px">🧭 ${(v.direction||"").toUpperCase()}</div>
-    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0">${v.en}</p>
-  </div>`).join("");
+  const probHTML=(R.problems||[]).map(p=>`
+    <div style="background:rgba(255,255,255,0.03);border:1px solid ${SC2[p.severity]||'#C9A96E'}44;border-left:3px solid ${SC2[p.severity]||'#C9A96E'};border-radius:10px;padding:13px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:7px">
+        <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${SC2[p.severity]};letter-spacing:2px">${p.area}</span>
+        <span style="font-size:10px;background:${SC2[p.severity]}22;color:${SC2[p.severity]};padding:2px 8px;border-radius:8px">${p.severity}</span>
+      </div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 7px">${p.issue}</p>
+      ${p.deepDive?`<div style="background:rgba(0,0,0,0.25);border-radius:6px;border-left:2px solid rgba(201,169,110,0.28);padding:7px 10px;font-size:11px;color:#9B8866;font-style:italic;margin-bottom:5px">🔍 ${p.deepDive}</div>`:''}
+      ${p.dasha_connection?`<div style="background:rgba(74,29,150,0.12);border-radius:6px;border-left:2px solid rgba(139,92,246,0.4);padding:7px 10px;font-size:11px;color:#A78BFA">🪐 ${p.dasha_connection}</div>`:''}
+      <p style="font-size:11px;color:#6B5B40;margin-top:6px;font-style:italic">${p.line}</p>
+    </div>`).join('');
 
-  const lifeHTML=(R.lifestyle||[]).map(l=>`<div style="background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.2);border-left:3px solid #2ECC71;border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:2px;margin-bottom:8px">🌿 ${(l.title||"").toUpperCase()}</div>
-    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0">${l.en}</p>
-  </div>`).join("");
+  const remHTML=(R.remedies||[]).map(r=>`
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.18);border-radius:10px;padding:13px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:7px">
+        <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px">${r.type}</span>
+        <span style="font-size:10px;color:#6B5B40">🕐 ${r.timing}</span>
+      </div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 5px">${r.remedy}</p>
+      ${r.planet_target?`<p style="font-size:11px;color:#9B8866">Targets: ${r.planet_target}</p>`:''}
+    </div>`).join('');
 
-  const posHTML=(R.positive_signs||[]).map(s=>`<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
-    <span style="color:#2ECC71;font-size:16px;flex-shrink:0;line-height:1.6">◈</span>
-    <p style="font-size:13px;line-height:1.7;color:#C4D8B0;margin:0">${s.en}</p>
-  </div>`).join("");
+  const gemHTML=(R.gemstones||[]).map(g=>{
+    const gm=GEMS[g.stone]||{name:g.stone,planet:'—',color:'#C9A96E',finger:'—'};
+    return `<div style="background:linear-gradient(135deg,${h2rgba(gm.color,0.07)},rgba(0,0,0,0.2));border:1px solid ${gm.color}44;border-top:3px solid ${gm.color};border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:10px">
+        <div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 13px ${gm.color}55;flex-shrink:0"></div>
+        <div>
+          <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${gm.color};margin-bottom:2px">${gm.name}</div>
+          <div style="font-size:11px;color:#6B5B40">Planet: ${gm.planet}</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#E8D5B0;line-height:1.7;margin:0 0 10px">${g.reason}</p>
+      ${g.mantra?`<div style="background:rgba(201,169,110,0.07);border-radius:6px;padding:7px 10px;font-size:11px;color:#C9A96E;margin-bottom:8px">🕉 ${g.mantra}</div>`:''}
+      ${g.test_first==='yes'?`<div style="background:rgba(232,41,41,0.08);border-radius:6px;padding:7px 10px;font-size:11px;color:#FCA5A5;margin-bottom:8px">⚠ Test before wearing</div>`:''}
+      <table style="width:100%;font-size:11px;border-collapse:collapse">
+        ${[['Weight',g.weight],['Metal',g.metal],['First Wear',g.day_to_wear],['Finger',gm.finger]].map(([k,v])=>`<tr><td style="padding:3px 0;color:#6B5B40;width:80px">${k}</td><td style="color:#C4AD8A">${v||''}</td></tr>`).join('')}
+      </table>
+    </div>`;
+  }).join('');
+
+  const vastuHTML=(R.vastu||[]).map(v=>`
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.18);border-left:3px solid #C9A96E;border-radius:10px;padding:13px;margin-bottom:9px">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px;margin-bottom:7px">🧭 ${(v.direction||'').toUpperCase()}</div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0">${v.en}</p>
+    </div>`).join('');
+
+  const lifeHTML=(R.lifestyle||[]).map(l=>`
+    <div style="background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.18);border-left:3px solid #2ECC71;border-radius:10px;padding:13px;margin-bottom:9px">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:2px;margin-bottom:7px">🌿 ${(l.title||'').toUpperCase()}</div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0">${l.en}</p>
+    </div>`).join('');
+
+  const posHTML=(R.positive_signs||[]).map(s=>`
+    <div style="display:flex;gap:10px;margin-bottom:9px;align-items:flex-start">
+      <span style="color:#2ECC71;font-size:15px;flex-shrink:0">◈</span>
+      <p style="font-size:13px;line-height:1.7;color:#C4D8B0;margin:0">${s.en}</p>
+    </div>`).join('');
 
   const html=`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"/>
-<title>HastRekha — ${M.name||"Palm Reading"}</title>
+<html><head><meta charset="UTF-8"/>
+<title>HastRekha — ${g_name}</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Crimson Pro',Georgia,serif;background:linear-gradient(135deg,#0D0A1A 0%,#1A0D2E 50%,#0D1A2E 100%);min-height:100vh;color:#E8D5B0;max-width:760px;margin:0 auto;padding:36px 24px;font-size:14px;line-height:1.75}
-.pbtn{display:block;margin:0 auto 24px;padding:13px 32px;background:linear-gradient(135deg,#8B6914,#C9A96E);color:#0D0A1A;border:none;border-radius:28px;font-size:14px;cursor:pointer;font-family:'Cinzel Decorative',cursive;letter-spacing:2px;font-weight:700}
-@media print{.pbtn,.no-print{display:none!important}body{background:#0D0A1A;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-</style>
-</head>
-<body>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Crimson Pro',Georgia,serif;background:linear-gradient(135deg,#06040F,#0D0820,#06040F);min-height:100vh;color:#E8D5B0;max-width:740px;margin:0 auto;padding:32px 22px;font-size:14px;line-height:1.75}
+.pbtn{display:block;margin:0 auto 22px;padding:12px 30px;background:linear-gradient(135deg,#8B6914,#C9A96E);color:#06040F;border:none;border-radius:26px;font-size:14px;cursor:pointer;font-family:'Cinzel Decorative',cursive;letter-spacing:2px;font-weight:700}
+@media print{.pbtn{display:none}body{background:#06040F;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+</head><body>
 <button class="pbtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
-
-<!-- HEADER -->
-<div style="text-align:center;margin-bottom:28px">
-  <div style="width:70px;height:70px;background:radial-gradient(circle,rgba(201,169,110,0.3),transparent);border:1px solid rgba(201,169,110,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:32px">🔮</div>
-  <h1 style="font-family:'Cinzel Decorative',cursive;font-size:28px;color:#C9A96E;margin-bottom:6px;letter-spacing:2px">✦ HastRekha ✦</h1>
-  <p style="font-size:11px;color:#9B8866;letter-spacing:4px;margin-bottom:4px">ANCIENT VEDIC PALM READING</p>
+<div style="text-align:center;margin-bottom:24px">
+  <div style="width:62px;height:62px;background:radial-gradient(circle,rgba(201,169,110,0.25),transparent);border:1px solid rgba(201,169,110,0.28);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px">🔮</div>
+  <h1 style="font-family:'Cinzel Decorative',cursive;font-size:26px;color:#C9A96E;margin-bottom:5px;letter-spacing:2px">✦ HastRekha ✦</h1>
+  <p style="font-size:11px;color:#9B8866;letter-spacing:4px;margin-bottom:3px">ANCIENT VEDIC PALM READING</p>
   <p style="font-size:12px;color:#6B5B40">${date}</p>
 </div>
-
-<!-- NAME BANNER -->
-<div style="background:linear-gradient(135deg,rgba(201,169,110,0.12),rgba(139,105,20,0.06));border:1px solid rgba(201,169,110,0.3);border-radius:12px;padding:16px 20px;margin-bottom:24px;text-align:center">
-  <p style="font-family:'Cinzel Decorative',cursive;font-size:14px;color:#C9A96E;letter-spacing:2px;margin-bottom:5px">${M.name||""}</p>
-  <p style="font-size:12px;color:#9B8866">Age: ${M.age||""} years · ${M.stage||""} · Engine: ${currentEngine==="both"?"Both Engines":currentEngine==="hasta"?"Ancient Texts":"Classical Vedic"}</p>
-  ${(M.concerns||[]).length>0?`<p style="font-size:11px;color:#6B5B40;margin-top:5px">Concerns: ${M.concerns.join(", ")}</p>`:""}
+<div style="background:linear-gradient(135deg,rgba(201,169,110,0.1),rgba(139,105,20,0.04));border:1px solid rgba(201,169,110,0.28);border-radius:12px;padding:16px 20px;margin-bottom:22px;text-align:center">
+  <p style="font-family:'Cinzel Decorative',cursive;font-size:13px;color:#C9A96E;letter-spacing:2px;margin-bottom:5px">${g_name}</p>
+  <p style="font-size:12px;color:#9B8866">Age: ${g_age} years · ${g_stage}${selectedConcerns.length?' · Concerns: '+selectedConcerns.join(', '):''}</p>
 </div>
-
-<!-- DIVIDER -->
-<div style="border-top:1px solid rgba(201,169,110,0.25);margin:20px 0"></div>
-
-<!-- OVERALL -->
-<div style="background:linear-gradient(135deg,rgba(201,169,110,0.1),rgba(139,105,20,0.05));border:1px solid rgba(201,169,110,0.28);border-radius:12px;padding:20px;margin-bottom:20px">
-  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:3px;margin-bottom:12px">✦ OVERALL READING ✦</div>
-  <p style="font-size:14px;line-height:1.85;color:#E8D5B0;margin:0 0 10px">${R.overall_energy||""}</p>
-  <p style="font-size:12px;color:#9B8866;font-style:italic;margin:0 0 12px">${R.hand_type||""}</p>
-  <div style="background:rgba(201,169,110,0.1);border-radius:8px;padding:10px 14px;border:1px solid rgba(201,169,110,0.2);font-size:13px;color:#C9A96E">
-    🌟 Most Favorable Period: <strong style="color:#E8D5B0">${R.lucky_period||""}</strong>
+<div style="border-top:1px solid rgba(201,169,110,0.22);margin:18px 0"></div>
+<div style="background:linear-gradient(135deg,rgba(201,169,110,0.09),rgba(139,105,20,0.03));border:1px solid rgba(201,169,110,0.26);border-radius:12px;padding:18px;margin-bottom:18px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:3px;margin-bottom:10px">✦ OVERALL READING ✦</div>
+  <p style="font-size:14px;line-height:1.85;color:#E8D5B0;margin:0 0 9px">${R.overall_energy||''}</p>
+  <p style="font-size:12px;color:#9B8866;font-style:italic;margin:0 0 10px">${R.hand_type||''}</p>
+  <div style="background:rgba(201,169,110,0.09);border-radius:8px;padding:9px 13px;border:1px solid rgba(201,169,110,0.18);font-size:13px;color:#C9A96E">🌟 Favorable Period: <strong style="color:#E8D5B0">${R.lucky_period||''}</strong></div>
+</div>
+<div style="background:rgba(74,29,150,0.1);border:1px solid rgba(139,92,246,0.22);border-radius:12px;padding:16px;margin-bottom:18px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#A78BFA;letter-spacing:3px;margin-bottom:9px">✦ VEDIC DASHA ✦</div>
+  <p style="font-size:13px;line-height:1.7;color:#E8D5B0;margin-bottom:10px">${R.dasha_summary||''}</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+    ${[['Life Stage',g_stage],['Age',g_age+' years'],['Mahadasha',g_dasha?g_dasha.maha+' Dasha':''],['Antardasha',g_dasha?g_dasha.antar+' Antar':''],['Afflicted',R.afflicted_planet||''],['Dasha Ends',g_dasha?g_dasha.mahaEnds:'']]
+    .map(([k,v])=>`<div style="background:rgba(0,0,0,0.22);border-radius:7px;padding:9px 11px"><div style="font-size:9px;color:#6B5B40;margin-bottom:2px">${k}</div><div style="font-size:13px;color:#A78BFA;font-weight:600">${v}</div></div>`).join('')}
   </div>
 </div>
-
-<!-- DASHA -->
-<div style="background:rgba(74,29,150,0.12);border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:18px;margin-bottom:20px">
-  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#A78BFA;letter-spacing:3px;margin-bottom:10px">✦ VEDIC DASHA PERIOD ✦</div>
-  <p style="font-size:13px;line-height:1.7;color:#E8D5B0;margin-bottom:12px">${R.dasha_summary||""}</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    ${[["Life Stage",M.stage||""],["Age",(M.age||"")+" years"],["Mahadasha",(M.dasha||{}).maha+" Mahadasha"],["Antardasha",(M.dasha||{}).antar+" Antardasha"],["Afflicted Planet",R.afflicted_planet||""],["Dasha Ends",(M.dasha||{}).mahaEnds||""]]
-    .map(([k,v])=>`<div style="background:rgba(0,0,0,0.25);border-radius:8px;padding:10px 12px"><div style="font-size:9px;color:#6B5B40;margin-bottom:3px">${k}</div><div style="font-size:13px;color:#A78BFA;font-weight:600">${v}</div></div>`).join("")}
-  </div>
-</div>
-
-<!-- POSITIVE SIGNS -->
-<div style="background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.2);border-radius:12px;padding:18px;margin-bottom:20px">
-  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:3px;margin-bottom:12px">✦ AUSPICIOUS SIGNS IN YOUR PALM ✦</div>
+<div style="background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.18);border-radius:12px;padding:16px;margin-bottom:18px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:3px;margin-bottom:10px">✦ AUSPICIOUS SIGNS ✦</div>
   ${posHTML}
 </div>
-
-${sec("🔮","SHUBH LAGNA WINDOWS",lagnaHTML)}
-${sec("⚡","PROBLEMS IDENTIFIED",probHTML)}
-${sec("🔱","VEDIC REMEDIES",remHTML)}
-${sec("💎","GEMSTONE PRESCRIPTIONS",gemHTML)}
-${sec("🧭","VASTU DIRECTIONS",vastuHTML)}
-${sec("🌿","LIFESTYLE PRACTICES",lifeHTML)}
-
-<!-- FOOTER -->
-<div style="border-top:1px solid rgba(201,169,110,0.2);margin-top:32px;padding-top:16px;text-align:center">
-  <p style="font-size:11px;color:#4A3F2F;font-style:italic;line-height:1.7">
-    For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>
-    ✦ HastRekha ✦ — Ancient Vedic Palm Reading
-  </p>
+${sec('🔮','SHUBH LAGNA WINDOWS',lagnaHTML)}
+${sec('⚡','PROBLEMS IDENTIFIED',probHTML)}
+${sec('🔱','VEDIC REMEDIES',remHTML)}
+${sec('💎','GEMSTONE PRESCRIPTIONS',gemHTML)}
+${sec('🧭','VASTU DIRECTIONS',vastuHTML)}
+${sec('🌿','LIFESTYLE PRACTICES',lifeHTML)}
+<div style="border-top:1px solid rgba(201,169,110,0.18);margin-top:28px;padding-top:14px;text-align:center">
+  <p style="font-size:11px;color:#4A3F2F;font-style:italic;line-height:1.7">For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>✦ HastRekha ✦ — Ancient Vedic Palm Reading</p>
 </div>
-</body>
-</html>`;
-  const w=window.open("","_blank");
-  if(w){w.document.write(html);w.document.close();}
+</body></html>`;
+
+  const w=window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); }
 }
 </script>
 </body>
