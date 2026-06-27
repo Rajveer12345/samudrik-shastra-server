@@ -2,550 +2,878 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Samudrik Shastra — Vedic Palm Reading</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,400;1,400&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>HastRekha — Vedic Palm Reading</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0D0A1A;--surface:#1A0D2E;--card:rgba(201,169,110,0.06);
-  --gold:#C9A96E;--gold2:#8B6914;--text:#E8D5B0;--muted:#9B8866;
-  --dim:#6B5B40;--green:#2ECC71;--orange:#E67E22;--red:#E82929;--blue:#2471A3;
+  --gold:#C9A96E;--gold2:#8B6914;--bg:#0D0A1A;--surface:#1A0D2E;
+  --text:#E8D5B0;--muted:#9B8866;--dim:#6B5B40;
+  --green:#2ECC71;--orange:#E67E22;--red:#E82929;--blue:#2471A3;--purple:#8E44AD;
+  --teal:#16A085;
 }
-body{min-height:100vh;background:linear-gradient(135deg,#0D0A1A 0%,#1A0D2E 50%,#0D1A2E 100%);color:var(--text);font-family:'Crimson Pro',serif;-webkit-tap-highlight-color:transparent;}
-@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+body{min-height:100vh;background:#0D0A1A;color:var(--text);font-family:'Crimson Pro',serif;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes glow{0%,100%{text-shadow:0 0 20px rgba(201,169,110,0.4)}50%{text-shadow:0 0 40px rgba(201,169,110,0.8)}}
+@keyframes glow{0%,100%{text-shadow:0 0 20px rgba(201,169,110,0.4)}50%{text-shadow:0 0 50px rgba(201,169,110,1),0 0 80px rgba(201,169,110,0.5)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(0.5)}50%{opacity:1;transform:scale(1)}}
+@keyframes orbit{from{transform:rotate(0deg) translateX(120px) rotate(0deg)}to{transform:rotate(360deg) translateX(120px) rotate(-360deg)}}
+@keyframes nebula{0%,100%{opacity:0.15;transform:scale(1)}50%{opacity:0.35;transform:scale(1.05)}}
 
-/* ── Screens ── */
-.screen{display:none;min-height:100vh;padding:28px 16px;animation:fadeUp .4s ease;}
-.screen.active{display:flex;flex-direction:column;align-items:center;}
-#screen-loading{justify-content:center;}
-#screen-result{align-items:stretch;padding:16px;}
+/* ── GALAXY BACKGROUND ── */
+#galaxy-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.screen{display:none;min-height:100vh;padding:24px 16px;position:relative;z-index:1}
+.screen.active{display:block}
 
-/* ── Upload ── */
-.logo{font-family:'Cinzel Decorative',cursive;font-size:clamp(20px,5vw,30px);color:var(--gold);animation:glow 3s ease-in-out infinite;text-align:center;margin:8px 0 4px;}
-.subtitle{font-family:'Crimson Pro',serif;font-size:13px;color:var(--muted);font-style:italic;letter-spacing:3px;text-align:center;}
-.upload-zone{border:1px dashed rgba(201,169,110,0.35);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;background:rgba(201,169,110,0.04);transition:all .3s;width:100%;max-width:420px;margin:20px 0;}
-.upload-zone:hover,.upload-zone:active{border-color:var(--gold);background:rgba(201,169,110,0.09);}
-.upload-zone img{max-height:220px;max-width:100%;border-radius:10px;border:1px solid rgba(201,169,110,0.3);}
-.btn-primary{background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold2));border:none;border-radius:50px;padding:15px 44px;color:#0D0A1A;font-family:'Cinzel Decorative',cursive;font-size:13px;cursor:pointer;letter-spacing:2px;box-shadow:0 4px 22px rgba(201,169,110,0.4);width:100%;max-width:420px;transition:opacity .2s;}
-.btn-primary:disabled{opacity:.5;cursor:default;}
-.btn-secondary{background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.28);border-radius:20px;padding:8px 16px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer;}
-.error-box{background:rgba(232,41,41,0.08);border:1px solid rgba(232,41,41,0.25);border-radius:10px;padding:14px 16px;font-size:13px;color:#fca5a5;line-height:1.6;width:100%;max-width:420px;margin-bottom:16px;}
+/* Engine toggle */
+.engine-toggle{display:flex;background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:12px;padding:4px;margin:12px 0;gap:4px}
+.engine-btn{flex:1;padding:10px 6px;border-radius:9px;border:none;cursor:pointer;font-family:'Cinzel Decorative',cursive;font-size:8px;letter-spacing:1px;background:transparent;color:var(--dim);transition:all .25s;text-align:center;line-height:1.4}
+.engine-btn.active{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#0D0A1A}
+.engine-desc{font-size:11px;color:var(--muted);text-align:center;padding:4px 8px 10px;font-style:italic;line-height:1.5}
 
-/* ── Loading ── */
-.spinner{width:52px;height:52px;border:2px solid rgba(201,169,110,0.15);border-top:2px solid var(--gold);border-radius:50%;animation:spin 1.2s linear infinite;margin-bottom:24px;}
-.loading-title{font-family:'Cinzel Decorative',cursive;font-size:14px;color:var(--gold);animation:pulse 2s ease-in-out infinite;text-align:center;padding:0 20px;margin-bottom:14px;}
-.loading-note{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:10px;padding:14px 18px;max-width:320px;text-align:center;font-size:13px;color:var(--muted);line-height:1.65;}
+/* Form */
+.form-card{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:14px;padding:16px;margin:12px 0}
+.form-label{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:2px;display:block;margin-bottom:6px}
+.form-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(201,169,110,0.25);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'Crimson Pro',serif;font-size:14px;-webkit-appearance:none}
+.form-input:focus{outline:none;border-color:var(--gold)}
+.form-select{width:100%;background:#1A0D2E;border:1px solid rgba(201,169,110,0.25);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'Crimson Pro',serif;font-size:14px;-webkit-appearance:none}
+.upload-zone{border:1px dashed rgba(201,169,110,0.35);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;background:rgba(201,169,110,0.04);transition:all .3s;margin:10px 0}
+.upload-zone:hover,.upload-zone:active{border-color:var(--gold);background:rgba(201,169,110,0.09)}
+.upload-zone img{max-height:200px;max-width:100%;border-radius:10px;border:1px solid rgba(201,169,110,0.3)}
+.btn-primary{background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold2));border:none;border-radius:50px;padding:15px;color:#0D0A1A;font-family:'Cinzel Decorative',cursive;font-size:13px;cursor:pointer;letter-spacing:2px;width:100%;box-shadow:0 4px 22px rgba(201,169,110,0.4)}
+.btn-primary:disabled{opacity:.4;cursor:default}
+.error-box{background:rgba(232,41,41,0.08);border:1px solid rgba(232,41,41,0.25);border-radius:10px;padding:12px 14px;font-size:13px;color:#fca5a5;margin-bottom:14px;line-height:1.6}
 
-/* ── Result top bar ── */
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
-.topbar-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
-.lang-toggle{display:flex;border-radius:20px;overflow:hidden;border:1px solid rgba(201,169,110,0.3);}
-.lang-btn{padding:6px 12px;font-size:12px;background:transparent;color:var(--dim);border:none;cursor:pointer;transition:all .2s;font-family:'Crimson Pro',serif;}
-.lang-btn.active{background:rgba(201,169,110,0.25);color:var(--gold);}
-.save-btn{padding:7px 14px;border-radius:20px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#0D0A1A;font-family:'Crimson Pro',serif;font-size:12px;}
+/* Ask Jyotishi */
+.jyotishi-bar{background:linear-gradient(135deg,rgba(142,68,173,0.15),rgba(201,169,110,0.1));border:1px solid rgba(142,68,173,0.3);border-radius:12px;padding:14px 16px;margin:12px 0;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .3s}
+.jyotishi-bar:hover{border-color:rgba(142,68,173,0.6);background:linear-gradient(135deg,rgba(142,68,173,0.25),rgba(201,169,110,0.15))}
+.jyotishi-icon{font-size:28px;flex-shrink:0;animation:float 4s ease-in-out infinite}
+.jyotishi-text{flex:1}
+.jyotishi-title{font-family:'Cinzel Decorative',cursive;font-size:11px;color:var(--purple);letter-spacing:1px;margin-bottom:3px}
+.jyotishi-sub{font-size:12px;color:var(--muted);line-height:1.5}
+.jyotishi-arrow{color:var(--gold);font-size:18px}
 
-/* ── Cards ── */
-.overview-card{background:linear-gradient(135deg,rgba(201,169,110,0.09),rgba(139,105,20,0.04));border:1px solid rgba(201,169,110,0.28);border-radius:13px;padding:18px;margin-bottom:12px;}
-.section-label{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
-.positive-box{background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.18);border-radius:11px;padding:13px;margin-bottom:12px;}
-.pos-label{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:8px;}
+/* Right hand note */
+.hand-note{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:10px;padding:10px 14px;margin-top:8px;display:flex;align-items:flex-start;gap:10px}
+.hand-note-icon{font-size:20px;flex-shrink:0}
+.hand-note-text{font-size:12px;color:var(--muted);line-height:1.6}
+.hand-why-link{color:var(--gold);cursor:pointer;text-decoration:underline;font-size:11px;display:inline-block;margin-top:4px}
 
-/* ── Tabs ── */
-.tabs{display:flex;gap:2px;margin-bottom:12px;background:rgba(201,169,110,0.04);border-radius:10px;padding:3px;flex-wrap:wrap;}
-.tab-btn{flex:1;min-width:55px;padding:8px 2px;border-radius:7px;border:none;cursor:pointer;font-family:'Crimson Pro',serif;font-size:11px;background:transparent;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s;}
-.tab-btn.active{background:rgba(201,169,110,0.22);color:var(--gold);border-bottom:2px solid var(--gold);}
-.tab-content{display:none;animation:fadeUp .3s ease;}
-.tab-content.active{display:block;}
+/* Right hand explanation modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.active{display:flex}
+.modal-box{background:linear-gradient(135deg,#1A0D2E,#0D1A2E);border:1px solid rgba(201,169,110,0.3);border-radius:16px;padding:24px;max-width:400px;width:100%;animation:fadeUp .3s ease}
+.modal-title{font-family:'Cinzel Decorative',cursive;font-size:13px;color:var(--gold);margin-bottom:14px;text-align:center}
+.modal-text{font-size:13px;color:var(--text);line-height:1.75;margin-bottom:14px}
+.modal-close{background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);border-radius:20px;padding:8px 20px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer;width:100%}
 
-/* ── Item cards ── */
-.item-card{border-radius:11px;padding:14px;margin-bottom:10px;transition:transform .18s;}
-.item-card:hover{transform:translateY(-2px);}
-.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:4px;}
-.card-label{font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:2px;}
-.badge{font-size:10px;padding:2px 8px;border-radius:20px;text-transform:capitalize;}
-.card-text{font-size:13px;color:var(--text);line-height:1.75;margin:0;}
-.deep-dive{background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 10px;border-left:2px solid rgba(201,169,110,0.3);margin:6px 0;font-size:11px;color:var(--muted);font-style:italic;}
-.card-meta{font-size:11px;color:var(--dim);margin-top:6px;font-style:italic;}
-.timeline-badge{font-size:10px;padding:2px 8px;border-radius:9px;}
+/* Loading */
+.loading-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.spinner{width:52px;height:52px;border:2px solid rgba(201,169,110,0.15);border-top:2px solid var(--gold);border-radius:50%;animation:spin 1.2s linear infinite;margin-bottom:22px}
+.loading-title{font-family:'Cinzel Decorative',cursive;font-size:14px;color:var(--gold);animation:pulse 2s ease-in-out infinite;text-align:center;padding:0 20px;margin-bottom:12px}
 
-/* ── Gem cards ── */
-.gems-grid{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));}
-.gem-card{border-radius:13px;padding:15px;transition:transform .18s;}
-.gem-card:hover{transform:translateY(-2px);}
-.gem-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0;}
-.gem-details div{display:flex;justify-content:space-between;margin-bottom:3px;}
-.gem-details span{font-size:10px;}
-
-/* ── Footer ── */
-.footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);border-radius:9px;text-align:center;font-size:11px;color:#3A2F1F;font-style:italic;line-height:1.7;}
-
-/* ── Mobile ── */
-@media(max-width:480px){
-  .screen{padding:20px 14px;}
-  #screen-result{padding:12px;}
-}
+/* Result */
+.result-wrap{max-width:860px;margin:0 auto;animation:fadeUp .5s ease}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.btn-back{background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.28);border-radius:20px;padding:7px 14px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer}
+.btn-save{padding:7px 14px;border-radius:20px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#0D0A1A;font-family:'Crimson Pro',serif;font-size:12px}
+.comparison-bar{display:flex;gap:3px;margin-bottom:14px;background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.15);border-radius:12px;padding:3px}
+.comp-btn{flex:1;padding:9px 4px;border-radius:9px;border:none;cursor:pointer;font-family:'Cinzel Decorative',cursive;font-size:8px;letter-spacing:1px;background:transparent;color:var(--dim);transition:all .2s;text-align:center}
+.comp-btn.active{color:var(--gold);background:rgba(201,169,110,0.15)}
+.overview-card{background:linear-gradient(135deg,rgba(201,169,110,0.09),rgba(139,105,20,0.04));border:1px solid rgba(201,169,110,0.28);border-radius:14px;padding:20px;margin-bottom:14px}
+.section-mini{font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--gold);letter-spacing:3px;margin-bottom:8px}
+.dasha-card{background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:12px;padding:16px;margin-bottom:14px}
+.dasha-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.dasha-item{background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px}
+.dasha-key{font-size:10px;color:var(--dim);margin-bottom:3px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px}
+.dasha-val{font-size:14px;color:var(--gold);font-weight:600}
+.lagna-card{border-radius:11px;padding:14px;margin-bottom:10px;border-left:3px solid}
+.lagna-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px}
+.lagna-num{font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:2px}
+.lagna-date{font-size:10px;padding:2px 9px;border-radius:9px;font-weight:500}
+.lagna-text{font-size:13px;color:var(--text);line-height:1.7;margin-bottom:8px}
+.lagna-remedy{background:rgba(0,0,0,0.2);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--muted);line-height:1.6}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+@media(max-width:480px){.compare-grid{grid-template-columns:1fr}}
+.compare-panel{background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.15);border-radius:11px;padding:14px}
+.agree-box{background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.2);border-radius:10px;padding:12px;margin-bottom:10px}
+.differ-box{background:rgba(230,126,34,0.07);border:1px solid rgba(230,126,34,0.2);border-radius:10px;padding:12px;margin-bottom:10px}
+.positive-box{background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.18);border-radius:11px;padding:14px;margin-bottom:14px}
+.tabs{display:flex;gap:2px;margin-bottom:12px;background:rgba(201,169,110,0.04);border-radius:10px;padding:3px;flex-wrap:wrap}
+.tab-btn{flex:1;min-width:44px;padding:8px 2px;border-radius:7px;border:none;cursor:pointer;font-family:'Crimson Pro',serif;font-size:10px;background:transparent;color:var(--dim);transition:all .2s}
+.tab-btn.active{background:rgba(201,169,110,0.22);color:var(--gold)}
+.tab-content{display:none}
+.tab-content.active{display:block;animation:fadeUp .3s ease}
+.item-card{border-radius:11px;padding:14px;margin-bottom:10px}
+.card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;flex-wrap:wrap;gap:4px}
+.clabel{font-family:'Cinzel Decorative',cursive;font-size:9px;letter-spacing:2px}
+.cbadge{font-size:10px;padding:2px 8px;border-radius:20px}
+.ctext{font-size:13px;color:var(--text);line-height:1.7;margin:0}
+.cdive{background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 10px;border-left:2px solid rgba(201,169,110,0.3);margin:6px 0;font-size:11px;color:var(--muted);font-style:italic}
+.cmeta{font-size:11px;color:var(--dim);margin-top:6px;font-style:italic}
+.gem-grid{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+.gem-card{border-radius:13px;padding:15px}
+.gem-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0}
+/* Gem stones banner linking */
+.stone-concern-tag{display:inline-block;background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);border-radius:10px;padding:2px 8px;font-size:10px;color:var(--gold);margin:3px 2px}
+footer{margin-top:24px;padding:11px 14px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);border-radius:9px;text-align:center;font-size:11px;color:#4A3F2F;font-style:italic;line-height:1.7}
 </style>
 </head>
 <body>
 
+<!-- GALAXY CANVAS -->
+<canvas id="galaxy-canvas"></canvas>
+
+<!-- RIGHT HAND MODAL -->
+<div class="modal-overlay" id="hand-modal">
+  <div class="modal-box">
+    <div class="modal-title">✦ Why Right Hand? ✦</div>
+    <div class="modal-text">
+      In Vedic palmistry, the <strong style="color:var(--gold)">right hand is the active hand</strong> — it represents the life you are actively creating through your choices, actions, and karma earned in this lifetime.<br/><br/>
+      The right hand shows <strong style="color:var(--gold)">what you are doing with what you were given</strong> — your current destiny, career path, relationships, and the events unfolding in your life right now.<br/><br/>
+      This is why we always read the right hand — it gives the most accurate and current reading regardless of gender. The left hand shows inherited tendencies from birth, which is secondary information.<br/><br/>
+      <span style="color:var(--muted);font-style:italic;font-size:12px">For best results: palm facing up, fingers relaxed, natural position. Good lighting.</span>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('hand-modal').classList.remove('active')">I Understand — Close</button>
+  </div>
+</div>
+
 <!-- UPLOAD SCREEN -->
 <div id="screen-upload" class="screen active">
-  <div style="font-size:50px;animation:float 3s ease-in-out infinite;margin-bottom:10px">🔮</div>
-  <h1 class="logo">Samudrik Shastra</h1>
-  <p class="subtitle">✦ Ancient Vedic Palm Reading ✦</p>
-  <p style="font-size:13px;color:rgba(201,169,110,0.7);text-align:center;max-width:380px;line-height:1.7;margin:12px 0 4px;">Upload a clear photo of your dominant hand, palm facing up, in good light.</p>
+  <div style="padding:20px 0 6px;text-align:center">
+    <div style="font-size:52px;animation:float 3s ease-in-out infinite;display:inline-block;margin-bottom:10px">🔮</div>
+    <div style="font-family:'Cinzel Decorative',cursive;font-size:clamp(22px,5vw,32px);color:var(--gold);animation:glow 3s ease-in-out infinite;margin-bottom:4px">HastRekha</div>
+    <div style="font-size:11px;color:var(--muted);letter-spacing:3px;font-style:italic;margin-bottom:6px">✦ Ancient Vedic Palm Reading ✦</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:4px">Powered by Samudrik Shastra &amp; Hasta Rahasya</div>
+  </div>
+
+  <!-- Ask Jyotishi CTA -->
+  <div class="jyotishi-bar" onclick="askJyotishi()">
+    <div class="jyotishi-icon">🧙‍♂️</div>
+    <div class="jyotishi-text">
+      <div class="jyotishi-title">Ask Our Jyotishi</div>
+      <div class="jyotishi-sub">Have a specific question? Get a personalised consultation from our expert Vedic astrologer.</div>
+    </div>
+    <div class="jyotishi-arrow">›</div>
+  </div>
 
   <div id="error-box" class="error-box" style="display:none"></div>
 
-  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
-    <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none"/>
-    <div id="upload-placeholder">
-      <div style="font-size:44px;opacity:.6;margin-bottom:10px">✋</div>
-      <p style="font-family:'Cinzel Decorative',cursive;font-size:12px;color:var(--gold);margin-bottom:6px">Upload Palm Photo</p>
-      <p style="font-size:12px;color:var(--dim)">Tap to take photo or choose from gallery</p>
+  <!-- Engine Selection -->
+  <div class="form-card">
+    <label class="form-label">SELECT READING ENGINE</label>
+    <div class="engine-toggle">
+      <button class="engine-btn active" id="engine-ss" onclick="setEngine('samudrik')">✦ Samudrik<br/>Shastra</button>
+      <button class="engine-btn" id="engine-hr" onclick="setEngine('hasta')">✦ Hasta<br/>Rahasya</button>
+      <button class="engine-btn" id="engine-both" onclick="setEngine('both')">⚖ Compare<br/>Both</button>
     </div>
-    <img id="preview-img" style="display:none"/>
-    <p id="change-hint" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">Tap to change</p>
+    <div class="engine-desc" id="engine-desc">Classical Samudrik Shastra — the standard Vedic palmistry system with Dasha calculation</div>
+  </div>
+
+  <div class="form-card">
+    <label class="form-label">YOUR NAME</label>
+    <input id="inp-name" class="form-input" type="text" placeholder="Enter your full name"/>
+  </div>
+
+  <div class="form-card">
+    <label class="form-label">DATE OF BIRTH</label>
+    <input id="inp-dob" class="form-input" type="date"/>
+    <p style="font-size:11px;color:var(--dim);margin-top:6px">Required for accurate Dasha period calculation</p>
+  </div>
+
+  <div class="form-card">
+    <label class="form-label">GENDER</label>
+    <select id="inp-gender" class="form-select">
+      <option value="">Select gender</option>
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+      <option value="other">Other / Prefer not to say</option>
+    </select>
+  </div>
+
+  <!-- Concerns — EXPANDED LIST -->
+  <div class="form-card">
+    <label class="form-label">YOUR PRIMARY CONCERNS <span style="font-size:9px;color:var(--dim)">(SELECT UP TO 3)</span></label>
+    <div id="concerns-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px"></div>
+  </div>
+
+  <!-- Palm Upload -->
+  <div class="form-card">
+    <label class="form-label">UPLOAD YOUR RIGHT PALM</label>
+    <div class="hand-note">
+      <div class="hand-note-icon">✋</div>
+      <div class="hand-note-text">
+        Please upload your <strong style="color:var(--gold)">right hand</strong> — palm facing the camera, fingers relaxed, in good light.
+        <br/><span class="hand-why-link" onclick="document.getElementById('hand-modal').classList.add('active')">Why right hand? Tap to learn more →</span>
+      </div>
+    </div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" style="margin-top:10px">
+      <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none"/>
+      <div id="upload-placeholder">
+        <div style="font-size:44px;opacity:.6;margin-bottom:10px">✋</div>
+        <p style="font-family:'Cinzel Decorative',cursive;font-size:12px;color:var(--gold);margin-bottom:5px">Tap to Upload Palm Photo</p>
+        <p style="font-size:12px;color:var(--dim)">Take photo or choose from gallery</p>
+      </div>
+      <img id="preview-img" style="display:none"/>
+      <p id="change-hint" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">Tap to change photo</p>
+    </div>
   </div>
 
   <button class="btn-primary" id="read-btn" onclick="startReading()" disabled>✦ Read My Palm ✦</button>
-  <p style="font-size:11px;color:#4A3F2F;text-align:center;margin-top:14px;font-style:italic">Your image is sent securely and never stored.</p>
+  <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:14px;font-style:italic;padding-bottom:30px">Your image is analysed securely and never stored permanently.</p>
 </div>
 
 <!-- LOADING SCREEN -->
 <div id="screen-loading" class="screen">
-  <img id="loading-thumb" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,169,110,0.4);margin-bottom:24px;opacity:.7;display:none"/>
-  <div class="spinner"></div>
-  <p class="loading-title" id="loading-msg">Waking up the server…</p>
-  <div class="loading-note">
-    ⏳ <b style="color:var(--gold)">Please be patient.</b><br/>
-    The free server wakes from sleep on first use — this takes <b style="color:var(--gold)">up to 60 seconds.</b><br/><br/>
-    <span style="color:var(--dim);font-style:italic">After the first reading, it will be much faster.</span>
+  <div class="loading-wrap">
+    <img id="loading-thumb" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,169,110,0.4);margin-bottom:24px;opacity:.7;display:none"/>
+    <div class="spinner"></div>
+    <p class="loading-title" id="loading-msg">Analysing your palm…</p>
+    <div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.15);border-radius:10px;padding:14px 18px;max-width:320px;text-align:center;font-size:13px;color:var(--muted);line-height:1.65">
+      ⏳ <b style="color:var(--gold)">Please be patient.</b><br/>
+      Consulting ancient texts and<br/>calculating your Dasha period.<br/><br/>
+      <span style="color:var(--dim);font-style:italic">This may take 60–90 seconds.</span>
+    </div>
   </div>
 </div>
 
 <!-- RESULT SCREEN -->
 <div id="screen-result" class="screen">
-  <div class="topbar">
-    <button class="btn-secondary" onclick="showScreen('upload');resetApp()">✋ New Palm</button>
-    <div class="topbar-right">
-      <div class="lang-toggle">
-        <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
-        <button class="lang-btn" id="lang-hi" onclick="setLang('hi')">हिं</button>
+  <div class="result-wrap">
+    <div class="topbar">
+      <button class="btn-back" onclick="resetApp()">✋ New Reading</button>
+      <button class="btn-save" onclick="saveReading()">📄 Save PDF</button>
+    </div>
+
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:28px;margin-bottom:5px">🔮</div>
+      <h1 style="font-family:'Cinzel Decorative',cursive;font-size:clamp(16px,4vw,22px);color:var(--gold);margin:0 0 3px">HastRekha</h1>
+      <p style="font-size:11px;color:var(--muted);font-style:italic;letter-spacing:2px" id="engine-result-label">✦ Samudrik Shastra Reading ✦</p>
+    </div>
+
+    <div id="comp-bar" style="display:none" class="comparison-bar">
+      <button class="comp-btn active" onclick="showEngine('ss')">✦ Samudrik Shastra</button>
+      <button class="comp-btn" onclick="showEngine('hr')">✦ Hasta Rahasya</button>
+      <button class="comp-btn" onclick="showEngine('compare')">⚖ Compare</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="overview-card" id="ss-overview">
+      <div class="section-mini">✦ OVERALL READING ✦</div>
+      <p id="r-overall" style="font-size:14px;line-height:1.8;margin:0 0 8px"></p>
+      <p id="r-handtype" style="font-size:11px;color:var(--muted);font-style:italic;margin:0 0 10px"></p>
+      <div style="padding:8px 12px;background:rgba(201,169,110,0.08);border-radius:8px;border:1px solid rgba(201,169,110,0.18);font-size:12px">
+        🌟 <span style="color:var(--gold)">Most Favorable Period: </span><strong id="r-lucky"></strong>
       </div>
-      <button class="save-btn" onclick="saveReading()">📄 Save</button>
     </div>
-  </div>
 
-  <div style="text-align:center;margin-bottom:14px">
-    <div style="font-size:26px;margin-bottom:5px">🔮</div>
-    <h1 style="font-family:'Cinzel Decorative',cursive;font-size:clamp(15px,4vw,22px);color:var(--gold);margin:0 0 3px">Samudrik Shastra</h1>
-    <p style="font-size:11px;color:var(--muted);font-style:italic;letter-spacing:2px">✦ <span data-en="Your Vedic Palm Reading" data-hi="आपका वैदिक हस्त पठन">Your Vedic Palm Reading</span> ✦</p>
-    <p style="font-size:11px;color:#5B4B30;margin-top:5px">💡 <span data-en="Save → new tab opens → Print → Save as PDF" data-hi="सहेजें → नया टैब → Print → Save as PDF">Save → new tab opens → Print → Save as PDF</span></p>
-  </div>
-
-  <!-- Overview -->
-  <div class="overview-card">
-    <div class="section-label">✦ <span data-en="OVERALL READING" data-hi="समग्र पठन">OVERALL READING</span> ✦</div>
-    <p id="r-overall" style="font-size:14px;line-height:1.8;margin:0 0 8px"></p>
-    <p id="r-handtype" style="font-size:11px;color:var(--muted);font-style:italic;margin:0 0 9px"></p>
-    <div style="padding:8px 12px;background:rgba(201,169,110,0.08);border-radius:8px;border:1px solid rgba(201,169,110,0.18);font-size:12px">
-      🌟 <span data-en="Favorable: " data-hi="अनुकूल: ">Favorable: </span><strong id="r-lucky"></strong>
+    <!-- Dasha -->
+    <div class="dasha-card" id="ss-dasha">
+      <div class="section-mini">✦ YOUR VEDIC DASHA ✦</div>
+      <p id="r-dasha-summary" style="font-size:13px;line-height:1.7;margin-bottom:10px"></p>
+      <div class="dasha-grid">
+        <div class="dasha-item"><div class="dasha-key">LIFE STAGE</div><div class="dasha-val" id="d-lifestage"></div></div>
+        <div class="dasha-item"><div class="dasha-key">AGE</div><div class="dasha-val" id="d-age"></div></div>
+        <div class="dasha-item"><div class="dasha-key">MAHADASHA</div><div class="dasha-val" id="d-maha"></div></div>
+        <div class="dasha-item"><div class="dasha-key">ANTARDASHA</div><div class="dasha-val" id="d-antar"></div></div>
+        <div class="dasha-item"><div class="dasha-key">AFFLICTED PLANET</div><div class="dasha-val" id="d-afflicted"></div></div>
+        <div class="dasha-item"><div class="dasha-key">DASHA ENDS</div><div class="dasha-val" id="d-ends"></div></div>
+      </div>
     </div>
-  </div>
 
-  <!-- Positive signs -->
-  <div class="positive-box">
-    <div class="pos-label">✦ <span data-en="AUSPICIOUS SIGNS" data-hi="शुभ संकेत">AUSPICIOUS SIGNS</span> ✦</div>
-    <div id="r-positive"></div>
-  </div>
+    <!-- HR Overview -->
+    <div class="overview-card" id="hr-overview" style="display:none;border-color:rgba(142,68,173,0.35)">
+      <div class="section-mini" style="color:var(--purple)">✦ HASTA RAHASYA READING ✦</div>
+      <p id="r-hr-overall" style="font-size:14px;line-height:1.8;margin:0 0 8px"></p>
+      <p id="r-hr-handtype" style="font-size:11px;color:var(--muted);font-style:italic;margin:0 0 10px"></p>
+      <div style="padding:8px 12px;background:rgba(142,68,173,0.08);border-radius:8px;border:1px solid rgba(142,68,173,0.18);font-size:12px">
+        📚 <span style="color:var(--purple)">Book Source: </span><strong id="r-hr-source" style="color:var(--text)"></strong>
+      </div>
+    </div>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="setTab('predictions')">🔮 <span data-en="Predict" data-hi="भविष्य">Predict</span></button>
-    <button class="tab-btn" onclick="setTab('problems')">⚡ <span data-en="Problems" data-hi="समस्या">Problems</span></button>
-    <button class="tab-btn" onclick="setTab('remedies')">🔱 <span data-en="Remedies" data-hi="उपाय">Remedies</span></button>
-    <button class="tab-btn" onclick="setTab('gemstones')">💎 <span data-en="Gems" data-hi="रत्न">Gems</span></button>
-    <button class="tab-btn" onclick="setTab('vastu')">🏠 Vastu</button>
-    <button class="tab-btn" onclick="setTab('lifestyle')">🌿 <span data-en="Life" data-hi="जीवन">Life</span></button>
-  </div>
+    <!-- Compare View -->
+    <div id="compare-view" style="display:none">
+      <div class="section-mini" style="margin-bottom:10px">⚖ WHERE BOTH ENGINES AGREE</div>
+      <div class="agree-box" id="agree-content"></div>
+      <div class="section-mini" style="margin-bottom:10px;color:var(--orange)">⚡ WHERE THEY DIFFER</div>
+      <div class="differ-box" id="differ-content"></div>
+    </div>
 
-  <div id="tab-predictions" class="tab-content active"></div>
-  <div id="tab-problems" class="tab-content"></div>
-  <div id="tab-remedies" class="tab-content"></div>
-  <div id="tab-gemstones" class="tab-content"></div>
-  <div id="tab-vastu" class="tab-content"></div>
-  <div id="tab-lifestyle" class="tab-content"></div>
+    <!-- Shubh Lagna -->
+    <div id="lagna-section">
+      <div class="section-mini" style="margin-bottom:12px">✦ SHUBH LAGNA WINDOWS ✦</div>
+      <div id="r-lagnas"></div>
+    </div>
 
-  <div class="footer">
-    <span data-en="For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones."
-          data-hi="केवल आध्यात्मिक मार्गदर्शन के लिए। रत्न धारण करने से पहले योग्य वैदिक ज्योतिषी से परामर्श लें।">
-      For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.
-    </span>
+    <!-- Positive signs -->
+    <div class="positive-box">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:9px">✦ AUSPICIOUS SIGNS IN YOUR PALM ✦</div>
+      <div id="r-positive"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="setTab('problems')">⚡ Problems</button>
+      <button class="tab-btn" onclick="setTab('remedies')">🔱 Remedies</button>
+      <button class="tab-btn" onclick="setTab('gemstones')">💎 Gems</button>
+      <button class="tab-btn" onclick="setTab('vastu')">🏠 Vastu</button>
+      <button class="tab-btn" onclick="setTab('lifestyle')">🌿 Life</button>
+    </div>
+    <div id="tab-problems" class="tab-content active"></div>
+    <div id="tab-remedies" class="tab-content"></div>
+    <div id="tab-gemstones" class="tab-content"></div>
+    <div id="tab-vastu" class="tab-content"></div>
+    <div id="tab-lifestyle" class="tab-content"></div>
+
+    <!-- Ask Jyotishi bottom -->
+    <div class="jyotishi-bar" onclick="askJyotishi()" style="margin-top:16px">
+      <div class="jyotishi-icon">🧙‍♂️</div>
+      <div class="jyotishi-text">
+        <div class="jyotishi-title">Questions About Your Reading?</div>
+        <div class="jyotishi-sub">Our Jyotishi can clarify and guide you further.</div>
+      </div>
+      <div class="jyotishi-arrow">›</div>
+    </div>
+
+    <footer>For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>✦ HastRekha ✦ — Ancient Vedic Palm Reading</footer>
   </div>
 </div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────────────────────
-const SERVER = window.location.origin; // Same server hosts this file
-const GEMS_DATA = {
-  ruby:            {name:"Ruby (Manik)",      nameHi:"माणिक",    planet:"Sun",     planetHi:"सूर्य",    color:"#E8294A", finger:"Ring finger, right hand",   fingerHi:"अनामिका, दाहिना हाथ"},
-  pearl:           {name:"Pearl (Moti)",      nameHi:"मोती",     planet:"Moon",    planetHi:"चंद्र",    color:"#C8B89A", finger:"Little finger, right hand",  fingerHi:"कनिष्ठा, दाहिना हाथ"},
-  coral:           {name:"Red Coral (Moonga)",nameHi:"लाल मूंगा",planet:"Mars",    planetHi:"मंगल",     color:"#E8512A", finger:"Ring finger, right hand",   fingerHi:"अनामिका, दाहिना हाथ"},
-  emerald:         {name:"Emerald (Panna)",   nameHi:"पन्ना",    planet:"Mercury", planetHi:"बुध",      color:"#2ECC71", finger:"Little finger, right hand",  fingerHi:"कनिष्ठा, दाहिना हाथ"},
-  yellow_sapphire: {name:"Yellow Sapphire",   nameHi:"पुखराज",   planet:"Jupiter", planetHi:"बृहस्पति", color:"#F4D03F", finger:"Index finger, right hand",  fingerHi:"तर्जनी, दाहिना हाथ"},
-  diamond:         {name:"Diamond (Heera)",   nameHi:"हीरा",     planet:"Venus",   planetHi:"शुक्र",    color:"#85C1E9", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
-  blue_sapphire:   {name:"Blue Sapphire",     nameHi:"नीलम",     planet:"Saturn",  planetHi:"शनि",      color:"#2471A3", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
-  hessonite:       {name:"Hessonite (Gomed)", nameHi:"गोमेद",    planet:"Rahu",    planetHi:"राहु",     color:"#A04000", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
-  cats_eye:        {name:"Cat's Eye",         nameHi:"लहसुनिया", planet:"Ketu",    planetHi:"केतु",     color:"#8E44AD", finger:"Middle finger, right hand", fingerHi:"मध्यमा, दाहिना हाथ"},
+// ── CONFIG ────────────────────────────────────────────────────
+const SERVER = window.location.origin;
+const JYOTISHI_EMAIL = 'jyotishi@hastrekhha.com'; // CHANGE THIS to actual email
+
+// ── GALAXY BACKGROUND ─────────────────────────────────────────
+(function initGalaxy(){
+  const canvas = document.getElementById('galaxy-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [], nebulae = [];
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  // Generate stars
+  for(let i = 0; i < 220; i++){
+    stars.push({
+      x: Math.random(), y: Math.random(),
+      r: Math.random() * 1.4 + 0.2,
+      opacity: Math.random() * 0.8 + 0.2,
+      speed: Math.random() * 0.003 + 0.001,
+      phase: Math.random() * Math.PI * 2,
+      color: ['#C9A96E','#E8D5B0','#A0B8FF','#FFD4A0','#FFFACD','#FFE4C4','#B8D4FF'][Math.floor(Math.random()*7)]
+    });
+  }
+  // Nebula blobs
+  for(let i = 0; i < 5; i++){
+    nebulae.push({
+      x: Math.random(), y: Math.random(),
+      rx: 80 + Math.random()*120, ry: 60 + Math.random()*80,
+      color: ['rgba(139,69,19,','rgba(72,20,100,','rgba(20,50,100,','rgba(100,30,60,'][Math.floor(Math.random()*4)],
+      phase: Math.random()*Math.PI*2, speed: 0.0004 + Math.random()*0.0003
+    });
+  }
+  let t = 0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // Dark gradient base
+    const grad = ctx.createRadialGradient(W*0.5,H*0.4,0,W*0.5,H*0.4,Math.max(W,H)*0.7);
+    grad.addColorStop(0,'rgba(26,13,46,0.95)');
+    grad.addColorStop(0.5,'rgba(13,10,26,0.98)');
+    grad.addColorStop(1,'rgba(13,26,46,1)');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+    // Nebulae
+    nebulae.forEach(n=>{
+      const a = 0.12 + 0.08*Math.sin(t*n.speed*100+n.phase);
+      const g2 = ctx.createRadialGradient(n.x*W,n.y*H,0,n.x*W,n.y*H,n.rx);
+      g2.addColorStop(0,n.color+a+')');
+      g2.addColorStop(1,n.color+'0)');
+      ctx.fillStyle=g2;
+      ctx.beginPath();
+      ctx.ellipse(n.x*W,n.y*H,n.rx,n.ry,t*n.speed,0,Math.PI*2);
+      ctx.fill();
+    });
+    // Stars
+    stars.forEach(s=>{
+      const op = s.opacity * (0.6 + 0.4*Math.sin(t*s.speed*200+s.phase));
+      ctx.globalAlpha = op;
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+      ctx.fill();
+      // Glow for brighter stars
+      if(s.r > 1.0){
+        const glow = ctx.createRadialGradient(s.x*W,s.y*H,0,s.x*W,s.y*H,s.r*4);
+        // Convert hex to rgba safely
+        const hx=s.color.replace('#','');
+        const rr=parseInt(hx.slice(0,2),16)||200,gg=parseInt(hx.slice(2,4),16)||180,bb=parseInt(hx.slice(4,6),16)||140;
+        glow.addColorStop(0,'rgba('+rr+','+gg+','+bb+',0.35)');
+        glow.addColorStop(1,'rgba('+rr+','+gg+','+bb+',0)');
+        ctx.fillStyle=glow;
+        ctx.beginPath();
+        ctx.arc(s.x*W,s.y*H,s.r*4,0,Math.PI*2);
+        ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
+    // Shooting star occasionally
+    if(Math.floor(t*0.3)%400===0){
+      const sx=Math.random()*W, sy=Math.random()*H*0.5;
+      const trail = ctx.createLinearGradient(sx,sy,sx+80,sy+30);
+      trail.addColorStop(0,'rgba(201,169,110,0)');
+      trail.addColorStop(0.5,'rgba(201,169,110,0.6)');
+      trail.addColorStop(1,'rgba(255,255,255,0.9)');
+      ctx.strokeStyle=trail; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+80,sy+30); ctx.stroke();
+    }
+    t++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── CONCERNS LIST — EXPANDED ──────────────────────────────────
+const CONCERNS = [
+  "Career & Job","Marriage & Partnership","Finance & Wealth",
+  "Property & Home","Health & Wellbeing","Family Conflicts",
+  "Education & Studies","Foreign Travel & Settlement",
+  "Business & Entrepreneurship","Child & Parenthood",
+  "Legal Matters","Relationship & Love",
+  "Fertility & Conception","Mental Peace & Anxiety",
+  "Spiritual Growth","Debt & Financial Recovery"
+];
+
+const GEMS={ruby:{name:"Ruby (Manik)",planet:"Sun",color:"#E8294A",finger:"Ring finger, right hand"},pearl:{name:"Pearl (Moti)",planet:"Moon",color:"#C8B89A",finger:"Little finger"},coral:{name:"Red Coral (Moonga)",planet:"Mars",color:"#E8512A",finger:"Ring finger"},emerald:{name:"Emerald (Panna)",planet:"Mercury",color:"#2ECC71",finger:"Little finger"},yellow_sapphire:{name:"Yellow Sapphire (Pukhraj)",planet:"Jupiter",color:"#F4D03F",finger:"Index finger"},diamond:{name:"Diamond (Heera)",planet:"Venus",color:"#85C1E9",finger:"Middle finger"},blue_sapphire:{name:"Blue Sapphire (Neelam)",planet:"Saturn",color:"#2471A3",finger:"Middle finger"},hessonite:{name:"Hessonite (Gomed)",planet:"Rahu",color:"#A04000",finger:"Middle finger"},cats_eye:{name:"Cat's Eye (Lehsunia)",planet:"Ketu",color:"#8E44AD",finger:"Middle finger"}};
+
+const SC={significant:"#E82929",moderate:"#E67E22",mild:"#F4D03F"};
+const SB={significant:"rgba(232,41,41,0.08)",moderate:"rgba(230,126,34,0.08)",mild:"rgba(244,208,63,0.06)"};
+const LC={1:{color:"#16A085",bg:"rgba(22,160,133,0.08)"},2:{color:"#E67E22",bg:"rgba(230,126,34,0.08)"},3:{color:"#2471A3",bg:"rgba(36,113,163,0.08)"}};
+const MSGS=["Studying your palm lines…","Reading the Fate Line…","Consulting ancient texts…","Calculating your Dasha period…","Identifying Shubh Lagna windows…","Almost ready…"];
+
+const ENGINE_DESCS={
+  samudrik:"Classical Samudrik Shastra — standard Vedic palmistry with Vimshottari Dasha calculation",
+  hasta:"Hasta Rahasya — reading based on 35 ancient palmistry books including Indian Palmistry (1895), Cheiro, Benham and more",
+  both:"Compare Both — see where Samudrik Shastra and Hasta Rahasya agree (high confidence) and where they differ"
 };
-const TC={current:"#9CA3AF",positive:"#16A085",warning:"#E67E22",info:"#2471A3"};
-const TB={current:"rgba(156,163,175,0.08)",positive:"rgba(22,160,133,0.08)",warning:"rgba(230,126,34,0.08)",info:"rgba(36,113,163,0.08)"};
-const SC={mild:"#F4D03F",moderate:"#E67E22",significant:"#E82929"};
-const SB={mild:"rgba(244,208,63,0.08)",moderate:"rgba(230,126,34,0.08)",significant:"rgba(232,41,41,0.09)"};
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let imgData=null, imgUrl=null, currentReading=null, currentLang="en";
-const MSGS=["Waking up the server… (first use takes ~60 seconds)","Scanning your palm lines…","Reading the Fate Line…","Consulting ancient Samudrik texts…","Analysing mounts and markings…","Preparing your complete reading…"];
+// Gemstone-to-concern mapping — THIS IS THE CORE LOGIC
+// Stones change based on what concerns user selected
+const CONCERN_STONE_MAP = {
+  "Career & Job":            ["yellow_sapphire","blue_sapphire"],
+  "Marriage & Partnership":  ["diamond","pearl","emerald"],
+  "Finance & Wealth":        ["yellow_sapphire","hessonite","emerald"],
+  "Property & Home":         ["coral","ruby"],
+  "Health & Wellbeing":      ["ruby","pearl","coral"],
+  "Family Conflicts":        ["pearl","coral"],
+  "Education & Studies":     ["emerald","yellow_sapphire"],
+  "Foreign Travel & Settlement":["hessonite","cats_eye"],
+  "Business & Entrepreneurship":["emerald","yellow_sapphire","ruby"],
+  "Child & Parenthood":      ["pearl","coral","cats_eye"],
+  "Legal Matters":           ["yellow_sapphire","ruby"],
+  "Relationship & Love":     ["diamond","pearl"],
+  "Fertility & Conception":  ["pearl","coral","ruby"],
+  "Mental Peace & Anxiety":  ["pearl","blue_sapphire","cats_eye"],
+  "Spiritual Growth":        ["cats_eye","hessonite","yellow_sapphire"],
+  "Debt & Financial Recovery":["hessonite","blue_sapphire","yellow_sapphire"]
+};
 
-// ── Screen management ─────────────────────────────────────────────────────────
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-'+id).classList.add('active');
-  window.scrollTo(0,0);
+let imgData=null,imgUrl=null,currentReading=null,hrReading=null;
+let selectedConcerns=[],currentEngine="samudrik",currentResultView="ss";
+
+// Build concerns grid
+const grid=document.getElementById("concerns-grid");
+CONCERNS.forEach(c=>{
+  const btn=document.createElement("button");
+  btn.textContent=c;
+  btn.style.cssText="padding:9px 10px;border-radius:8px;border:1px solid rgba(201,169,110,0.2);background:transparent;color:#9B8866;font-family:'Crimson Pro',serif;font-size:12px;cursor:pointer;text-align:left;transition:all .2s;line-height:1.3";
+  btn.onclick=function(){
+    if(selectedConcerns.includes(c)){
+      selectedConcerns=selectedConcerns.filter(x=>x!==c);
+      btn.style.background="transparent";btn.style.color="#9B8866";btn.style.borderColor="rgba(201,169,110,0.2)";
+    } else if(selectedConcerns.length<3){
+      selectedConcerns.push(c);
+      btn.style.background="rgba(201,169,110,0.15)";btn.style.color="#C9A96E";btn.style.borderColor="#C9A96E";
+    }
+  };
+  grid.appendChild(btn);
+});
+
+function setEngine(e){
+  currentEngine=e;
+  document.getElementById("engine-ss").classList.toggle("active",e==="samudrik");
+  document.getElementById("engine-hr").classList.toggle("active",e==="hasta");
+  document.getElementById("engine-both").classList.toggle("active",e==="both");
+  document.getElementById("engine-desc").textContent=ENGINE_DESCS[e];
 }
 
-// ── File handling ─────────────────────────────────────────────────────────────
-document.getElementById('file-input').addEventListener('change', function(){
-  const file = this.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    imgUrl = e.target.result;
-    const parts = imgUrl.split(',');
-    const m = parts[0].match(/:(.*?);/);
-    imgData = {data: parts[1], mediaType: m?m[1]:'image/jpeg'};
-    document.getElementById('upload-placeholder').style.display='none';
-    const img = document.getElementById('preview-img');
-    img.src = imgUrl; img.style.display='block';
-    document.getElementById('change-hint').style.display='block';
-    document.getElementById('read-btn').disabled=false;
-    document.getElementById('error-box').style.display='none';
+document.getElementById("file-input").addEventListener("change",function(){
+  const file=this.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    imgUrl=e.target.result;
+    const parts=imgUrl.split(",");const m=parts[0].match(/:(.*?);/);
+    imgData={data:parts[1],mediaType:m?m[1]:"image/jpeg"};
+    document.getElementById("upload-placeholder").style.display="none";
+    const img=document.getElementById("preview-img");img.src=imgUrl;img.style.display="block";
+    document.getElementById("change-hint").style.display="block";
+    document.getElementById("read-btn").disabled=false;
+    document.getElementById("error-box").style.display="none";
   };
   reader.readAsDataURL(file);
 });
 
-// ── Drag & drop ───────────────────────────────────────────────────────────────
-const uz = document.getElementById('upload-zone');
-uz.addEventListener('dragover', e=>{e.preventDefault();uz.style.borderColor='var(--gold)';});
-uz.addEventListener('dragleave', ()=>{uz.style.borderColor='';});
-uz.addEventListener('drop', e=>{
-  e.preventDefault(); uz.style.borderColor='';
-  const file=e.dataTransfer.files[0];
-  if(file){const dt=new DataTransfer();dt.items.add(file);document.getElementById('file-input').files=dt.files;document.getElementById('file-input').dispatchEvent(new Event('change'));}
-});
+function showScreen(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById("screen-"+id).classList.add("active");window.scrollTo(0,0);}
+function calcAge(dob){const b=new Date(dob),n=new Date();let y=n.getFullYear()-b.getFullYear();if(n.getMonth()-b.getMonth()<0||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))y--;return y;}
+function lifeStage(age){return age<=12?"Child (0-12)":age<=18?"Teenager (13-18)":age<=25?"Young Adult (19-25)":age<=45?"Working Professional (26-45)":age<=60?"Middle Age (46-60)":"Senior (60+)";}
+function calcDasha(dob){
+  const planets=["Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury"];
+  const years=[7,20,6,10,7,18,16,19,17];
+  const b=new Date(dob),now=new Date();
+  const ageYears=(now-b)/(1000*60*60*24*365.25);
+  const birthFraction=(b.getMonth()*30+b.getDate())/365;
+  let cumulative=(birthFraction*120)%120,idx=0;
+  while(cumulative>years[idx]){cumulative-=years[idx];idx=(idx+1)%9;}
+  let elapsed=ageYears,currentIdx=idx,remainingInFirst=years[idx]-cumulative;
+  if(elapsed<remainingInFirst){const e=new Date(now.getTime()+remainingInFirst*365.25*24*3600*1000);return{maha:planets[currentIdx],antar:planets[(currentIdx+1)%9],mahaEnds:e.toLocaleDateString("en-IN",{month:"short",year:"numeric"}),mahaRemainingYears:Math.round(remainingInFirst*10)/10};}
+  elapsed-=remainingInFirst;currentIdx=(currentIdx+1)%9;
+  while(elapsed>years[currentIdx]){elapsed-=years[currentIdx];currentIdx=(currentIdx+1)%9;}
+  const remaining=years[currentIdx]-elapsed;
+  const mahaEnds=new Date(now.getTime()+remaining*365.25*24*3600*1000);
+  return{maha:planets[currentIdx],antar:planets[(currentIdx+1)%9],mahaEnds:mahaEnds.toLocaleDateString("en-IN",{month:"short",year:"numeric"}),mahaRemainingYears:Math.round(remaining*10)/10};
+}
 
-// ── Main reading flow ─────────────────────────────────────────────────────────
+// Get recommended stones based on concerns selected
+function getRecommendedStones(){
+  if(selectedConcerns.length===0) return null;
+  const counts={};
+  selectedConcerns.forEach(c=>{
+    (CONCERN_STONE_MAP[c]||[]).forEach(s=>{counts[s]=(counts[s]||0)+1;});
+  });
+  // Sort by frequency — stone that appears most across selected concerns comes first
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+}
+
+function askJyotishi(){
+  const name=document.getElementById("inp-name").value||"";
+  const dob=document.getElementById("inp-dob").value||"";
+  const concerns=selectedConcerns.join(", ")||"General enquiry";
+  const subject=encodeURIComponent("HastRekha — Consultation Request");
+  const body=encodeURIComponent(`Namaste,
+
+I would like to request a personalised consultation.
+
+Name: ${name}
+Date of Birth: ${dob}
+Primary Concerns: ${concerns}
+
+Please let me know the next steps.
+
+Thank you`);
+  window.location.href=`mailto:${JYOTISHI_EMAIL}?subject=${subject}&body=${body}`;
+}
+
 async function startReading(){
-  if(!imgData) return;
-  showScreen('loading');
-  if(imgUrl){const t=document.getElementById('loading-thumb');t.src=imgUrl;t.style.display='block';}
-
-  let mi=0;
-  document.getElementById('loading-msg').textContent=MSGS[0];
-  const interval=setInterval(()=>{mi=(mi+1)%MSGS.length;document.getElementById('loading-msg').textContent=MSGS[mi];},3000);
-
-  const fetchWithTimeout=(url,opts,ms)=>{
-    const ctrl=new AbortController();
-    const t=setTimeout(()=>ctrl.abort(),ms);
-    return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));
-  };
-
-  try {
-    // Wake ping
-    try{ await fetchWithTimeout(SERVER+'/health',{method:'GET'},65000); }catch(_){}
-
-    // Read palm — retry once
+  if(!imgData)return;
+  const name=document.getElementById("inp-name").value.trim()||"You";
+  const dob=document.getElementById("inp-dob").value;
+  const gender=document.getElementById("inp-gender").value;
+  if(!dob){showError("Please enter your date of birth for accurate Dasha calculation");return;}
+  const age=calcAge(dob);const stage=lifeStage(age);const dasha=calcDasha(dob);
+  showScreen("loading");
+  if(imgUrl){const t=document.getElementById("loading-thumb");t.src=imgUrl;t.style.display="block";}
+  let mi=0;document.getElementById("loading-msg").textContent=MSGS[0];
+  const interval=setInterval(()=>{mi=(mi+1)%MSGS.length;document.getElementById("loading-msg").textContent=MSGS[mi];},3500);
+  const fetchTO=(url,opts,ms)=>{const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(url,{...opts,signal:c.signal}).finally(()=>clearTimeout(t));};
+  try{
+    try{await fetchTO(SERVER+"/health",{method:"GET"},65000);}catch(_){}
     let res,data;
     for(let attempt=0;attempt<2;attempt++){
       try{
-        res=await fetchWithTimeout(SERVER+'/read-palm',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({imageData:imgData.data,mediaType:imgData.mediaType})
-        },120000);
-        data=await res.json();
-        break;
-      }catch(e){
-        if(attempt>=1) throw e;
-        document.getElementById('loading-msg').textContent='Retrying…';
-        await new Promise(r=>setTimeout(r,4000));
-      }
+        res=await fetchTO(SERVER+"/read-palm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({imageData:imgData.data,mediaType:imgData.mediaType,name,dob,gender,concerns:selectedConcerns,engine:currentEngine})},130000);
+        data=await res.json();break;
+      }catch(e){if(attempt>=1)throw e;await new Promise(r=>setTimeout(r,4000));}
     }
-
     clearInterval(interval);
-    if(!res.ok||data.error) throw new Error(data.error||'Server error '+res.status);
-    if(!data.reading) throw new Error('Empty response from server');
-    currentReading=data.reading;
-    renderReading(data.reading);
-    showScreen('result');
-  } catch(err){
+    if(!res.ok||data.error)throw new Error(data.error||"Server error "+res.status);
+    if(!data.reading)throw new Error("Empty reading from server");
+    // Attach metadata
+    data.reading._meta={name,age,stage,dob,dasha,concerns:selectedConcerns,engine:currentEngine};
+    currentReading=data.reading;hrReading=data.hrReading||null;
+    renderReading(data.reading,data.hrReading,dasha,age,stage);
+    showScreen("result");
+  }catch(err){
     clearInterval(interval);
     let msg=err.message;
-    if(err.name==='AbortError') msg='Request timed out. The server is waking up — please wait 30 seconds and try again.';
-    else if(msg.includes('Failed to fetch')||msg.includes('NetworkError')) msg='Cannot reach the server. Make sure you are using this app from its direct URL (not from Claude).';
-    showError(msg);
-    showScreen('upload');
+    if(err.name==="AbortError")msg="Request timed out. Please wait 30 seconds and try again.";
+    else if(msg.includes("Failed to fetch"))msg="Cannot reach server. Please try again.";
+    showError(msg);showScreen("upload");
   }
 }
 
-function showError(msg){
-  const box=document.getElementById('error-box');
-  box.textContent='⚠ '+msg;
-  box.style.display='block';
+function showError(msg){const b=document.getElementById("error-box");b.textContent="⚠ "+msg;b.style.display="block";}
+
+function showEngine(view){
+  currentResultView=view;
+  document.querySelectorAll(".comp-btn").forEach((b,i)=>{b.classList.toggle("active",["ss","hr","compare"][i]===view);});
+  document.getElementById("ss-overview").style.display=view==="hr"?"none":"block";
+  document.getElementById("ss-dasha").style.display=view==="hr"?"none":"block";
+  document.getElementById("hr-overview").style.display=view==="ss"?"none":"block";
+  document.getElementById("compare-view").style.display=view==="compare"?"block":"none";
+  document.getElementById("lagna-section").style.display=view==="compare"?"none":"block";
+}
+
+function renderReading(R,HR,dasha,age,stage){
+  const engineLabels={samudrik:"✦ Samudrik Shastra Reading ✦",hasta:"✦ Hasta Rahasya Reading ✦",both:"✦ Dual Engine Reading ✦"};
+  document.getElementById("engine-result-label").textContent=engineLabels[currentEngine]||engineLabels.samudrik;
+  document.getElementById("comp-bar").style.display=currentEngine==="both"?"flex":"none";
+  document.getElementById("r-overall").textContent=R.overall_energy||"";
+  document.getElementById("r-handtype").textContent="Hand: "+(R.hand_type||"")+(R.life_stage_reading?" | "+R.life_stage_reading:"");
+  document.getElementById("r-lucky").textContent=R.lucky_period||"";
+  document.getElementById("r-dasha-summary").textContent=R.dasha_summary||"";
+  document.getElementById("d-lifestage").textContent=stage;
+  document.getElementById("d-age").textContent=age+" years";
+  document.getElementById("d-maha").textContent=(dasha.maha||"")+" Dasha";
+  document.getElementById("d-antar").textContent=(dasha.antar||"")+" Antar";
+  document.getElementById("d-afflicted").textContent=R.afflicted_planet||dasha.maha;
+  document.getElementById("d-ends").textContent=dasha.mahaEnds;
+  if(HR){
+    document.getElementById("r-hr-overall").textContent=HR.overall_energy||"";
+    document.getElementById("r-hr-handtype").textContent="Hand: "+(HR.hand_type||"");
+    document.getElementById("r-hr-source").textContent=HR.book_source||"35 Ancient Palmistry Books";
+    buildComparison(R,HR);
+  }
+  // Shubh Lagnas
+  const lc=document.getElementById("r-lagnas");lc.innerHTML="";
+  (R.shubh_lagnas||[]).forEach(l=>{const c=LC[l.number]||LC[1];lc.innerHTML+=`<div class="lagna-card" style="background:${c.bg};border-left-color:${c.color}"><div class="lagna-header"><span class="lagna-num" style="color:${c.color}">SHUBH LAGNA ${l.number} — ${l.probability||""}</span><span class="lagna-date" style="background:${c.color}22;color:${c.color}">📅 ${l.window||""}</span></div><p class="lagna-text">${l.what_will_happen||""}</p><div class="lagna-remedy"><b style="color:${c.color}">Remedy before window:</b> ${l.remedy_before||""}<br/><b style="color:#9CA3AF">If missed:</b> ${l.if_missed||""}</div></div>`;});
+  // Positive
+  const pb=document.getElementById("r-positive");pb.innerHTML="";
+  (R.positive_signs||[]).forEach(s=>{pb.innerHTML+=`<div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start"><span style="color:var(--green);flex-shrink:0">◈</span><span style="font-size:13px;color:#C4D8B0;line-height:1.6">${s.en}</span></div>`;});
+  // Problems
+  document.getElementById("tab-problems").innerHTML=(R.problems||[]).map(p=>`<div class="item-card" style="background:${SB[p.severity]||"rgba(201,169,110,0.05)"};border:1px solid ${SC[p.severity]||"#C9A96E"}36;border-left:3px solid ${SC[p.severity]||"#C9A96E"}"><div class="card-hdr"><span class="clabel" style="color:${SC[p.severity]}">${(p.area||"").toUpperCase()}</span><span class="cbadge" style="background:${SC[p.severity]}18;color:${SC[p.severity]}">${p.severity}</span></div><p class="ctext">${p.issue||""}</p>${p.deepDive?`<div class="cdive">🔍 ${p.deepDive}</div>`:""}${p.dasha_connection?`<div class="cdive" style="border-color:var(--gold)">🪐 ${p.dasha_connection}</div>`:""}<p class="cmeta">${p.line||""}</p></div>`).join("");
+  // Remedies
+  document.getElementById("tab-remedies").innerHTML=(R.remedies||[]).map(r=>`<div class="item-card" style="background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.18)"><div class="card-hdr"><span class="clabel" style="color:var(--gold)">${r.type||""}</span><span style="font-size:10px;color:var(--muted)">🕐 ${r.timing||""}</span></div><p class="ctext">${r.remedy||""}</p>${r.planet_target?`<p class="cmeta">Targets: ${r.planet_target} | For: ${r.for||""}</p>`:""}</div>`).join("");
+
+  // GEMSTONES — concern-aware prioritisation
+  const recommendedStones = getRecommendedStones();
+  function h2r(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?parseInt(r[1],16)+","+parseInt(r[2],16)+","+parseInt(r[3],16):"201,169,110";}
+  const gemsToShow = R.gemstones || [];
+  // Add concern tags showing WHY this stone was recommended
+  function getConcernTagsForStone(stoneKey){
+    return selectedConcerns.filter(c=>(CONCERN_STONE_MAP[c]||[]).includes(stoneKey))
+      .map(c=>`<span class="stone-concern-tag">${c}</span>`).join("");
+  }
+  document.getElementById("tab-gemstones").innerHTML=`
+    ${recommendedStones&&recommendedStones.length>0?`<div style="background:rgba(201,169,110,0.06);border:1px solid rgba(201,169,110,0.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.6">
+      <b style="color:var(--gold)">✦ Stones below are personalised</b> based on your selected concerns: <b style="color:var(--text)">${selectedConcerns.join(", ")||"General reading"}</b>. The palm reading further refines which stones suit you.
+    </div>`:""}
+    <div class="gem-grid">${gemsToShow.map(g=>{const gm=GEMS[g.stone]||{name:g.stone,planet:"—",color:"#C9A96E",finger:"—"};const concernTags=getConcernTagsForStone(g.stone);const isRecommended=recommendedStones&&recommendedStones.indexOf(g.stone)<2;return`<div class="gem-card" style="background:linear-gradient(135deg,rgba(${h2r(gm.color)},0.08),rgba(201,169,110,0.03));border:1px solid ${gm.color}36;border-top:3px solid ${gm.color}${isRecommended?' box-shadow:0 0 20px '+gm.color+'20':''}">
+      ${isRecommended?`<div style="font-size:9px;color:${gm.color};font-family:'Cinzel Decorative',cursive;letter-spacing:1px;margin-bottom:6px">★ PRIMARY RECOMMENDATION</div>`:""}
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><div class="gem-dot" style="background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 13px ${gm.color}50"></div><div><div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${gm.color};margin-bottom:2px">${gm.name}</div><div style="font-size:10px;color:var(--dim)">${gm.planet}</div></div></div>
+      ${concernTags?`<div style="margin-bottom:8px">${concernTags}</div>`:""}
+      <p style="font-size:12px;color:#C4AD8A;margin:0 0 10px;line-height:1.6">${g.reason||""}</p>
+      ${g.test_first==="yes"?`<div style="background:rgba(232,41,41,0.08);border-radius:6px;padding:6px 8px;font-size:11px;color:#fca5a5;margin-bottom:8px">⚠ Test before wearing — keep under pillow on Saturday night first</div>`:""}
+      ${g.mantra?`<div style="background:rgba(201,169,110,0.06);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--gold);margin-bottom:8px">🕉 ${g.mantra}</div>`:""}
+      <div style="border-top:1px solid rgba(201,169,110,0.12);padding-top:8px">${[["Weight",g.weight],["Metal",g.metal],["First Wear",g.day_to_wear],["Finger",gm.finger]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--dim)">${k}</span><span style="font-size:10px;color:#C4AD8A">${v||""}</span></div>`).join("")}</div>
+    </div>`}).join("")}</div>`;
+
+  document.getElementById("tab-vastu").innerHTML=(R.vastu||[]).map(v=>`<div class="item-card" style="background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.2);border-left:3px solid var(--gold)"><div class="clabel" style="color:var(--gold);margin-bottom:6px">🧭 ${(v.direction||"").toUpperCase()}</div><p class="ctext">${v.en||""}</p></div>`).join("");
+  document.getElementById("tab-lifestyle").innerHTML=(R.lifestyle||[]).map(l=>`<div class="item-card" style="background:rgba(46,204,113,0.04);border:1px solid rgba(46,204,113,0.15);border-left:3px solid var(--green)"><div class="clabel" style="color:var(--green);margin-bottom:6px">🌿 ${(l.title||"").toUpperCase()}</div><p class="ctext">${l.en||""}</p></div>`).join("");
+}
+
+function buildComparison(R,HR){
+  if(!HR)return;
+  const agree=[],differ=[];
+  if(R.hand_type&&HR.hand_type){if(R.hand_type.slice(0,6).toLowerCase()===HR.hand_type.slice(0,6).toLowerCase())agree.push(`✅ Hand Type: Both engines agree — ${R.hand_type}`);else differ.push(`✋ Hand Type:<br/>Samudrik: ${R.hand_type}<br/>Hasta Rahasya: ${HR.hand_type}`);}
+  const rAreas=(R.problems||[]).map(p=>p.area.toLowerCase());const hrAreas=(HR.problems||[]).map(p=>p.area.toLowerCase());
+  const common=rAreas.filter(a=>hrAreas.some(h=>h.slice(0,5)===a.slice(0,5)));
+  if(common.length>0)agree.push(`✅ Problem Areas: Both identify issues in — ${common.join(", ")}`);
+  if(R.lucky_period&&HR.lucky_period){if(R.lucky_period.slice(0,8)===HR.lucky_period.slice(0,8))agree.push(`✅ Favorable Period: Both agree — ${R.lucky_period}`);else differ.push(`📅 Favorable Period:<br/>Samudrik: ${R.lucky_period}<br/>Hasta Rahasya: ${HR.lucky_period}`);}
+  document.getElementById("agree-content").innerHTML=agree.length?agree.map(a=>`<p style="font-size:13px;color:#C4D8B0;margin-bottom:8px;line-height:1.65">${a}</p>`).join(""):`<p style="font-size:13px;color:var(--muted)">Run both engines to see agreements.</p>`;
+  document.getElementById("differ-content").innerHTML=differ.length?differ.map(d=>`<p style="font-size:13px;color:#E8D5B0;margin-bottom:10px;line-height:1.65">${d}</p>`).join(""):`<p style="font-size:13px;color:var(--muted)">No significant differences — high confidence reading.</p>`;
+}
+
+function setTab(name){
+  const tabs=["problems","remedies","gemstones","vastu","lifestyle"];
+  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",tabs[i]===name));
+  document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
 }
 
 function resetApp(){
-  imgData=null; imgUrl=null; currentReading=null;
-  document.getElementById('preview-img').style.display='none';
-  document.getElementById('upload-placeholder').style.display='block';
-  document.getElementById('change-hint').style.display='none';
-  document.getElementById('read-btn').disabled=true;
-  document.getElementById('error-box').style.display='none';
-  document.getElementById('file-input').value='';
+  imgData=null;imgUrl=null;currentReading=null;hrReading=null;selectedConcerns=[];
+  document.getElementById("preview-img").style.display="none";
+  document.getElementById("upload-placeholder").style.display="block";
+  document.getElementById("change-hint").style.display="none";
+  document.getElementById("read-btn").disabled=true;
+  document.getElementById("error-box").style.display="none";
+  document.getElementById("file-input").value="";
+  document.querySelectorAll("#concerns-grid button").forEach(b=>{b.style.background="transparent";b.style.color="#9B8866";b.style.borderColor="rgba(201,169,110,0.2)";});
+  showScreen("upload");
 }
 
-// ── Render reading ────────────────────────────────────────────────────────────
-function t(item,field){
-  const hi=currentLang==='hi';
-  const hiField=field+'Hi';
-  return hi?(item[hiField]||item[field]||''):item[field]||'';
-}
+// ── PDF GENERATION — DARK MYSTICAL THEME ─────────────────────
+function saveReading(){
+  if(!currentReading)return;
+  const R=currentReading;const M=R._meta||{};
+  const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+  const LC2={1:"#16A085",2:"#D4A017",3:"#2471A3"};
+  const SC2={significant:"#C0392B",moderate:"#D35400",mild:"#B7950B"};
 
-function renderReading(R){
-  // Overview
-  document.getElementById('r-overall').textContent=t(R,'overall_energy');
-  document.getElementById('r-handtype').textContent=(currentLang==='hi'?'हस्त: ':'Hand: ')+t(R,'hand_type');
-  document.getElementById('r-lucky').textContent=R.lucky_period||'';
-
-  // Positive signs
-  const pos=document.getElementById('r-positive');
-  pos.innerHTML=(R.positive_signs||[]).map(s=>`
-    <div style="display:flex;gap:7px;margin-bottom:5px;align-items:flex-start">
-      <span style="color:var(--green);flex-shrink:0;margin-top:3px">◈</span>
-      <span style="font-size:13px;color:#C4D8B0;line-height:1.6">${t(s,'en')}</span>
-    </div>`).join('');
-
-  // Predictions
-  document.getElementById('tab-predictions').innerHTML=(R.predictions||[]).map(cat=>`
-    <div style="margin-bottom:16px">
-      <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${cat.color||'var(--gold)'};letter-spacing:2px;border-bottom:1px solid ${cat.color||'var(--gold)'}44;padding-bottom:5px;margin-bottom:9px">${t(cat,'category')}</div>
-      ${(cat.items||[]).map(item=>`
-        <div class="item-card" style="background:${TB[item.type]||'rgba(201,169,110,0.05)'};border:1px solid ${TC[item.type]||'var(--gold)'}33;border-left:3px solid ${TC[item.type]||'var(--gold)'}">
-          <div class="card-header">
-            <span class="card-label" style="color:${TC[item.type]||'var(--gold)'}">${t(item,'label')}</span>
-            ${item.timeline?`<span class="timeline-badge" style="background:${TC[item.type]||'var(--gold)'}22;color:${TC[item.type]||'var(--gold)'}">📅 ${t(item,'timeline')}</span>`:''}
-          </div>
-          <p class="card-text">${t(item,'reading')}</p>
-        </div>`).join('')}
-    </div>`).join('');
-
-  // Problems
-  document.getElementById('tab-problems').innerHTML=(R.problems||[]).map(p=>`
-    <div class="item-card" style="background:${SB[p.severity]||'rgba(201,169,110,0.05)'};border:1px solid ${SC[p.severity]||'var(--gold)'}36;border-left:3px solid ${SC[p.severity]||'var(--gold)'}">
-      <div class="card-header">
-        <span class="card-label" style="color:${SC[p.severity]||'var(--gold)'}">${t(p,'area')}</span>
-        <span class="badge" style="background:${SC[p.severity]||'var(--gold)'}18;color:${SC[p.severity]||'var(--gold)'}">${p.severity}</span>
-      </div>
-      <p class="card-text">${t(p,'issue')}</p>
-      ${p.deepDive?`<div class="deep-dive">🔍 ${p.deepDive}</div>`:''}
-      <p class="card-meta">${currentLang==='hi'?'रेखा: ':'Line: '}${p.line}</p>
-    </div>`).join('');
-
-  // Remedies
-  document.getElementById('tab-remedies').innerHTML=(R.remedies||[]).map(r=>`
-    <div class="item-card" style="background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.18)">
-      <div class="card-header">
-        <span class="card-label" style="color:var(--gold)">${t(r,'type')}</span>
-        <span style="font-size:10px;color:var(--muted);font-style:italic">🕐 ${t(r,'timing')}</span>
-      </div>
-      <p class="card-text">${t(r,'remedy')}</p>
-      <p class="card-meta">${currentLang==='hi'?'के लिए: ':'For: '}${t(r,'for')}</p>
-    </div>`).join('');
-
-  // Gemstones
-  function hexToRgb(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?`${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}`:'201,169,110';}
-  document.getElementById('tab-gemstones').innerHTML=`<div class="gems-grid">${(R.gemstones||[]).map(g=>{
-    const gm=GEMS_DATA[g.stone]||{name:g.stone,nameHi:g.stone,planet:'—',planetHi:'—',color:'#C9A96E',finger:'—',fingerHi:'—'};
-    const hi=currentLang==='hi';
-    return `<div class="gem-card" style="background:linear-gradient(135deg,rgba(${hexToRgb(gm.color)},0.08),rgba(201,169,110,0.03));border:1px solid ${gm.color}36;border-top:3px solid ${gm.color}">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
-        <div class="gem-dot" style="background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 13px ${gm.color}50"></div>
-        <div>
-          <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${gm.color};margin-bottom:2px">${hi?gm.nameHi:gm.name}</div>
-          <div style="font-size:10px;color:var(--dim)">${hi?gm.planetHi:gm.planet}</div>
+  function sec(emoji,title,content){
+    return`<div style="margin-bottom:32px;page-break-inside:avoid">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:20px">${emoji}</span>
+        <div style="flex:1;border-bottom:1px solid rgba(201,169,110,0.4);padding-bottom:6px">
+          <span style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:#C9A96E;letter-spacing:3px">${title}</span>
         </div>
       </div>
-      <p style="font-size:12px;color:#C4AD8A;margin:0 0 10px;line-height:1.6">${hi?(g.reasonHi||g.reason):g.reason}</p>
-      <div class="gem-details" style="border-top:1px solid rgba(201,169,110,0.12);padding-top:8px">
-        ${[['Weight','वज़न',g.weight],['Metal','धातु',g.metal],['First Wear','पहली बार',g.day_to_wear],['Finger','उंगली',hi?gm.fingerHi:gm.finger]]
-          .map(([en,h,v])=>`<div><span style="color:var(--dim)">${hi?h:en}</span><span style="color:#C4AD8A">${v||''}</span></div>`).join('')}
-      </div>
-    </div>`;}).join('')}</div>`;
+      ${content}
+    </div>`;
+  }
 
-  // Vastu
-  document.getElementById('tab-vastu').innerHTML=(R.vastu||[]).map(v=>`
-    <div class="item-card" style="background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.2);border-left:3px solid var(--gold)">
-      <div class="card-label" style="color:var(--gold);margin-bottom:6px">🧭 ${v.direction.toUpperCase()}</div>
-      <p class="card-text">${currentLang==='hi'?(v.hi||v.en):v.en}</p>
-    </div>`).join('');
-
-  // Lifestyle
-  document.getElementById('tab-lifestyle').innerHTML=(R.lifestyle||[]).map(l=>`
-    <div class="item-card" style="background:rgba(46,204,113,0.04);border:1px solid rgba(46,204,113,0.15);border-left:3px solid var(--green)">
-      <div class="card-label" style="color:var(--green);margin-bottom:6px">🌿 ${(currentLang==='hi'?(l.titleHi||l.title):l.title).toUpperCase()}</div>
-      <p class="card-text">${currentLang==='hi'?(l.hi||l.en):l.en}</p>
-    </div>`).join('');
-
-  updateLangDisplay();
-}
-
-// ── Language ──────────────────────────────────────────────────────────────────
-function setLang(lang){
-  currentLang=lang;
-  document.getElementById('lang-en').classList.toggle('active',lang==='en');
-  document.getElementById('lang-hi').classList.toggle('active',lang==='hi');
-  if(currentReading) renderReading(currentReading);
-  updateLangDisplay();
-}
-
-function updateLangDisplay(){
-  const hi=currentLang==='hi';
-  document.querySelectorAll('[data-en]').forEach(el=>{
-    el.textContent=hi?(el.dataset.hi||el.dataset.en):el.dataset.en;
-  });
-  const hf=hi?"'Noto Sans Devanagari',sans-serif":"'Crimson Pro',serif";
-  document.querySelectorAll('.card-text,.card-meta,.loading-note').forEach(el=>el.style.fontFamily=hf);
-}
-
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-function setTab(name){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    const tabs=['predictions','problems','remedies','gemstones','vastu','lifestyle'];
-    b.classList.toggle('active',tabs[i]===name);
-  });
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-}
-
-// ── Save as HTML/PDF ──────────────────────────────────────────────────────────
-function saveReading(){
-  if(!currentReading) return;
-  const R=currentReading;
-  const isHi=currentLang==='hi';
-  const tx=(item,field)=>{ const hf=field+'Hi'; return isHi?(item[hf]||item[field]||''):item[field]||''; };
-  const SC2={mild:"#b45309",moderate:"#c2410c",significant:"#b91c1c"};
-  const bf=isHi?"'Noto Sans Devanagari',sans-serif":"Georgia,serif";
-  const date=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
-
-  function card(content,style=''){return `<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:14px;margin-bottom:10px;page-break-inside:avoid;${style}">${content}</div>`;}
-  function sec(title,body){return `<div style="margin-bottom:26px"><div style="font-family:'Cinzel Decorative',cursive;font-size:11px;color:#78350f;letter-spacing:3px;border-bottom:2px solid #fcd34d;padding-bottom:7px;margin-bottom:12px">${title}</div>${body}</div>`;}
-
-  const predHTML=(R.predictions||[]).map(cat=>`<div style="margin-bottom:20px">
-    <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${cat.color||'#92400e'};letter-spacing:2px;border-bottom:2px solid ${cat.color||'#92400e'}33;padding-bottom:5px;margin-bottom:10px">${tx(cat,'category')}</div>
-    ${(cat.items||[]).map(item=>card(`
-      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:6px">
-        <b style="font-size:10px;color:${TC[item.type]||'#92400e'}">${tx(item,'label')}</b>
-        ${item.timeline?`<span style="font-size:10px;background:${TC[item.type]||'#92400e'}22;color:${TC[item.type]||'#92400e'};padding:2px 8px;border-radius:8px">📅 ${tx(item,'timeline')}</span>`:''}
-      </div>
-      <p style="font-size:13px;line-height:1.75;margin:0;color:#1c1917">${tx(item,'reading')}`,
-      `border-left:3px solid ${TC[item.type]||'#92400e'}`)).join('')}
-    </div>`).join('');
-
-  const probHTML=(R.problems||[]).map(p=>card(`
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-      <b style="font-size:10px;color:${SC2[p.severity]||'#92400e'}">${tx(p,'area')}</b>
-      <span style="font-size:10px;background:${SC2[p.severity]||'#92400e'}22;color:${SC2[p.severity]||'#92400e'};padding:2px 8px;border-radius:8px">${p.severity}</span>
+  const lagnaHTML=(R.shubh_lagnas||[]).map(l=>{const c=LC2[l.number]||"#C9A96E";return`<div style="background:rgba(255,255,255,0.04);border:1px solid ${c}55;border-left:4px solid ${c};border-radius:10px;padding:16px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;flex-wrap:wrap;gap:6px">
+      <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${c};letter-spacing:2px">SHUBH LAGNA ${l.number} — ${l.probability}</span>
+      <span style="font-size:11px;background:${c}22;color:${c};padding:3px 10px;border-radius:10px">📅 ${l.window}</span>
     </div>
-    <p style="font-size:13px;line-height:1.75;margin:5px 0;color:#1c1917">${tx(p,'issue')}</p>
-    ${!isHi&&p.deepDive?`<p style="font-size:11px;color:#78716c;font-style:italic;background:#f5f5f4;padding:7px;border-radius:4px;margin-top:7px">🔍 ${p.deepDive}</p>`:''}`,
-    `border-left:4px solid ${SC2[p.severity]||'#92400e'}`)).join('');
-
-  const remHTML=(R.remedies||[]).map(r=>card(`
-    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:3px;margin-bottom:6px">
-      <b style="font-size:10px;color:#92400e">${tx(r,'type')}</b>
-      <span style="font-size:10px;color:#78716c;font-style:italic">🕐 ${tx(r,'timing')}</span>
+    <p style="font-size:13px;line-height:1.8;color:#E8D5B0;margin:0 0 10px">${l.what_will_happen}</p>
+    <div style="background:rgba(0,0,0,0.3);border-radius:7px;padding:10px 12px;font-size:12px;color:#9B8866;line-height:1.65">
+      <b style="color:${c}">Remedy before window:</b> ${l.remedy_before}<br/>
+      <b style="color:#6B5B40">If missed:</b> ${l.if_missed}
     </div>
-    <p style="font-size:13px;line-height:1.75;margin:5px 0;color:#1c1917">${tx(r,'remedy')}</p>
-    <p style="font-size:11px;color:#78716c;font-style:italic;margin:0">${isHi?'के लिए: ':'For: '}${tx(r,'for')}</p>`)).join('');
+  </div>`}).join("");
 
-  function hexToRgb(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?`${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}`:'201,169,110';}
-  const gemHTML=(R.gemstones||[]).map(g=>{
-    const gm=GEMS_DATA[g.stone]||{name:g.stone,nameHi:g.stone,planet:'—',planetHi:'—',color:'#C9A96E',finger:'—',fingerHi:'—'};
-    return card(`
-      <b style="font-size:11px;color:${gm.color}">${isHi?gm.nameHi:gm.name}</b>
-      <span style="font-size:10px;color:#78716c;margin-left:8px">${isHi?gm.planetHi:gm.planet}</span>
-      <p style="font-size:13px;line-height:1.75;margin:8px 0;color:#1c1917">${isHi?(g.reasonHi||g.reason):g.reason}</p>
-      <table style="width:100%;font-size:11px;border-collapse:collapse">
-        ${[['Weight','वज़न',g.weight],['Metal','धातु',g.metal],['First Wear','पहली बार',g.day_to_wear],['Finger','उंगली',isHi?gm.fingerHi:gm.finger]]
-          .map(([en,h,v])=>`<tr><td style="padding:2px 0;color:#78716c">${isHi?h:en}</td><td style="text-align:right;color:#44403c">${v||''}</td></tr>`).join('')}
-      </table>`,`border-top:3px solid ${gm.color}`);}).join('');
+  const probHTML=(R.problems||[]).map(p=>`<div style="background:rgba(255,255,255,0.03);border:1px solid ${SC2[p.severity]||"#C9A96E"}44;border-left:3px solid ${SC2[p.severity]||"#C9A96E"};border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center">
+      <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${SC2[p.severity]};letter-spacing:2px">${p.area}</span>
+      <span style="font-size:10px;background:${SC2[p.severity]}22;color:${SC2[p.severity]};padding:2px 9px;border-radius:9px">${p.severity}</span>
+    </div>
+    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 8px">${p.issue}</p>
+    ${p.deepDive?`<div style="background:rgba(0,0,0,0.25);border-radius:6px;border-left:2px solid rgba(201,169,110,0.3);padding:8px 10px;font-size:11px;color:#9B8866;font-style:italic;margin-bottom:6px">🔍 ${p.deepDive}</div>`:""}
+    ${p.dasha_connection?`<div style="background:rgba(0,0,0,0.2);border-radius:6px;border-left:2px solid rgba(201,169,110,0.5);padding:8px 10px;font-size:11px;color:#C9A96E;">🪐 ${p.dasha_connection}</div>`:""}
+    <p style="font-size:11px;color:#6B5B40;margin-top:7px;font-style:italic">${p.line}</p>
+  </div>`).join("");
 
-  const vastuHTML=(R.vastu||[]).map(v=>card(`
-    <b style="font-size:10px;color:#92400e">🧭 ${v.direction.toUpperCase()}</b>
-    <p style="font-size:13px;line-height:1.75;margin:6px 0 0;color:#1c1917">${isHi?(v.hi||v.en):v.en}</p>`,
-    'border-left:4px solid #92400e')).join('');
+  const remHTML=(R.remedies||[]).map(r=>`<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.2);border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px">${r.type}</span>
+      <span style="font-size:10px;color:#6B5B40">🕐 ${r.timing}</span>
+    </div>
+    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 6px">${r.remedy}</p>
+    ${r.planet_target?`<p style="font-size:11px;color:#9B8866;margin:0">Targets: ${r.planet_target}</p>`:""}
+  </div>`).join("");
 
-  const lifeHTML=(R.lifestyle||[]).map(l=>`
-    <div style="border:1px solid #86efac;border-left:4px solid #166534;background:#f0fdf4;border-radius:8px;padding:13px;margin-bottom:10px;page-break-inside:avoid">
-      <b style="font-size:10px;color:#166534">🌿 ${(isHi?(l.titleHi||l.title):l.title).toUpperCase()}</b>
-      <p style="font-size:13px;line-height:1.75;margin:6px 0 0;color:#1c1917">${isHi?(l.hi||l.en):l.en}</p>
-    </div>`).join('');
+  function h2r(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?parseInt(r[1],16)+","+parseInt(r[2],16)+","+parseInt(r[3],16):"201,169,110";}
+  const gemHTML=(R.gemstones||[]).map(g=>{const gm=GEMS[g.stone]||{name:g.stone,planet:"—",color:"#C9A96E",finger:"—"};return`<div style="background:linear-gradient(135deg,rgba(${h2r(gm.color)},0.08),rgba(0,0,0,0.2));border:1px solid ${gm.color}44;border-top:3px solid ${gm.color};border-radius:12px;padding:16px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 14px ${gm.color}66;flex-shrink:0"></div>
+      <div>
+        <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${gm.color};margin-bottom:2px">${gm.name}</div>
+        <div style="font-size:11px;color:#6B5B40">Planet: ${gm.planet}</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#E8D5B0;line-height:1.7;margin:0 0 12px">${g.reason}</p>
+    ${g.mantra?`<div style="background:rgba(201,169,110,0.08);border-radius:7px;padding:8px 12px;font-size:11px;color:#C9A96E;margin-bottom:10px">🕉 ${g.mantra}</div>`:""}
+    ${g.test_first==="yes"?`<div style="background:rgba(220,38,38,0.1);border-radius:7px;padding:8px 12px;font-size:11px;color:#FCA5A5;margin-bottom:10px">⚠ Test before wearing</div>`:""}
+    <table style="width:100%;font-size:11px;border-collapse:collapse">
+      ${[["Weight",g.weight],["Metal",g.metal],["First Wear",g.day_to_wear],["Finger",gm.finger]].map(([k,v])=>`<tr><td style="padding:4px 0;color:#6B5B40;width:80px">${k}</td><td style="padding:4px 0;color:#C4AD8A">${v||""}</td></tr>`).join("")}
+    </table>
+  </div>`}).join("");
 
-  const posHTML=(R.positive_signs||[]).map(s=>`
-    <div style="display:flex;gap:8px;margin-bottom:7px">
-      <span style="color:#16a34a;flex-shrink:0">◈</span>
-      <p style="font-size:13px;line-height:1.7;margin:0;color:#1c1917">${isHi?(s.hi||s.en):s.en}</p>
-    </div>`).join('');
+  const vastuHTML=(R.vastu||[]).map(v=>`<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.2);border-left:3px solid #C9A96E;border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px;margin-bottom:8px">🧭 ${(v.direction||"").toUpperCase()}</div>
+    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0">${v.en}</p>
+  </div>`).join("");
 
-  const html=`<!DOCTYPE html><html lang="${isHi?'hi':'en'}"><head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Samudrik Shastra Reading – ${date}</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:${bf};background:#fff;color:#1c1917;max-width:720px;margin:0 auto;padding:32px 20px;font-size:14px;line-height:1.75}.pbtn{display:block;margin:14px auto;padding:12px 28px;background:linear-gradient(135deg,#78350f,#b45309);color:#fff;border:none;border-radius:22px;font-size:14px;cursor:pointer;font-family:inherit}@media print{.pbtn{display:none}}</style>
-</head><body>
-<h1 style="font-family:'Cinzel Decorative',cursive;font-size:22px;color:#78350f;text-align:center;margin-bottom:5px">🔮 Samudrik Shastra</h1>
-<p style="text-align:center;color:#92400e;font-size:11px;letter-spacing:3px;margin-bottom:3px">✦ Ancient Vedic Palm Reading ✦</p>
-<p style="text-align:center;color:#a8a29e;font-size:11px;margin-bottom:10px">${date} · ${isHi?'हिंदी':'English'}</p>
-<button class="pbtn" onclick="window.print()">${isHi?'🖨️ Print → Save as PDF':'🖨️ Print → Save as PDF'}</button>
-<hr style="border:none;border-top:1px solid #fde68a;margin:18px 0"/>
-<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:20px;margin-bottom:18px">
-  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#92400e;letter-spacing:3px;margin-bottom:9px">✦ ${isHi?'समग्र पठन':'OVERALL READING'} ✦</div>
-  <p style="font-size:14px;line-height:1.8;color:#1c1917">${tx(R,'overall_energy')}</p>
-  <p style="font-size:11px;color:#78716c;font-style:italic;margin-top:8px">${isHi?'हस्त: ':'Hand: '}${tx(R,'hand_type')}</p>
-  <div style="background:#fef3c7;border-radius:6px;padding:8px 12px;margin-top:10px;font-size:13px">🌟 ${isHi?'अनुकूल: ':'Favorable: '}<strong>${R.lucky_period||''}</strong></div>
+  const lifeHTML=(R.lifestyle||[]).map(l=>`<div style="background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.2);border-left:3px solid #2ECC71;border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:2px;margin-bottom:8px">🌿 ${(l.title||"").toUpperCase()}</div>
+    <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0">${l.en}</p>
+  </div>`).join("");
+
+  const posHTML=(R.positive_signs||[]).map(s=>`<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
+    <span style="color:#2ECC71;font-size:16px;flex-shrink:0;line-height:1.6">◈</span>
+    <p style="font-size:13px;line-height:1.7;color:#C4D8B0;margin:0">${s.en}</p>
+  </div>`).join("");
+
+  const html=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>HastRekha — ${M.name||"Palm Reading"}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:linear-gradient(135deg,#0D0A1A 0%,#1A0D2E 50%,#0D1A2E 100%);min-height:100vh;color:#E8D5B0;max-width:760px;margin:0 auto;padding:36px 24px;font-size:14px;line-height:1.75}
+.pbtn{display:block;margin:0 auto 24px;padding:13px 32px;background:linear-gradient(135deg,#8B6914,#C9A96E);color:#0D0A1A;border:none;border-radius:28px;font-size:14px;cursor:pointer;font-family:'Cinzel Decorative',cursive;letter-spacing:2px;font-weight:700}
+@media print{.pbtn,.no-print{display:none!important}body{background:#0D0A1A;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<button class="pbtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+<!-- HEADER -->
+<div style="text-align:center;margin-bottom:28px">
+  <div style="width:70px;height:70px;background:radial-gradient(circle,rgba(201,169,110,0.3),transparent);border:1px solid rgba(201,169,110,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:32px">🔮</div>
+  <h1 style="font-family:'Cinzel Decorative',cursive;font-size:28px;color:#C9A96E;margin-bottom:6px;letter-spacing:2px">✦ HastRekha ✦</h1>
+  <p style="font-size:11px;color:#9B8866;letter-spacing:4px;margin-bottom:4px">ANCIENT VEDIC PALM READING</p>
+  <p style="font-size:12px;color:#6B5B40">${date}</p>
 </div>
-<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;margin-bottom:18px">
-  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#166534;letter-spacing:3px;margin-bottom:9px">✦ ${isHi?'शुभ संकेत':'AUSPICIOUS SIGNS'} ✦</div>${posHTML}
-</div>
-${sec(`🔮 ${isHi?'जीवन भविष्यवाणियां':'LIFE PREDICTIONS & TIMELINES'}`,predHTML)}
-${sec(`⚡ ${isHi?'समस्याएं':'PROBLEMS IDENTIFIED'}`,probHTML)}
-${sec(`🔱 ${isHi?'वैदिक उपाय':'VEDIC REMEDIES'}`,remHTML)}
-${sec(`💎 ${isHi?'रत्न':'GEMSTONES'}`,gemHTML)}
-${sec(`🧭 ${isHi?'वास्तु':'VASTU DIRECTIONS'}`,vastuHTML)}
-${sec(`🌿 ${isHi?'जीवनशैली':'LIFESTYLE PRACTICES'}`,lifeHTML)}
-<p style="text-align:center;font-size:11px;color:#a8a29e;font-style:italic;margin-top:28px;padding-top:14px;border-top:1px solid #e7e5e4">
-  ${isHi?'केवल आध्यात्मिक मार्गदर्शन के लिए। रत्न धारण करने से पहले योग्य वैदिक ज्योतिषी से परामर्श लें।':'For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.'}
-</p></body></html>`;
 
-  const w=window.open('','_blank');
+<!-- NAME BANNER -->
+<div style="background:linear-gradient(135deg,rgba(201,169,110,0.12),rgba(139,105,20,0.06));border:1px solid rgba(201,169,110,0.3);border-radius:12px;padding:16px 20px;margin-bottom:24px;text-align:center">
+  <p style="font-family:'Cinzel Decorative',cursive;font-size:14px;color:#C9A96E;letter-spacing:2px;margin-bottom:5px">${M.name||""}</p>
+  <p style="font-size:12px;color:#9B8866">Age: ${M.age||""} years · ${M.stage||""} · Engine: ${currentEngine==="both"?"Both Engines":currentEngine==="hasta"?"Hasta Rahasya":"Samudrik Shastra"}</p>
+  ${(M.concerns||[]).length>0?`<p style="font-size:11px;color:#6B5B40;margin-top:5px">Concerns: ${M.concerns.join(", ")}</p>`:""}
+</div>
+
+<!-- DIVIDER -->
+<div style="border-top:1px solid rgba(201,169,110,0.25);margin:20px 0"></div>
+
+<!-- OVERALL -->
+<div style="background:linear-gradient(135deg,rgba(201,169,110,0.1),rgba(139,105,20,0.05));border:1px solid rgba(201,169,110,0.28);border-radius:12px;padding:20px;margin-bottom:20px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:3px;margin-bottom:12px">✦ OVERALL READING ✦</div>
+  <p style="font-size:14px;line-height:1.85;color:#E8D5B0;margin:0 0 10px">${R.overall_energy||""}</p>
+  <p style="font-size:12px;color:#9B8866;font-style:italic;margin:0 0 12px">${R.hand_type||""}</p>
+  <div style="background:rgba(201,169,110,0.1);border-radius:8px;padding:10px 14px;border:1px solid rgba(201,169,110,0.2);font-size:13px;color:#C9A96E">
+    🌟 Most Favorable Period: <strong style="color:#E8D5B0">${R.lucky_period||""}</strong>
+  </div>
+</div>
+
+<!-- DASHA -->
+<div style="background:rgba(74,29,150,0.12);border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:18px;margin-bottom:20px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#A78BFA;letter-spacing:3px;margin-bottom:10px">✦ VEDIC DASHA PERIOD ✦</div>
+  <p style="font-size:13px;line-height:1.7;color:#E8D5B0;margin-bottom:12px">${R.dasha_summary||""}</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    ${[["Life Stage",M.stage||""],["Age",(M.age||"")+" years"],["Mahadasha",(M.dasha||{}).maha+" Mahadasha"],["Antardasha",(M.dasha||{}).antar+" Antardasha"],["Afflicted Planet",R.afflicted_planet||""],["Dasha Ends",(M.dasha||{}).mahaEnds||""]]
+    .map(([k,v])=>`<div style="background:rgba(0,0,0,0.25);border-radius:8px;padding:10px 12px"><div style="font-size:9px;color:#6B5B40;margin-bottom:3px">${k}</div><div style="font-size:13px;color:#A78BFA;font-weight:600">${v}</div></div>`).join("")}
+  </div>
+</div>
+
+<!-- POSITIVE SIGNS -->
+<div style="background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.2);border-radius:12px;padding:18px;margin-bottom:20px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:3px;margin-bottom:12px">✦ AUSPICIOUS SIGNS IN YOUR PALM ✦</div>
+  ${posHTML}
+</div>
+
+${sec("🔮","SHUBH LAGNA WINDOWS",lagnaHTML)}
+${sec("⚡","PROBLEMS IDENTIFIED",probHTML)}
+${sec("🔱","VEDIC REMEDIES",remHTML)}
+${sec("💎","GEMSTONE PRESCRIPTIONS",gemHTML)}
+${sec("🧭","VASTU DIRECTIONS",vastuHTML)}
+${sec("🌿","LIFESTYLE PRACTICES",lifeHTML)}
+
+<!-- FOOTER -->
+<div style="border-top:1px solid rgba(201,169,110,0.2);margin-top:32px;padding-top:16px;text-align:center">
+  <p style="font-size:11px;color:#4A3F2F;font-style:italic;line-height:1.7">
+    For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>
+    ✦ HastRekha ✦ — Ancient Vedic Palm Reading
+  </p>
+</div>
+</body>
+</html>`;
+  const w=window.open("","_blank");
   if(w){w.document.write(html);w.document.close();}
-  else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download='Palm-Reading.html';a.click();}
 }
 </script>
 </body>
