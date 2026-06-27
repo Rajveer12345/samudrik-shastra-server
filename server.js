@@ -337,20 +337,40 @@ async function analyzePalm(imageData, mediaType, name, dob, gender, concerns) {
 
   const jsonResponse = await callClaude(fullPrompt, null, null, 2500);
 
-  // Extract and clean JSON
-  const start = jsonResponse.indexOf("{");
-  const end = jsonResponse.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("No JSON found in AI response");
-
-  const raw = jsonResponse.slice(start, end + 1);
-  let safe = "";
-  for (let i = 0; i < raw.length; i++) {
-    const c = raw.charCodeAt(i);
-    if (c === 9 || c === 10 || c === 13) { safe += " "; }
-    else if (c >= 32 && c <= 126) { safe += raw[i]; }
+  // Extract and clean JSON — robust parser
+  function extractJSON(text) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1) throw new Error("No JSON found in AI response");
+    const raw = text.slice(start, end + 1);
+    let safe = "";
+    for (let i = 0; i < raw.length; i++) {
+      const c = raw.charCodeAt(i);
+      if (c === 9 || c === 10 || c === 13) { safe += " "; }
+      else if (c >= 32 && c <= 126) { safe += raw[i]; }
+    }
+    // Fix common JSON issues — trailing commas
+    safe = safe.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+    return JSON.parse(safe);
   }
 
-  const result = JSON.parse(safe);
+  let result;
+  try {
+    result = extractJSON(jsonResponse);
+  } catch(parseErr) {
+    // Retry once with a simpler prompt if JSON parsing fails
+    console.error("JSON parse failed, retrying with simpler prompt...");
+    const retryPrompt = `You are a Vedic palmistry expert. Based on these palm observations:
+${plainReading.slice(0, 800)}
+
+Person: ${name}, Age: ${age}, DOB: ${dob}, Stage: ${stage}
+Dasha: ${dasha.maha} Mahadasha, ${dasha.antar} Antardasha
+
+Return ONLY valid JSON (no text before or after):
+{"hand_type":"describe hand type","overall_energy":"2-3 sentence reading","lucky_period":"Month Year to Month Year","life_stage_reading":"brief stage reading","dasha_summary":"brief dasha meaning","afflicted_planet":"${dasha.maha}","shubh_lagnas":[{"number":1,"window":"Month Year to Month Year","probability":"High","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"next window"},{"number":2,"window":"Month Year","probability":"Medium","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"next"},{"number":3,"window":"Month Year","probability":"Certain","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"later"}],"problems":[{"area":"career","issue":"description","severity":"significant","line":"Fate Line","deepDive":"insight","dasha_connection":"dasha link"},{"area":"health","issue":"description","severity":"moderate","line":"Health Line","deepDive":"insight","dasha_connection":"link"}],"remedies":[{"for":"career","type":"Mantra","remedy":"Om Namah Shivaya 108 times","timing":"Every Monday","planet_target":"${dasha.maha}"}],"gemstones":[{"stone":"yellow_sapphire","reason":"strengthens Jupiter","weight":"4-5 carats","metal":"Gold","day_to_wear":"Thursday","test_first":"no","mantra":"Om Brim Brihaspataye Namah"}],"vastu":[{"direction":"North","en":"Keep North zone clean for wealth"}],"lifestyle":[{"title":"Morning Routine","en":"Wake early and meditate"}],"positive_signs":[{"en":"Strong Life Line indicates resilience"}]}`;
+    const retryResponse = await callClaude(retryPrompt, null, null, 1500);
+    result = extractJSON(retryResponse);
+  }
 
   // Attach metadata so frontend can display it
   result._meta = { name, age, dob, gender, stage: result.life_stage_reading ? "detected" : "unknown", dasha, concerns };
