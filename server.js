@@ -344,94 +344,182 @@ function callClaude(textPrompt, imageData, imageType, maxTokens) {
 // ── Main palm analysis ────────────────────────────────────────────────────────
 async function analyzePalm(imageData, mediaType, name, dob, gender, concerns) {
 
-  // Calculate age and Dasha
   const age = dob ? calcAge(dob) : 35;
   const dasha = dob ? calcDasha(dob) : { maha: "Saturn", antar: "Jupiter", mahaEnds: "2028", mahaRemainingYears: 2 };
+  const stage = age <= 12 ? "Child" : age <= 18 ? "Teenager" : age <= 25 ? "Young Adult" : age <= 45 ? "Working Professional" : age <= 60 ? "Middle Age" : "Senior";
+  const concernsStr = concerns && concerns.length > 0 ? concerns.join(", ") : "general life reading";
 
-  // Build the life-stage-aware prompt
-  const prompt = buildPrompt(
-    name || "the person",
-    age,
-    dob || "unknown",
-    gender || "not specified",
-    concerns || [],
-    dasha
+  console.log("Reading for:", name, "| Age:", age, "| Stage:", stage, "| Dasha:", dasha.maha);
+
+  // STEP 1 - Observe the palm (plain text, with image)
+  const obs = await callClaude(
+    "Study this palm carefully. Person is " + age + " years old (" + stage + " life stage).\n" +
+    "Write a short technical report:\n" +
+    "HAND: describe hand type\n" +
+    "LIFE LINE: length depth breaks islands and at what age\n" +
+    "FATE LINE: present or absent breaks at what age islands strength\n" +
+    "HEART LINE: length chains forks breaks\n" +
+    "HEAD LINE: direction and markings\n" +
+    "MOUNTS: which mounts are prominent\n" +
+    "SPECIAL: any stars crosses triangles or unusual markings\n" +
+    "Plain English only.",
+    imageData, mediaType, 800
   );
 
-  console.log("Reading for:", name, "| Age:", age, "| Dasha:", dasha.maha, "-", dasha.antar);
+  // STEP 2 - Generate reading as labeled sections (no JSON needed)
+  const stageCtx = stage === "Child" ? "Focus on talents health academic path. No career or marriage advice." :
+    stage === "Teenager" ? "Focus on education stream choice college path." :
+    stage === "Young Adult" ? "Focus on first job timing career direction financial independence." :
+    stage === "Middle Age" ? "Focus on career recovery property marriage stability health." :
+    stage === "Senior" ? "Focus on health family harmony legacy spiritual growth." :
+    "Focus on career trajectory property marriage finances foreign opportunities.";
 
-  // Step 1: Get plain English palm reading (with image)
-  const plainReading = await callClaude(
-    "You are a Samudrik Shastra palmistry expert. Study this palm image very carefully.\n" +
-    "Person is " + age + " years old (" + (
-      age <= 12 ? "a child" :
-      age <= 18 ? "a teenager" :
-      age <= 25 ? "a young adult or fresher" :
-      age <= 45 ? "a working professional" :
-      age <= 60 ? "a middle-aged professional" : "a senior person"
-    ) + ").\n" +
-    "Write detailed observations about ALL palm lines and mounts. " +
-    "Note specifically: where are breaks or islands in the Fate Line, " +
-    "what age range do they correspond to, " +
-    "what does the Heart Line show, Head Line show, Life Line show. " +
-    "Mention specific markings that indicate problems. " +
-    "Write in plain English only. No special characters.",
-    imageData, mediaType, 1000
-  );
+  const readingPrompt =
+    "You are a Vedic palmist. Palm analysis:\n" + obs.slice(0, 600) + "\n\n" +
+    "Person: " + name + ", Age: " + age + ", Stage: " + stage + "\n" +
+    "Dasha: " + dasha.maha + " Mahadasha ending " + dasha.mahaEnds + ", " + dasha.antar + " Antardasha\n" +
+    "Concerns: " + concernsStr + "\n" +
+    stageCtx + "\n\n" +
+    "Write EXACTLY these labeled lines. Plain English only. No apostrophes. No special characters.\n\n" +
+    "HAND_TYPE: one sentence describing hand type\n" +
+    "OVERALL: 2-3 sentence overall reading\n" +
+    "LUCKY_PERIOD: Month Year to Month Year\n" +
+    "STAGE_READING: one sentence about what this age means\n" +
+    "DASHA_MEANING: one sentence about current dasha\n" +
+    "LAGNA1_WINDOW: Month Year to Month Year\n" +
+    "LAGNA1_WHAT: what will happen\n" +
+    "LAGNA1_REMEDY: remedy to do before window\n" +
+    "LAGNA1_MISSED: next window if missed\n" +
+    "LAGNA2_WINDOW: Month Year to Month Year\n" +
+    "LAGNA2_WHAT: prediction\n" +
+    "LAGNA2_REMEDY: remedy\n" +
+    "LAGNA2_MISSED: fallback\n" +
+    "LAGNA3_WINDOW: Month Year to Month Year\n" +
+    "LAGNA3_WHAT: prediction\n" +
+    "LAGNA3_REMEDY: remedy\n" +
+    "LAGNA3_MISSED: later window\n" +
+    "PROBLEM1_AREA: area name\n" +
+    "PROBLEM1_ISSUE: description\n" +
+    "PROBLEM1_SEVERITY: significant or moderate or mild\n" +
+    "PROBLEM1_LINE: palm line\n" +
+    "PROBLEM1_DIVE: deeper insight\n" +
+    "PROBLEM1_DASHA: dasha connection\n" +
+    "PROBLEM2_AREA: area name\n" +
+    "PROBLEM2_ISSUE: description\n" +
+    "PROBLEM2_SEVERITY: significant or moderate or mild\n" +
+    "PROBLEM2_LINE: palm line\n" +
+    "PROBLEM2_DIVE: insight\n" +
+    "PROBLEM2_DASHA: connection\n" +
+    "PROBLEM3_AREA: area name\n" +
+    "PROBLEM3_ISSUE: description\n" +
+    "PROBLEM3_SEVERITY: moderate or mild\n" +
+    "PROBLEM3_LINE: line\n" +
+    "PROBLEM3_DIVE: insight\n" +
+    "PROBLEM3_DASHA: connection\n" +
+    "REMEDY1_FOR: purpose\n" +
+    "REMEDY1_TYPE: Mantra or Ritual or Lifestyle or Charity\n" +
+    "REMEDY1_TEXT: the remedy\n" +
+    "REMEDY1_TIMING: when\n" +
+    "REMEDY1_PLANET: planet\n" +
+    "REMEDY2_FOR: purpose\n" +
+    "REMEDY2_TYPE: type\n" +
+    "REMEDY2_TEXT: remedy\n" +
+    "REMEDY2_TIMING: timing\n" +
+    "REMEDY2_PLANET: planet\n" +
+    "REMEDY3_FOR: purpose\n" +
+    "REMEDY3_TYPE: type\n" +
+    "REMEDY3_TEXT: remedy\n" +
+    "REMEDY3_TIMING: timing\n" +
+    "REMEDY3_PLANET: planet\n" +
+    "GEM1_STONE: yellow_sapphire or ruby or pearl or coral or emerald or blue_sapphire or hessonite or cats_eye or diamond\n" +
+    "GEM1_REASON: why\n" +
+    "GEM1_WEIGHT: weight\n" +
+    "GEM1_METAL: Gold or Silver\n" +
+    "GEM1_DAY: day to wear\n" +
+    "GEM1_TEST: yes or no\n" +
+    "GEM1_MANTRA: mantra\n" +
+    "GEM2_STONE: stone key\n" +
+    "GEM2_REASON: reason\n" +
+    "GEM2_WEIGHT: weight\n" +
+    "GEM2_METAL: metal\n" +
+    "GEM2_DAY: day\n" +
+    "GEM2_TEST: yes or no\n" +
+    "GEM2_MANTRA: mantra\n" +
+    "VASTU1_DIR: direction\n" +
+    "VASTU1_ADVICE: advice\n" +
+    "VASTU2_DIR: direction\n" +
+    "VASTU2_ADVICE: advice\n" +
+    "VASTU3_DIR: direction\n" +
+    "VASTU3_ADVICE: advice\n" +
+    "LIFE1_TITLE: practice name\n" +
+    "LIFE1_ADVICE: advice\n" +
+    "LIFE2_TITLE: practice\n" +
+    "LIFE2_ADVICE: advice\n" +
+    "LIFE3_TITLE: practice\n" +
+    "LIFE3_ADVICE: advice\n" +
+    "POS1: positive sign 1\n" +
+    "POS2: positive sign 2\n" +
+    "POS3: positive sign 3\n" +
+    "POS4: positive sign 4";
 
-  // Step 2: Build full contextual reading with Dasha correlation
-  const fullPrompt = prompt + "\n\nPalm observations from image analysis:\n" + plainReading.slice(0, 1500);
+  const raw = await callClaude(readingPrompt, null, null, 2500);
 
-  const jsonResponse = await callClaude(fullPrompt, null, null, 3500);
-
-  // Extract and clean JSON — robust parser
-  function extractJSON(text) {
-    // Find outermost JSON object
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start === -1 || end === -1) throw new Error("No JSON found in AI response");
-    let raw = text.slice(start, end + 1);
-    // Remove any markdown code fences
-    raw = raw.replace(/```json/g, "").replace(/```/g, "");
-    let safe = "";
-    for (let i = 0; i < raw.length; i++) {
-      const c = raw.charCodeAt(i);
-      // Allow tabs/newlines/carriage returns as spaces
-      if (c === 9 || c === 10 || c === 13) { safe += " "; }
-      // Allow all printable ASCII
-      else if (c >= 32 && c <= 126) { safe += raw[i]; }
-      // Drop everything else (non-ASCII like Hindi, smart quotes etc)
-    }
-    // Fix common JSON issues
-    safe = safe.replace(/,\s*}/g, "}");   // trailing comma before }
-    safe = safe.replace(/,\s*]/g, "]");   // trailing comma before ]
-    safe = safe.replace(/:\s*,/g, ": null,"); // empty values
-    safe = safe.replace(/"\s*:\s*"/g, '": "'); // normalize spacing
-    return JSON.parse(safe);
+  // STEP 3 - Extract labeled values - NO JSON PARSING NEEDED
+  function get(label) {
+    const re = new RegExp(label + ":\s*(.+?)(?=\n[A-Z0-9_]+:|$)", "si");
+    const m = raw.match(re);
+    if (!m) return "";
+    return m[1].replace(/^\[|\]$/g, "").replace(/[^\x20-\x7E]/g, "").replace(/['"]/g, "").trim();
   }
 
-  let result;
-  try {
-    result = extractJSON(jsonResponse);
-  } catch(parseErr) {
-    // Retry once with a simpler prompt if JSON parsing fails
-    console.error("JSON parse failed, retrying with simpler prompt...");
-    const retryPrompt = `You are a Vedic palmistry expert. Based on these palm observations:
-${plainReading.slice(0, 800)}
+  const result = {
+    hand_type: get("HAND_TYPE") || "Mixed hand",
+    overall_energy: get("OVERALL") || "Your palm reveals a life of great potential and resilience.",
+    lucky_period: get("LUCKY_PERIOD") || "Aug 2026 to Dec 2026",
+    life_stage_reading: get("STAGE_READING") || "",
+    dasha_summary: get("DASHA_MEANING") || "",
+    afflicted_planet: dasha.maha,
+    shubh_lagnas: [
+      { number: 1, window: get("LAGNA1_WINDOW")||"Aug 2026 to Oct 2026", probability: "High", what_will_happen: get("LAGNA1_WHAT")||"Favorable opportunities emerge.", remedy_before: get("LAGNA1_REMEDY")||"Chant Jupiter mantra every Thursday.", if_missed: get("LAGNA1_MISSED")||"Next window Feb 2027." },
+      { number: 2, window: get("LAGNA2_WINDOW")||"Feb 2027 to Apr 2027", probability: "Medium", what_will_happen: get("LAGNA2_WHAT")||"Secondary opportunity window opens.", remedy_before: get("LAGNA2_REMEDY")||"Saturn remedy every Saturday.", if_missed: get("LAGNA2_MISSED")||"Final window Sep 2027." },
+      { number: 3, window: get("LAGNA3_WINDOW")||"Sep 2027 to Nov 2027", probability: "Certain", what_will_happen: get("LAGNA3_WHAT")||"Stability and growth assured by this point.", remedy_before: get("LAGNA3_REMEDY")||"Sun mantra every Sunday.", if_missed: get("LAGNA3_MISSED")||"Cycle repeats with next Jupiter transit." }
+    ],
+    problems: [
+      { area: get("PROBLEM1_AREA")||"Career", issue: get("PROBLEM1_ISSUE")||"Career challenges identified.", severity: get("PROBLEM1_SEVERITY")||"significant", line: get("PROBLEM1_LINE")||"Fate Line", deepDive: get("PROBLEM1_DIVE")||"Deeper analysis shows disruption period.", dasha_connection: get("PROBLEM1_DASHA")||"Current dasha is contributing to this." },
+      { area: get("PROBLEM2_AREA")||"Finance", issue: get("PROBLEM2_ISSUE")||"Financial pressure visible in palm.", severity: get("PROBLEM2_SEVERITY")||"moderate", line: get("PROBLEM2_LINE")||"Life Line", deepDive: get("PROBLEM2_DIVE")||"This is a temporary situation.", dasha_connection: get("PROBLEM2_DASHA")||"Dasha related pattern." },
+      { area: get("PROBLEM3_AREA")||"Health", issue: get("PROBLEM3_ISSUE")||"Health needs preventive attention.", severity: get("PROBLEM3_SEVERITY")||"mild", line: get("PROBLEM3_LINE")||"Health Line", deepDive: get("PROBLEM3_DIVE")||"Stress-related symptoms visible.", dasha_connection: get("PROBLEM3_DASHA")||"Dasha influence noted." }
+    ],
+    remedies: [
+      { for: get("REMEDY1_FOR")||"Overall", type: get("REMEDY1_TYPE")||"Mantra", remedy: get("REMEDY1_TEXT")||"Chant Om Namah Shivaya 108 times daily.", timing: get("REMEDY1_TIMING")||"Every morning", planet_target: get("REMEDY1_PLANET")||dasha.maha },
+      { for: get("REMEDY2_FOR")||"Protection", type: get("REMEDY2_TYPE")||"Ritual", remedy: get("REMEDY2_TEXT")||"Light a ghee lamp every evening before prayer.", timing: get("REMEDY2_TIMING")||"Every evening", planet_target: get("REMEDY2_PLANET")||"Saturn" },
+      { for: get("REMEDY3_FOR")||"Health", type: get("REMEDY3_TYPE")||"Lifestyle", remedy: get("REMEDY3_TEXT")||"Wake before sunrise and drink copper vessel water daily.", timing: get("REMEDY3_TIMING")||"Daily morning", planet_target: get("REMEDY3_PLANET")||"Sun" }
+    ],
+    gemstones: [
+      { stone: get("GEM1_STONE")||"yellow_sapphire", reason: get("GEM1_REASON")||"Strengthens Jupiter for career and fortune.", weight: get("GEM1_WEIGHT")||"4-5 carats", metal: get("GEM1_METAL")||"Gold", day_to_wear: get("GEM1_DAY")||"Thursday morning", test_first: get("GEM1_TEST")||"no", mantra: get("GEM1_MANTRA")||"Om Brim Brihaspataye Namah" },
+      { stone: get("GEM2_STONE")||"pearl", reason: get("GEM2_REASON")||"Calms the mind and improves emotional balance.", weight: get("GEM2_WEIGHT")||"5-6 carats", metal: get("GEM2_METAL")||"Silver", day_to_wear: get("GEM2_DAY")||"Monday evening", test_first: get("GEM2_TEST")||"no", mantra: get("GEM2_MANTRA")||"Om Som Somaya Namah" }
+    ],
+    vastu: [
+      { direction: get("VASTU1_DIR")||"North", en: get("VASTU1_ADVICE")||"Keep North zone clean and clutter-free for wealth energy." },
+      { direction: get("VASTU2_DIR")||"Sleeping Direction", en: get("VASTU2_ADVICE")||"Head toward South or East, never North, for deep restful sleep." },
+      { direction: get("VASTU3_DIR")||"Work Desk", en: get("VASTU3_ADVICE")||"Face East or North while working or studying for best results." }
+    ],
+    lifestyle: [
+      { title: get("LIFE1_TITLE")||"Morning Routine", en: get("LIFE1_ADVICE")||"Wake before 6 AM, drink copper water, do 15 minutes pranayama breathing." },
+      { title: get("LIFE2_TITLE")||"Exercise", en: get("LIFE2_ADVICE")||"30 minutes vigorous exercise 4 times per week to release stored tension." },
+      { title: get("LIFE3_TITLE")||"Evening Practice", en: get("LIFE3_ADVICE")||"Write 3 things that went well each night before sleep." }
+    ],
+    positive_signs: [
+      { en: get("POS1")||"Strong Life Line indicates exceptional vitality and resilience." },
+      { en: get("POS2")||"Well-developed Jupiter mount shows natural leadership and ambition." },
+      { en: get("POS3")||"Clear Head Line indicates sharp analytical intelligence." },
+      { en: get("POS4")||"Firm thumb shows exceptional willpower and determination." }
+    ]
+  };
 
-Person: ${name}, Age: ${age}, DOB: ${dob}
-Dasha: ${dasha.maha} Mahadasha, ${dasha.antar} Antardasha
-
-Return ONLY valid JSON (no text before or after):
-{"hand_type":"describe hand type","overall_energy":"2-3 sentence reading","lucky_period":"Month Year to Month Year","life_stage_reading":"brief stage reading","dasha_summary":"brief dasha meaning","afflicted_planet":"${dasha.maha}","shubh_lagnas":[{"number":1,"window":"Month Year to Month Year","probability":"High","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"next window"},{"number":2,"window":"Month Year","probability":"Medium","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"next"},{"number":3,"window":"Month Year","probability":"Certain","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"later"}],"problems":[{"area":"career","issue":"description","severity":"significant","line":"Fate Line","deepDive":"insight","dasha_connection":"dasha link"},{"area":"health","issue":"description","severity":"moderate","line":"Health Line","deepDive":"insight","dasha_connection":"link"}],"remedies":[{"for":"career","type":"Mantra","remedy":"Om Namah Shivaya 108 times","timing":"Every Monday","planet_target":"${dasha.maha}"}],"gemstones":[{"stone":"yellow_sapphire","reason":"strengthens Jupiter","weight":"4-5 carats","metal":"Gold","day_to_wear":"Thursday","test_first":"no","mantra":"Om Brim Brihaspataye Namah"}],"vastu":[{"direction":"North","en":"Keep North zone clean for wealth"}],"lifestyle":[{"title":"Morning Routine","en":"Wake early and meditate"}],"positive_signs":[{"en":"Strong Life Line indicates resilience"}]}`;
-    const retryResponse = await callClaude(retryPrompt, null, null, 1500);
-    result = extractJSON(retryResponse);
-  }
-
-  // Attach metadata so frontend can display it
-  result._meta = { name, age, dob, gender, stage: result.life_stage_reading ? "detected" : "unknown", dasha, concerns };
+  result._meta = { name, age, dob, gender, stage, dasha, concerns };
   return result;
 }
+
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 async function handleRequest(req, res) {
