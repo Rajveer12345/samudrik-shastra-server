@@ -8,11 +8,51 @@ const API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || "admin123";
 const DB = { readings: [] };
 
-function cors(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// ── ALLOWED ORIGINS ──────────────────────────────────────
+const ALLOWED_ORIGINS = [
+  "https://hast-rekha.com",
+  "https://www.hast-rekha.com",
+  "https://samudrik-shastra-server.onrender.com"
+];
+
+function cors(res, req) {
+  const origin = req && req.headers && req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else if (!origin) {
+    // Direct server-to-server or same-origin — allow
+    res.setHeader("Access-Control-Allow-Origin", "https://hast-rekha.com");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Vary", "Origin");
 }
+
+// ── RATE LIMITER ──────────────────────────────────────────
+// Max 3 readings per IP per 24 hours (prevents bot abuse)
+const rateLimitMap = new Map(); // ip -> { count, resetAt }
+const RATE_LIMIT = 3;
+const RATE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true; // allowed
+  }
+  if (entry.count >= RATE_LIMIT) return false; // blocked
+  entry.count++;
+  return true; // allowed
+}
+
+// Clean up old entries every hour to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap.entries()) {
+    if (now > entry.resetAt) rateLimitMap.delete(ip);
+  }
+}, 60 * 60 * 1000);
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -229,7 +269,7 @@ Include ALL sections. All dates must be future dates after June 2026.`;
 }
 
 async function handleRequest(req, res) {
-  cors(res);
+  cors(res, req);
   if (req.method==="OPTIONS") { res.writeHead(204); res.end(); return; }
   const url = new URL("http://x"+req.url).pathname;
 
@@ -242,6 +282,18 @@ async function handleRequest(req, res) {
   if (req.method==="GET" && url==="/health") { sendJSON(res,{status:"ok",hasKey:!!API_KEY}); return; }
 
   if (req.method==="POST" && url==="/read-palm") {
+    // ── ORIGIN GUARD ──
+    const origin = req.headers.origin || "";
+    const referer = req.headers.referer || "";
+    const originOk = ALLOWED_ORIGINS.some(o => origin.startsWith(o) || referer.startsWith(o));
+    if (origin && !originOk) {
+      sendJSON(res,{error:"Unauthorised origin"},403); return;
+    }
+    // ── RATE LIMIT GUARD ──
+    const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+    if (!checkRateLimit(clientIp)) {
+      sendJSON(res,{error:"Too many requests. Maximum 3 readings per day per user. Please try again tomorrow."},429); return;
+    }
     if (!API_KEY) { sendJSON(res,{error:"API key not set"},500); return; }
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid body"},400); return; }

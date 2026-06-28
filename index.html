@@ -389,7 +389,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
       <div style="color:var(--gold);font-size:18px">›</div>
     </div>
 
-    <footer>For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>✦ HastRekha ✦ — Ancient Vedic Palm Reading</footer>
+    <footer>For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>✦ HastRekha ✦ — Ancient Vedic Palm Reading<br/><a href="/terms.html" style="color:var(--dim);font-size:10px;text-decoration:underline">Terms &amp; Conditions</a> &nbsp;·&nbsp; <a href="mailto:jyotish@hast-rekha.com" style="color:var(--dim);font-size:10px">jyotish@hast-rekha.com</a><br/>© 2026 HastRekha. All rights reserved.</footer>
   </div>
 </div>
 
@@ -1292,16 +1292,13 @@ ${pdfSec('🌿','LIFESTYLE PRACTICES',lifeHTML)}
 </div>
 </body></html>`;
 
-  // Auto-download as HTML file (works on all devices)
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`HastRekha_${(g_name||'Reading').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Open print window — works on all devices including iPhone (Save to Files as PDF)
+  const printWin = window.open('','_blank','width=800,height=900');
+  if(!printWin){ alert('Please allow popups to save your reading as PDF.'); return; }
+  printWin.document.write(html);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(()=>{ printWin.print(); }, 800);
 }
 </script>
 </body>
