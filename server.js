@@ -245,6 +245,73 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (req.method==="POST" && url==="/ask-jyotishi") {
+    let body;
+    try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid body"},400); return; }
+    const {name,email,question,readingContext}=body;
+    if(!name||!email||!question){ sendJSON(res,{error:"Missing fields"},400); return; }
+
+    // Send email via Anthropic API (use Claude to draft + send via SMTP if configured)
+    // For now: log it and return success — add SMTP_USER/SMTP_PASS env vars to enable real sending
+    console.log("=== JYOTISHI QUESTION ===");
+    console.log("From:", name, "<"+email+">");
+    console.log("Question:", question);
+    console.log("Context:", readingContext);
+    console.log("========================");
+
+    // If SMTP configured, send email
+    const SMTP_USER = process.env.SMTP_USER||"";
+    const SMTP_PASS = process.env.SMTP_PASS||"";
+    const TO_EMAIL  = "jyotish@hast-rekha.com";
+
+    if(SMTP_USER && SMTP_PASS) {
+      try {
+        const emailBody = [
+          "From: "+SMTP_USER,
+          "To: "+TO_EMAIL,
+          "Reply-To: "+email,
+          "Subject: HastRekha Consultation — "+name,
+          "Content-Type: text/plain; charset=utf-8",
+          "",
+          "NEW CONSULTATION REQUEST",
+          "========================",
+          "Name: "+name,
+          "Email: "+email,
+          "",
+          "QUESTION:",
+          question,
+          "",
+          "READING CONTEXT:",
+          readingContext||"No reading done yet",
+          "",
+          "--- Sent from HastRekha App ---"
+        ].join("\r\n");
+
+        // Use Gmail SMTP via TLS
+        await new Promise((resolve,reject)=>{
+          const tls=require("tls");
+          const sock=tls.connect(465,{host:"smtp.gmail.com"},()=>{
+            let step=0;
+            const cmds=["EHLO hast-rekha.com\r\n","AUTH LOGIN\r\n",Buffer.from(SMTP_USER).toString("base64")+"\r\n",Buffer.from(SMTP_PASS).toString("base64")+"\r\n","MAIL FROM:<"+SMTP_USER+">\r\n","RCPT TO:<"+TO_EMAIL+">\r\n","DATA\r\n",emailBody+"\r\n.\r\n","QUIT\r\n"];
+            sock.on("data",d=>{
+              const r=d.toString();
+              if(r.startsWith("2")||r.startsWith("3")){if(step<cmds.length){sock.write(cmds[step++]);}}
+              if(r.startsWith("221")){sock.destroy();resolve();}
+              if(r.startsWith("5")){sock.destroy();reject(new Error(r));}
+            });
+            sock.on("error",reject);
+          });
+        });
+        console.log("Email sent to",TO_EMAIL);
+      } catch(emailErr) {
+        console.error("Email send failed:",emailErr.message);
+      }
+    }
+
+    sendJSON(res,{success:true,message:"Question received"});
+    return;
+  }
+
   if (req.method==="GET" && url==="/admin/stats") {
     if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
     const today=new Date().toDateString();
