@@ -245,7 +245,7 @@ async function handleRequest(req, res) {
     if (!API_KEY) { sendJSON(res,{error:"API key not set"},500); return; }
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid body"},400); return; }
-    const {imageData,mediaType,name,dob,gender,concerns}=body;
+    const {imageData,mediaType,name,dob,gender,concerns,engine}=body;
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
     try {
       const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns,engine);
