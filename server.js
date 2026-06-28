@@ -168,7 +168,7 @@ PALM READING INSTRUCTIONS:
 3. Cross-reference palm events with Dasha timeline — where palm matches Dasha = CONFIRMED prediction
 4. Give SPECIFIC month and year predictions — not vague
 5. For problems: identify exactly when they started (age and year) and when they will resolve
-6. Use ONLY plain ASCII text — no Hindi, no smart quotes, no em-dashes, no apostrophes
+6. Use ONLY plain ASCII-safe text in JSON string values — NO Hindi/Sanskrit script, NO smart/curly quotes (‘’“”), NO em-dashes (—), NO en-dashes (–). Use straight apostrophes (') and hyphens (-) only. Violating this will break JSON parsing.
 7. Respond with ONLY a valid JSON object — nothing before or after
 8. All date windows must be in the FUTURE — current year is 2026
 
@@ -254,16 +254,38 @@ Include ALL sections. All dates must be future dates after June 2026.`;
   const end = text.lastIndexOf("}");
   if (start===-1||end===-1) throw new Error("No JSON in AI response: "+raw.slice(0,200));
 
+  let slice = text.slice(start, end+1);
+
+  // Allow ALL Unicode — only strip control characters (except tab/newline/CR which become spaces)
+  // This fixes JSON parse failures caused by ₹, —, curly quotes, Sanskrit chars etc.
   let safe = "";
-  const slice = text.slice(start, end+1);
   for (let i=0;i<slice.length;i++) {
     const c = slice.charCodeAt(i);
-    if (c===9||c===10||c===13) safe += " ";
-    else if (c>=32&&c<=126) safe += slice[i];
+    if (c===9||c===10||c===13) safe += " ";       // tab/newline → space
+    else if (c<32) continue;                       // other control chars → strip
+    else safe += slice[i];                         // everything else including Unicode → keep
   }
-  safe = safe.replace(/,(\s*[}\]])/g,"$1");
 
-  const result = JSON.parse(safe);
+  // Fix trailing commas, smart quotes, and common JSON issues
+  safe = safe
+    .replace(/,(\s*[}\]])/g,"$1")               // trailing commas
+    .replace(/[\u2018\u2019]/g,"'")              // smart single quotes → straight
+    .replace(/[\u201C\u201D]/g,"\"")            // smart double quotes → straight
+    .replace(/\u2014/g,"--")                      // em-dash → --
+    .replace(/\u2013/g,"-");                      // en-dash → -
+
+  let result;
+  try {
+    result = JSON.parse(safe);
+  } catch(parseErr) {
+    // Last resort: try to extract and re-parse with more aggressive cleaning
+    console.error("JSON parse failed, attempting recovery. Error at:", parseErr.message);
+    const cleaned = safe
+      .replace(/[\x00-\x1F\x7F]/g," ")         // strip all remaining control chars
+      .replace(/,\s*}/g,"}")                       // trailing commas before }
+      .replace(/,\s*]/g,"]");                      // trailing commas before ]
+    result = JSON.parse(cleaned);
+  }
   result._meta = { name, age, dob, gender, stage, dasha, concerns };
   return result;
 }
@@ -280,6 +302,13 @@ async function handleRequest(req, res) {
     return;
   }
   if (req.method==="GET" && url==="/health") { sendJSON(res,{status:"ok",hasKey:!!API_KEY}); return; }
+
+  if (req.method==="GET" && url==="/terms.html") {
+    const f = path.join(__dirname,"terms.html");
+    if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }
+    else { res.writeHead(404,{"Content-Type":"text/plain"}); res.end("Terms page not found"); }
+    return;
+  }
 
   if (req.method==="POST" && url==="/read-palm") {
     // ── ORIGIN GUARD ──
