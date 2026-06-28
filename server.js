@@ -102,7 +102,7 @@ function getStage(age) {
 }
 
 function callClaude(messages, maxTokens, systemPrompt) {
-  const body = JSON.stringify({ model:"claude-opus-4-5", max_tokens:maxTokens||4000, system:systemPrompt||undefined, messages });
+  const body = JSON.stringify({ model:"claude-opus-4-5", max_tokens:maxTokens||8000, system:systemPrompt||undefined, messages });
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname:"api.anthropic.com", path:"/v1/messages", method:"POST",
@@ -237,7 +237,7 @@ JSON structure — include ALL fields exactly as shown:
   ]
 }
 
-Include ALL sections. All dates must be future dates after June 2026.`;
+Include ALL sections. All dates must be future dates after June 2026. Keep each text field under 60 words. Do NOT add any fields beyond those specified.`;
 
   const messages = [{
     role: "user",
@@ -247,7 +247,7 @@ Include ALL sections. All dates must be future dates after June 2026.`;
     ]
   }];
 
-  const raw = await callClaude(messages, 4500, SYSTEM);
+  const raw = await callClaude(messages, 8000, SYSTEM);
 
   let text = raw.replace(/```json\s*/gi,"").replace(/```\s*/g,"");
   const start = text.indexOf("{");
