@@ -158,6 +158,30 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
   </div>
 </div>
 
+<!-- MODAL — Ask Jyotishi Form -->
+<div class="modal-bg" id="modal-jyotishi">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-title">🧙‍♂️ Ask Our Jyotishi</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px;text-align:center">Type your specific question below. Our Jyotishi will personally review your palm reading and reply within 24-48 hours.</p>
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:var(--gold);margin-bottom:4px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px">YOUR NAME</div>
+      <input id="j-name" class="inp" type="text" placeholder="Your full name"/>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:var(--gold);margin-bottom:4px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px">YOUR EMAIL (for our reply)</div>
+      <input id="j-email" class="inp" type="email" placeholder="your@email.com"/>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;color:var(--gold);margin-bottom:4px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px">YOUR QUESTION</div>
+      <textarea id="j-question" class="inp" rows="4" placeholder="e.g. When will my financial situation improve? Is 2027 a good year for property purchase?" style="resize:none;line-height:1.6"></textarea>
+    </div>
+    <div id="j-status" style="display:none;font-size:12px;text-align:center;padding:8px;border-radius:8px;margin-bottom:10px"></div>
+    <button class="btn-main" onclick="submitJyotishi()" id="j-submit-btn" style="margin-bottom:8px">✦ Send My Question ✦</button>
+    <button class="modal-close" onclick="closeModal('modal-jyotishi')">Close</button>
+    <p style="font-size:10px;color:var(--dim);text-align:center;margin-top:8px">Consultation fee applies for detailed personalised responses · jyotish@hast-rekha.com</p>
+  </div>
+</div>
+
 <!-- SCREEN: UPLOAD -->
 <div id="scr-upload" class="screen active">
   <div style="text-align:center;padding:18px 0 8px">
@@ -167,7 +191,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
     <div style="font-size:11px;color:var(--dim)">✦ Ancient Wisdom · Modern Clarity ✦</div>
   </div>
 
-  <div class="jbar" onclick="askJyotishi()">
+  <div class="jbar" onclick="openJyotishi()">
     <div class="jbar-icon">🧙‍♂️</div>
     <div style="flex:1">
       <div class="jbar-title">Ask Our Jyotishi</div>
@@ -356,7 +380,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
     <div id="tab-vastu" class="tab-panel"></div>
     <div id="tab-lifestyle" class="tab-panel"></div>
 
-    <div class="jbar" onclick="askJyotishi()" style="margin-top:14px">
+    <div class="jbar" onclick="openJyotishi()" style="margin-top:14px">
       <div class="jbar-icon">🧙‍♂️</div>
       <div style="flex:1">
         <div class="jbar-title">Questions About Your Reading?</div>
@@ -691,16 +715,83 @@ document.getElementById('file-inp').addEventListener('change',function(){
   reader.readAsDataURL(file);
 });
 
-// ── ASK JYOTISHI ────────────────────────────────────────
-function askJyotishi(){
-  const name=document.getElementById('inp-name').value||g_name||'';
-  const dob=document.getElementById('inp-dob').value||g_dob||'';
-  const concerns=selectedConcerns.join(', ')||'General enquiry';
-  const readingSummary=currentReading?
-    `\n\n---- MY READING SUMMARY ----\nHand Type: ${currentReading.hand_type||''}\nFavorable Period: ${currentReading.lucky_period||''}\nAfflicted Planet: ${currentReading.afflicted_planet||''}\nDasha: ${g_dasha?g_dasha.maha+' Mahadasha, '+g_dasha.antar+' Antardasha':''}\n`:'';
-  const subject=encodeURIComponent('HastRekha — Consultation Request');
-  const body=encodeURIComponent(`Namaste,\n\nI would like to request a personalised consultation.\n\nName: ${name}\nDate of Birth: ${dob}\nConcerns: ${concerns}${readingSummary}\nMy Question:\n[Please type your specific question here]\n\nThank you`);
-  window.location.href=`mailto:${JYOTISHI_EMAIL}?subject=${subject}&body=${body}`;
+// ── JYOTISHI FORM ────────────────────────────────────────
+function openJyotishi(){
+  // Pre-fill name if available
+  const nameEl=document.getElementById('j-name');
+  if(nameEl && (g_name||document.getElementById('inp-name').value)){
+    nameEl.value=g_name||document.getElementById('inp-name').value||'';
+  }
+  document.getElementById('j-status').style.display='none';
+  document.getElementById('j-submit-btn').disabled=false;
+  document.getElementById('j-submit-btn').textContent='✦ Send My Question ✦';
+  openModal('modal-jyotishi');
+}
+
+async function submitJyotishi(){
+  const name=document.getElementById('j-name').value.trim();
+  const email=document.getElementById('j-email').value.trim();
+  const question=document.getElementById('j-question').value.trim();
+  const statusEl=document.getElementById('j-status');
+  const btn=document.getElementById('j-submit-btn');
+
+  if(!name||!email||!question){
+    statusEl.style.display='block';
+    statusEl.style.background='rgba(232,41,41,0.1)';
+    statusEl.style.color='#fca5a5';
+    statusEl.textContent='Please fill in all fields before submitting.';
+    return;
+  }
+  if(!email.includes('@')){
+    statusEl.style.display='block';
+    statusEl.style.background='rgba(232,41,41,0.1)';
+    statusEl.style.color='#fca5a5';
+    statusEl.textContent='Please enter a valid email address.';
+    return;
+  }
+
+  btn.disabled=true;
+  btn.textContent='Sending...';
+  statusEl.style.display='none';
+
+  // Build reading context
+  const readingContext=currentReading?
+    `Hand Type: ${currentReading.hand_type||''}
+Favorable Period: ${currentReading.lucky_period||''}
+Dasha: ${g_dasha?g_dasha.maha+' Mahadasha, '+g_dasha.antar+' Antardasha':''}
+Concerns: ${selectedConcerns.join(', ')||'General'}
+DOB: ${g_dob||'Not provided'}
+Age: ${g_age||''}`:'No reading done yet';
+
+  try {
+    const res=await fetch(SERVER+'/ask-jyotishi',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ name, email, question, readingContext })
+    });
+    const data=await res.json();
+    if(data.success){
+      statusEl.style.display='block';
+      statusEl.style.background='rgba(46,204,113,0.1)';
+      statusEl.style.color='#2ECC71';
+      statusEl.textContent='Your question has been sent! Our Jyotishi will reply to '+email+' within 24-48 hours.';
+      btn.textContent='✦ Question Sent ✦';
+      document.getElementById('j-question').value='';
+    } else {
+      throw new Error(data.error||'Failed to send');
+    }
+  } catch(e) {
+    // Fallback to mailto if server endpoint not available
+    const subject=encodeURIComponent('HastRekha Consultation — '+name);
+    const body=encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nQuestion:\n${question}\n\n--- Reading Context ---\n${readingContext}`);
+    window.open(`mailto:${JYOTISHI_EMAIL}?subject=${subject}&body=${body}`,'_blank');
+    statusEl.style.display='block';
+    statusEl.style.background='rgba(201,169,110,0.1)';
+    statusEl.style.color='var(--gold)';
+    statusEl.textContent='Opening your email app to send the question...';
+    btn.disabled=false;
+    btn.textContent='✦ Send My Question ✦';
+  }
 }
 
 // ── START READING ────────────────────────────────────────
@@ -987,13 +1078,108 @@ function savePDF(){
   const LC2={1:'#16A085',2:'#D4A017',3:'#2471A3'};
   const SC2={significant:'#C0392B',moderate:'#D35400',mild:'#B7950B'};
 
-  function sec(emoji,title,content){
-    return `<div style="margin-bottom:28px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:18px">${emoji}</span><div style="flex:1;border-bottom:1px solid rgba(201,169,110,0.35);padding-bottom:5px"><span style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:#C9A96E;letter-spacing:3px">${title}</span></div></div>${content}</div>`;
+  // Line quality for PDF
+  const lq=R.line_quality||{};
+  const lqHTML=[['heartLine','Heart Line'],['headLine','Head Line'],['lifeLine','Life Line'],['fateLine','Fate Line'],['sunLine','Sun Line']].map(([k,label])=>{
+    const score=lq[k]||0;
+    const col=score>=7?'#2ECC71':score>=5?'#E67E22':'#E82929';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+      <span style="font-size:12px;color:#9B8866;width:70px">${label}</span>
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:4px;height:6px">
+        <div style="width:${score*10}%;background:${col};height:6px;border-radius:4px"></div>
+      </div>
+      <span style="font-size:12px;color:${col};font-weight:700;width:36px;text-align:right">${score}/10</span>
+    </div>`;
+  }).join('');
+
+  // Problems with all new fields
+  const probHTML=(R.problems||[]).map(p=>{
+    const col=SC2[p.severity]||'#C9A96E';
+    return `<div style="page-break-inside:avoid;background:rgba(255,255,255,0.03);border:1px solid ${col}44;border-left:4px solid ${col};border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px">
+        <span style="font-size:14px;font-weight:700;color:#E8D5B0">${p.title||p.area||''}</span>
+        <span style="font-size:10px;background:${col}22;color:${col};padding:3px 10px;border-radius:20px;text-transform:uppercase;font-weight:600">${p.severity}</span>
+      </div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 8px">${p.issue||''}</p>
+      ${p.deep_dive||p.deepDive?`<div style="background:rgba(0,0,0,0.25);border-radius:6px;border-left:2px solid rgba(201,169,110,0.3);padding:8px 10px;font-size:12px;color:#9B8866;font-style:italic;margin-bottom:6px"><b style="color:#C9A96E">Deeper Insight:</b> ${p.deep_dive||p.deepDive}</div>`:''}
+      ${p.dasha_connection?`<div style="background:rgba(74,29,150,0.12);border-radius:6px;border-left:2px solid rgba(139,92,246,0.4);padding:8px 10px;font-size:12px;color:#A78BFA;margin-bottom:6px">🪐 ${p.dasha_connection}</div>`:''}
+      ${(p.line_source||p.started_when||p.resolution)?`<div style="background:rgba(0,0,0,0.2);border-radius:7px;padding:10px 12px;font-size:12px;line-height:1.9">
+        ${p.line_source?`<div><b style="color:#C9A96E">Line Source:</b> <span style="color:#9B8866">${p.line_source}</span></div>`:''}
+        ${p.started_when?`<div><b style="color:#C9A96E">Started When:</b> <span style="color:#9B8866">${p.started_when}</span></div>`:''}
+        ${p.resolution?`<div><b style="color:#C9A96E">Resolution:</b> <span style="color:#9B8866">${p.resolution}</span></div>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+
+  // Predictions for PDF
+  const predHTML=(R.predictions||[]).map(p=>`
+    <div style="page-break-inside:avoid;background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.2);border-radius:10px;padding:13px;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:#E8D5B0;margin-bottom:7px">🔮 ${p.category||''}</div>
+      <p style="font-size:13px;color:#9B8866;line-height:1.7;margin:0 0 7px">${p.current_situation||''}</p>
+      <div style="background:rgba(22,160,133,0.1);border-radius:6px;padding:6px 10px;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:700;color:#16A085">Primary Window: </span>
+        <span style="font-size:12px;color:#E8D5B0">${p.primary_window||''}</span>
+      </div>
+      <div style="font-size:11px;color:#6B5B40;font-style:italic">Line Evidence: ${p.line_evidence||''}</div>
+    </div>`).join('');
+
+  const remHTML=(R.remedies||[]).map(r=>`
+    <div style="page-break-inside:avoid;background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.18);border-radius:10px;padding:13px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:7px;flex-wrap:wrap;gap:4px">
+        <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px">${r.type||''}</span>
+        <span style="font-size:10px;color:#6B5B40">🕐 ${r.timing||''}</span>
+      </div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 5px">${r.remedy||''}</p>
+      ${r.planet_target?`<p style="font-size:11px;color:#9B8866">Targets: ${r.planet_target}</p>`:''}
+    </div>`).join('');
+
+  const gemHTML=(R.gemstones||[]).map(g=>{
+    const gm=GEMS[g.stone]||{name:g.title||g.stone,planet:g.planet||'—',color:'#C9A96E',finger:g.wear_on||'—'};
+    const col=gm.color;
+    const displayName=g.title||gm.name;
+    const displayFinger=g.wear_on||gm.finger;
+    return `<div style="page-break-inside:avoid;background:linear-gradient(135deg,${h2rgba(col,0.07)},rgba(0,0,0,0.2));border:1px solid ${col}44;border-top:3px solid ${col};border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,white,${col});box-shadow:0 0 13px ${col}55;flex-shrink:0"></div>
+          <div>
+            <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${col};margin-bottom:2px">${displayName}</div>
+            <div style="font-size:11px;color:#6B5B40">Planet: ${g.planet||gm.planet}</div>
+          </div>
+        </div>
+        <span style="font-size:10px;background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);border-radius:9px;padding:3px 10px;font-weight:700">RECOMMENDED</span>
+      </div>
+      <p style="font-size:13px;color:#E8D5B0;line-height:1.7;margin:0 0 10px">${g.reason||''}</p>
+      ${g.mantra?`<div style="background:rgba(201,169,110,0.07);border-radius:6px;padding:7px 10px;font-size:11px;color:#C9A96E;margin-bottom:8px">🕉 ${g.mantra}</div>`:''}
+      ${g.test_first==='yes'?`<div style="background:rgba(232,41,41,0.08);border-radius:6px;padding:7px 10px;font-size:11px;color:#FCA5A5;margin-bottom:8px">⚠ Test before wearing</div>`:''}
+      <table style="width:100%;font-size:11px;border-collapse:collapse">
+        ${[['Weight',g.weight],['Metal',g.metal],['Wear On',displayFinger],['First Wear',g.day_to_wear]].map(([k,v])=>`<tr><td style="padding:3px 0;color:#6B5B40;width:80px">${k}</td><td style="color:#C4AD8A">${v||''}</td></tr>`).join('')}
+      </table>
+    </div>`;
+  }).join('');
+
+  const vastuHTML=(R.vastu||[]).map(v=>`
+    <div style="page-break-inside:avoid;background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.18);border-radius:10px;padding:13px;margin-bottom:9px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;flex-wrap:wrap;gap:6px">
+        <span style="font-size:13px;font-weight:700;color:#E8D5B0">🧭 ${v.direction||''}</span>
+        ${v.compass?`<span style="background:rgba(36,113,163,0.25);color:#85C1E9;border:1px solid rgba(36,113,163,0.5);border-radius:8px;padding:3px 12px;font-size:13px;font-weight:700">${v.compass}</span>`:''}
+      </div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0">${v.en||''}</p>
+    </div>`).join('');
+
+  function pdfSec(emoji, title, content){
+    return `<div style="page-break-inside:avoid;margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(201,169,110,0.25)">
+        <span style="font-size:16px">${emoji}</span>
+        <span style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:#C9A96E;letter-spacing:3px">${title}</span>
+      </div>
+      ${content}
+    </div>`;
   }
 
   const lagnaHTML=(R.shubh_lagnas||[]).map(l=>{
     const c=LC2[l.number]||'#C9A96E';
-    return `<div style="background:rgba(255,255,255,0.03);border:1px solid ${c}44;border-left:4px solid ${c};border-radius:10px;padding:14px;margin-bottom:10px">
+    return `<div style="page-break-inside:avoid;background:rgba(255,255,255,0.03);border:1px solid ${c}44;border-left:4px solid ${c};border-radius:10px;padding:14px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center;flex-wrap:wrap;gap:5px">
         <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${c};letter-spacing:2px">SHUBH LAGNA ${l.number} — ${l.probability}</span>
         <span style="font-size:11px;background:${c}22;color:${c};padding:2px 9px;border-radius:9px">📅 ${l.window}</span>
@@ -1006,116 +1192,116 @@ function savePDF(){
     </div>`;
   }).join('');
 
-  const probHTML=(R.problems||[]).map(p=>`
-    <div style="background:rgba(255,255,255,0.03);border:1px solid ${SC2[p.severity]||'#C9A96E'}44;border-left:3px solid ${SC2[p.severity]||'#C9A96E'};border-radius:10px;padding:13px;margin-bottom:9px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:7px">
-        <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${SC2[p.severity]};letter-spacing:2px">${p.area}</span>
-        <span style="font-size:10px;background:${SC2[p.severity]}22;color:${SC2[p.severity]};padding:2px 8px;border-radius:8px">${p.severity}</span>
-      </div>
-      <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 7px">${p.issue}</p>
-      ${p.deepDive?`<div style="background:rgba(0,0,0,0.25);border-radius:6px;border-left:2px solid rgba(201,169,110,0.28);padding:7px 10px;font-size:11px;color:#9B8866;font-style:italic;margin-bottom:5px">🔍 ${p.deepDive}</div>`:''}
-      ${p.dasha_connection?`<div style="background:rgba(74,29,150,0.12);border-radius:6px;border-left:2px solid rgba(139,92,246,0.4);padding:7px 10px;font-size:11px;color:#A78BFA">🪐 ${p.dasha_connection}</div>`:''}
-      <p style="font-size:11px;color:#6B5B40;margin-top:6px;font-style:italic">${p.line}</p>
-    </div>`).join('');
-
-  const remHTML=(R.remedies||[]).map(r=>`
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.18);border-radius:10px;padding:13px;margin-bottom:9px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:7px">
-        <span style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px">${r.type}</span>
-        <span style="font-size:10px;color:#6B5B40">🕐 ${r.timing}</span>
-      </div>
-      <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 5px">${r.remedy}</p>
-      ${r.planet_target?`<p style="font-size:11px;color:#9B8866">Targets: ${r.planet_target}</p>`:''}
-    </div>`).join('');
-
-  const gemHTML=(R.gemstones||[]).map(g=>{
-    const gm=GEMS[g.stone]||{name:g.stone,planet:'—',color:'#C9A96E',finger:'—'};
-    return `<div style="background:linear-gradient(135deg,${h2rgba(gm.color,0.07)},rgba(0,0,0,0.2));border:1px solid ${gm.color}44;border-top:3px solid ${gm.color};border-radius:12px;padding:14px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:11px;margin-bottom:10px">
-        <div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 13px ${gm.color}55;flex-shrink:0"></div>
-        <div>
-          <div style="font-family:'Cinzel Decorative',cursive;font-size:10px;color:${gm.color};margin-bottom:2px">${gm.name}</div>
-          <div style="font-size:11px;color:#6B5B40">Planet: ${gm.planet}</div>
-        </div>
-      </div>
-      <p style="font-size:13px;color:#E8D5B0;line-height:1.7;margin:0 0 10px">${g.reason}</p>
-      ${g.mantra?`<div style="background:rgba(201,169,110,0.07);border-radius:6px;padding:7px 10px;font-size:11px;color:#C9A96E;margin-bottom:8px">🕉 ${g.mantra}</div>`:''}
-      ${g.test_first==='yes'?`<div style="background:rgba(232,41,41,0.08);border-radius:6px;padding:7px 10px;font-size:11px;color:#FCA5A5;margin-bottom:8px">⚠ Test before wearing</div>`:''}
-      <table style="width:100%;font-size:11px;border-collapse:collapse">
-        ${[['Weight',g.weight],['Metal',g.metal],['First Wear',g.day_to_wear],['Finger',gm.finger]].map(([k,v])=>`<tr><td style="padding:3px 0;color:#6B5B40;width:80px">${k}</td><td style="color:#C4AD8A">${v||''}</td></tr>`).join('')}
-      </table>
-    </div>`;
-  }).join('');
-
-  const vastuHTML=(R.vastu||[]).map(v=>`
-    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,169,110,0.18);border-left:3px solid #C9A96E;border-radius:10px;padding:13px;margin-bottom:9px">
-      <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:2px;margin-bottom:7px">🧭 ${(v.direction||'').toUpperCase()}</div>
-      <p style="font-size:13px;line-height:1.75;color:#E8D5B0">${v.en}</p>
-    </div>`).join('');
-
-  const lifeHTML=(R.lifestyle||[]).map(l=>`
-    <div style="background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.18);border-left:3px solid #2ECC71;border-radius:10px;padding:13px;margin-bottom:9px">
-      <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:2px;margin-bottom:7px">🌿 ${(l.title||'').toUpperCase()}</div>
-      <p style="font-size:13px;line-height:1.75;color:#E8D5B0">${l.en}</p>
-    </div>`).join('');
-
   const posHTML=(R.positive_signs||[]).map(s=>`
     <div style="display:flex;gap:10px;margin-bottom:9px;align-items:flex-start">
       <span style="color:#2ECC71;font-size:15px;flex-shrink:0">◈</span>
       <p style="font-size:13px;line-height:1.7;color:#C4D8B0;margin:0">${s.en}</p>
     </div>`).join('');
 
+  const lifeHTML=(R.lifestyle||[]).map(l=>`
+    <div style="page-break-inside:avoid;background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.18);border-left:3px solid #2ECC71;border-radius:10px;padding:13px;margin-bottom:9px">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:2px;margin-bottom:5px">🌿 ${(l.title||'').toUpperCase()}</div>
+      <p style="font-size:13px;line-height:1.75;color:#E8D5B0;margin:0 0 6px">${l.en}</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:#9B8866">
+        ${l.frequency?`<span><b style="color:#2ECC71">Frequency:</b> ${l.frequency}</span>`:''}
+        ${l.best_time?`<span><b style="color:#2ECC71">Best Time:</b> ${l.best_time}</span>`:''}
+      </div>
+    </div>`).join('');
+
   const html=`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/>
+<meta name="color-scheme" content="light">
 <title>HastRekha — ${g_name}</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Crimson Pro',Georgia,serif;background:linear-gradient(135deg,#06040F,#0D0820,#06040F);min-height:100vh;color:#E8D5B0;max-width:740px;margin:0 auto;padding:32px 22px;font-size:14px;line-height:1.75}
-.pbtn{display:block;margin:0 auto 22px;padding:12px 30px;background:linear-gradient(135deg,#8B6914,#C9A96E);color:#06040F;border:none;border-radius:26px;font-size:14px;cursor:pointer;font-family:'Cinzel Decorative',cursive;letter-spacing:2px;font-weight:700}
-@media print{.pbtn{display:none}body{background:#06040F;-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{color-scheme:light!important;background:#06040F!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+body{font-family:'Crimson Pro',Georgia,serif;color:#E8D5B0;max-width:760px;margin:0 auto;padding:28px 20px;font-size:14px;line-height:1.75}
+.no-print{display:block}
+@page{margin:15mm;size:A4}
+@media print{
+  .no-print{display:none!important}
+  body{padding:0;max-width:100%}
+  *{page-break-inside:avoid}
+  html,body{background:#06040F!important;color:#E8D5B0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+</style>
 </head><body>
-<button class="pbtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+<div class="no-print" style="text-align:center;margin-bottom:20px">
+  <button onclick="window.print()" style="padding:12px 32px;background:linear-gradient(135deg,#8B6914,#C9A96E);color:#06040F;border:none;border-radius:26px;font-size:14px;cursor:pointer;font-family:'Cinzel Decorative',cursive;letter-spacing:2px;font-weight:700">🖨️ Print / Save as PDF</button>
+</div>
+
 <div style="text-align:center;margin-bottom:24px">
-  <div style="width:62px;height:62px;background:radial-gradient(circle,rgba(201,169,110,0.25),transparent);border:1px solid rgba(201,169,110,0.28);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px">🔮</div>
-  <h1 style="font-family:'Cinzel Decorative',cursive;font-size:26px;color:#C9A96E;margin-bottom:5px;letter-spacing:2px">✦ HastRekha ✦</h1>
+  <div style="font-size:32px;margin-bottom:10px">🔮</div>
+  <h1 style="font-family:'Cinzel Decorative',cursive;font-size:24px;color:#C9A96E;margin-bottom:5px;letter-spacing:2px">✦ HastRekha ✦</h1>
   <p style="font-size:11px;color:#9B8866;letter-spacing:4px;margin-bottom:3px">ANCIENT VEDIC PALM READING</p>
   <p style="font-size:12px;color:#6B5B40">${date}</p>
 </div>
-<div style="background:linear-gradient(135deg,rgba(201,169,110,0.1),rgba(139,105,20,0.04));border:1px solid rgba(201,169,110,0.28);border-radius:12px;padding:16px 20px;margin-bottom:22px;text-align:center">
+
+<div style="background:linear-gradient(135deg,rgba(201,169,110,0.1),rgba(139,105,20,0.04));border:1px solid rgba(201,169,110,0.28);border-radius:12px;padding:16px 20px;margin-bottom:20px;text-align:center">
   <p style="font-family:'Cinzel Decorative',cursive;font-size:13px;color:#C9A96E;letter-spacing:2px;margin-bottom:5px">${g_name}</p>
   <p style="font-size:12px;color:#9B8866">Age: ${g_age} years · ${g_stage}${selectedConcerns.length?' · Concerns: '+selectedConcerns.join(', '):''}</p>
 </div>
+
 <div style="border-top:1px solid rgba(201,169,110,0.22);margin:18px 0"></div>
-<div style="background:linear-gradient(135deg,rgba(201,169,110,0.09),rgba(139,105,20,0.03));border:1px solid rgba(201,169,110,0.26);border-radius:12px;padding:18px;margin-bottom:18px">
-  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:3px;margin-bottom:10px">✦ OVERALL READING ✦</div>
+
+<div style="page-break-inside:avoid;background:linear-gradient(135deg,rgba(201,169,110,0.09),rgba(139,105,20,0.03));border:1px solid rgba(201,169,110,0.26);border-radius:12px;padding:18px;margin-bottom:18px">
+  <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#C9A96E;letter-spacing:3px;margin-bottom:12px">✦ OVERALL READING ✦</div>
   <p style="font-size:14px;line-height:1.85;color:#E8D5B0;margin:0 0 9px">${R.overall_energy||''}</p>
-  <p style="font-size:12px;color:#9B8866;font-style:italic;margin:0 0 10px">${R.hand_type||''}</p>
-  <div style="background:rgba(201,169,110,0.09);border-radius:8px;padding:9px 13px;border:1px solid rgba(201,169,110,0.18);font-size:13px;color:#C9A96E">🌟 Favorable Period: <strong style="color:#E8D5B0">${R.lucky_period||''}</strong></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+    <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:8px;color:#C9A96E;letter-spacing:2px;margin-bottom:5px">HAND SHAPE</div>
+      <p style="font-size:12px;color:#E8D5B0;line-height:1.5">${R.hand_type||''}</p>
+    </div>
+    <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px">
+      <div style="font-family:'Cinzel Decorative',cursive;font-size:8px;color:#C9A96E;letter-spacing:2px;margin-bottom:5px">DOMINANT MOUNT</div>
+      <p style="font-size:12px;color:#E8D5B0;line-height:1.5">${R.dominant_mount||''}</p>
+    </div>
+  </div>
+  <div style="background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+    <div style="font-family:'Cinzel Decorative',cursive;font-size:8px;color:#C9A96E;letter-spacing:2px;margin-bottom:8px">LINE QUALITY</div>
+    ${lqHTML}
+  </div>
+  <div style="background:rgba(201,169,110,0.09);border-radius:8px;padding:9px 13px;border:1px solid rgba(201,169,110,0.18);font-size:13px;color:#C9A96E">🌟 Most Favorable Period: <strong style="color:#E8D5B0">${R.lucky_period||''}</strong></div>
 </div>
-<div style="background:rgba(74,29,150,0.1);border:1px solid rgba(139,92,246,0.22);border-radius:12px;padding:16px;margin-bottom:18px">
+
+<div style="page-break-inside:avoid;background:rgba(74,29,150,0.1);border:1px solid rgba(139,92,246,0.22);border-radius:12px;padding:16px;margin-bottom:18px">
   <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#A78BFA;letter-spacing:3px;margin-bottom:9px">✦ VEDIC DASHA ✦</div>
   <p style="font-size:13px;line-height:1.7;color:#E8D5B0;margin-bottom:10px">${R.dasha_summary||''}</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-    ${[['Life Stage',g_stage],['Age',g_age+' years'],['Mahadasha',g_dasha?g_dasha.maha+' Dasha':''],['Antardasha',g_dasha?g_dasha.antar+' Antar':''],['Afflicted',R.afflicted_planet||''],['Dasha Ends',g_dasha?g_dasha.mahaEnds:'']]
+    ${[['Life Stage',g_stage],['Age',g_age+' years'],['Mahadasha',g_dasha?g_dasha.maha+' Dasha':''],['Antardasha',g_dasha?g_dasha.antar+' Antar':''],['Afflicted Planet',R.afflicted_planet||''],['Dasha Ends',g_dasha?g_dasha.mahaEnds:'']]
     .map(([k,v])=>`<div style="background:rgba(0,0,0,0.22);border-radius:7px;padding:9px 11px"><div style="font-size:9px;color:#6B5B40;margin-bottom:2px">${k}</div><div style="font-size:13px;color:#A78BFA;font-weight:600">${v}</div></div>`).join('')}
   </div>
 </div>
-<div style="background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.18);border-radius:12px;padding:16px;margin-bottom:18px">
+
+<div style="page-break-inside:avoid;background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.18);border-radius:12px;padding:16px;margin-bottom:18px">
   <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:#2ECC71;letter-spacing:3px;margin-bottom:10px">✦ AUSPICIOUS SIGNS ✦</div>
   ${posHTML}
 </div>
-${sec('🔮','SHUBH LAGNA WINDOWS',lagnaHTML)}
-${sec('⚡','PROBLEMS IDENTIFIED',probHTML)}
-${sec('🔱','VEDIC REMEDIES',remHTML)}
-${sec('💎','GEMSTONE PRESCRIPTIONS',gemHTML)}
-${sec('🧭','VASTU DIRECTIONS',vastuHTML)}
-${sec('🌿','LIFESTYLE PRACTICES',lifeHTML)}
+
+${pdfSec('🔮','SHUBH LAGNA WINDOWS',lagnaHTML)}
+${pdfSec('✨','PREDICTIONS',predHTML)}
+${pdfSec('⚡','PROBLEMS IDENTIFIED',probHTML)}
+${pdfSec('🔱','VEDIC REMEDIES',remHTML)}
+${pdfSec('💎','GEMSTONE PRESCRIPTIONS',gemHTML)}
+${pdfSec('🧭','VASTU DIRECTIONS',vastuHTML)}
+${pdfSec('🌿','LIFESTYLE PRACTICES',lifeHTML)}
+
 <div style="border-top:1px solid rgba(201,169,110,0.18);margin-top:28px;padding-top:14px;text-align:center">
   <p style="font-size:11px;color:#4A3F2F;font-style:italic;line-height:1.7">For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>✦ HastRekha ✦ — Ancient Vedic Palm Reading</p>
 </div>
 </body></html>`;
 
-  const w=window.open('','_blank');
-  if(w){ w.document.write(html); w.document.close(); }
+  // Auto-download as HTML file (works on all devices)
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`HastRekha_${(g_name||'Reading').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 </script>
 </body>
