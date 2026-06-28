@@ -62,18 +62,20 @@ const ADMIN_EMAIL = "jyotish@hast-rekha.com";
 
 async function sendEmail(to, subject, htmlBody) {
   if (!SMTP_USER || !SMTP_PASS) { console.log("SMTP not configured — skipping email"); return; }
+  console.log("Attempting email to:", to, "from:", SMTP_USER);
   const boundary = "----=_HastRekha_" + Date.now();
+  // Encode subject for non-ASCII safety
+  const safeSubject = "=?UTF-8?B?" + Buffer.from(subject).toString("base64") + "?=";
   const msg = [
     "From: HastRekha <" + FROM_EMAIL + ">",
     "To: " + to,
     "Reply-To: " + ADMIN_EMAIL,
-    "Subject: " + subject,
+    "Subject: " + safeSubject,
     "MIME-Version: 1.0",
     'Content-Type: multipart/alternative; boundary="' + boundary + '"',
     "",
     "--" + boundary,
     "Content-Type: text/html; charset=utf-8",
-    "Content-Transfer-Encoding: quoted-printable",
     "",
     htmlBody,
     "",
@@ -81,29 +83,61 @@ async function sendEmail(to, subject, htmlBody) {
   ].join("\r\n");
 
   return new Promise((resolve, reject) => {
+    const net = require("net");
     const tls = require("tls");
-    const sock = tls.connect(465, { host: "smtp.gmail.com" }, () => {
+    // Use port 587 STARTTLS for Google Workspace compatibility
+    const sock = net.connect(587, "smtp.gmail.com", () => {
       let step = 0;
-      const cmds = [
-        "EHLO hast-rekha.com\r\n",
-        "AUTH LOGIN\r\n",
-        Buffer.from(SMTP_USER).toString("base64") + "\r\n",
-        Buffer.from(SMTP_PASS).toString("base64") + "\r\n",
-        "MAIL FROM:<" + SMTP_USER + ">\r\n",
-        "RCPT TO:<" + to + ">\r\n",
-        "DATA\r\n",
-        msg + "\r\n.\r\n",
-        "QUIT\r\n"
-      ];
+      let upgraded = false;
+      let buffer = "";
+
+      function handleLine(line) {
+        console.log("SMTP <<", line.slice(0,80));
+        const code = line.slice(0,3);
+        if (code === "220" && !upgraded) { sock.write("EHLO hast-rekha.com\r\n"); return; }
+        if (line.includes("STARTTLS") && !upgraded) { sock.write("STARTTLS\r\n"); return; }
+        if (code === "220" && !upgraded) {
+          // Upgrade to TLS
+          upgraded = true;
+          const tlsSock = tls.connect({ socket: sock, host: "smtp.gmail.com" }, () => {
+            tlsSock.write("EHLO hast-rekha.com\r\n");
+            const cmds = [
+              "AUTH LOGIN\r\n",
+              Buffer.from(SMTP_USER).toString("base64") + "\r\n",
+              Buffer.from(SMTP_PASS).toString("base64") + "\r\n",
+              "MAIL FROM:<" + SMTP_USER + ">\r\n",
+              "RCPT TO:<" + to + ">\r\n",
+              "DATA\r\n",
+              msg + "\r\n.\r\n",
+              "QUIT\r\n"
+            ];
+            let cs = 0;
+            tlsSock.on("data", d => {
+              const r = d.toString();
+              console.log("SMTP(tls) <<", r.slice(0,80));
+              if (r.startsWith("2") || r.startsWith("3")) { if(cs < cmds.length) tlsSock.write(cmds[cs++]); }
+              if (r.startsWith("221")) { tlsSock.destroy(); resolve(); }
+              if (r.startsWith("5")) { tlsSock.destroy(); reject(new Error(r.trim())); }
+            });
+            tlsSock.on("error", e => { console.error("TLS sock error:", e.message); reject(e); });
+          });
+          return;
+        }
+        if (!upgraded) {
+          if (code === "250") { sock.write("STARTTLS\r\n"); }
+        }
+      }
+
       sock.on("data", d => {
-        const r = d.toString();
-        if (r.startsWith("2") || r.startsWith("3")) { if (step < cmds.length) sock.write(cmds[step++]); }
-        if (r.startsWith("221")) { sock.destroy(); resolve(); }
-        if (r.startsWith("5")) { sock.destroy(); reject(new Error(r.trim())); }
+        buffer += d.toString();
+        const lines = buffer.split("\r\n");
+        buffer = lines.pop();
+        lines.forEach(l => { if(l) handleLine(l); });
       });
-      sock.on("error", reject);
+      sock.on("error", e => { console.error("Socket error:", e.message); reject(e); });
+      sock.on("close", () => { if(!upgraded) reject(new Error("Connection closed before TLS upgrade")); });
     });
-    sock.on("error", reject);
+    sock.on("error", e => { console.error("Connect error:", e.message); reject(e); });
   });
 }
 
@@ -561,11 +595,11 @@ async function handleRequest(req, res) {
       if (userEmail && userEmail.includes("@")) {
         sendEmail(userEmail, subject, emailHtml)
           .then(()=>console.log("Reading email sent to", userEmail))
-          .catch(e=>console.error("Email to user failed:", e.message));
+          .catch(e=>console.error("Email to user FAILED:", e.message, e.stack));
       }
       // Always send copy to admin
       sendEmail(ADMIN_EMAIL, "[COPY] " + subject, emailHtml)
-        .catch(e=>console.error("Admin email failed:", e.message));
+        .catch(e=>console.error("Admin email FAILED:", e.message, e.stack));
     } catch(e) {
       console.error("Error:",e.message);
       sendJSON(res,{error:e.message},500);
