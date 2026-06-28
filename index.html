@@ -278,7 +278,22 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
     <div class="overview-card" id="r-overview">
       <div class="sec-title">✦ OVERALL READING ✦</div>
       <p id="r-overall" style="font-size:14px;line-height:1.8;margin:0 0 8px"></p>
-      <p id="r-handtype" style="font-size:11px;color:var(--muted);font-style:italic;margin:0 0 10px"></p>
+      <!-- Hand shape + Dominant mount boxes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px">
+          <div style="font-family:'Cinzel Decorative',cursive;font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:5px">HAND SHAPE</div>
+          <p id="r-handtype" style="font-size:12px;color:var(--text);line-height:1.5;margin:0"></p>
+        </div>
+        <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px">
+          <div style="font-family:'Cinzel Decorative',cursive;font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:5px">DOMINANT MOUNT</div>
+          <p id="r-dominant-mount" style="font-size:12px;color:var(--text);line-height:1.5;margin:0"></p>
+        </div>
+      </div>
+      <!-- Line Quality -->
+      <div style="background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-family:'Cinzel Decorative',cursive;font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:8px">LINE QUALITY</div>
+        <div id="r-line-quality"></div>
+      </div>
       <div style="padding:8px 12px;background:rgba(201,169,110,0.07);border-radius:8px;border:1px solid rgba(201,169,110,0.16);font-size:12px">
         🌟 <span style="color:var(--gold)">Most Favorable Period: </span><strong id="r-lucky"></strong>
       </div>
@@ -313,27 +328,29 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
       <div class="diff-box" id="r-differ"></div>
     </div>
 
-    <!-- Shubh Lagnas -->
-    <div id="r-lagnas-section">
-      <div class="sec-title" style="margin-bottom:10px">✦ SHUBH LAGNA WINDOWS ✦</div>
-      <div id="r-lagnas"></div>
-    </div>
-
     <!-- Positive signs -->
     <div class="pos-box">
       <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:9px">✦ AUSPICIOUS SIGNS IN YOUR PALM ✦</div>
       <div id="r-positive"></div>
     </div>
 
-    <!-- Tabs -->
+    <!-- Shubh Lagnas -->
+    <div id="r-lagnas-section">
+      <div class="sec-title" style="margin-bottom:10px">✦ SHUBH LAGNA WINDOWS ✦</div>
+      <div id="r-lagnas"></div>
+    </div>
+
+    <!-- Tabs — added Predictions -->
     <div class="tabs">
-      <button class="tab-btn active" onclick="setTab('problems')">⚡ Problems</button>
+      <button class="tab-btn active" onclick="setTab('predictions')">🔮 Predict</button>
+      <button class="tab-btn" onclick="setTab('problems')">⚡ Problems</button>
       <button class="tab-btn" onclick="setTab('remedies')">🔱 Remedies</button>
       <button class="tab-btn" onclick="setTab('gemstones')">💎 Gems</button>
       <button class="tab-btn" onclick="setTab('vastu')">🏠 Vastu</button>
       <button class="tab-btn" onclick="setTab('lifestyle')">🌿 Life</button>
     </div>
-    <div id="tab-problems" class="tab-panel active"></div>
+    <div id="tab-predictions" class="tab-panel active"></div>
+    <div id="tab-problems" class="tab-panel"></div>
     <div id="tab-remedies" class="tab-panel"></div>
     <div id="tab-gemstones" class="tab-panel"></div>
     <div id="tab-vastu" class="tab-panel"></div>
@@ -761,17 +778,32 @@ function renderReading(){
   const R=currentReading;
   const HR=hrReading;
 
-  // Engine label
   const labels={samudrik:'✦ Classical Vedic Reading ✦',hasta:'✦ Ancient Texts Reading ✦',both:'✦ Complete Vedic Reading ✦'};
   document.getElementById('result-engine-label').textContent=labels[currentEngine]||labels.samudrik;
-
-  // Compare bar
   document.getElementById('comp-bar').style.display=currentEngine==='both'?'flex':'none';
 
   // Overview
   document.getElementById('r-overall').textContent=R.overall_energy||'';
-  document.getElementById('r-handtype').textContent='Hand: '+(R.hand_type||'')+(R.life_stage_reading?' | '+R.life_stage_reading:'');
+  document.getElementById('r-handtype').textContent=R.hand_type||'';
+  document.getElementById('r-dominant-mount').textContent=R.dominant_mount||'';
   document.getElementById('r-lucky').textContent=R.lucky_period||'';
+
+  // Line quality bars
+  const lq=R.line_quality||{};
+  const lqEl=document.getElementById('r-line-quality');
+  const lqLines=[['heartLine','Heart Line'],['headLine','Head Line'],['lifeLine','Life Line'],['fateLine','Fate Line'],['sunLine','Sun Line']];
+  lqEl.innerHTML=lqLines.map(([k,label])=>{
+    const score=lq[k]||0;
+    const pct=score*10;
+    const col=score>=7?'#2ECC71':score>=5?'#E67E22':'#E82929';
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <span style="font-size:11px;color:var(--muted);width:60px;flex-shrink:0">${label}</span>
+      <div style="flex:1;background:rgba(255,255,255,0.06);border-radius:4px;height:5px">
+        <div style="width:${pct}%;background:${col};height:5px;border-radius:4px;transition:width .8s ease"></div>
+      </div>
+      <span style="font-size:11px;color:${col};width:30px;text-align:right;font-weight:600">${score}/10</span>
+    </div>`;
+  }).join('');
 
   // Dasha
   document.getElementById('r-dasha-summary').textContent=R.dasha_summary||'';
@@ -782,49 +814,54 @@ function renderReading(){
   document.getElementById('d-afflicted').textContent=R.afflicted_planet||g_dasha.maha;
   document.getElementById('d-ends').textContent=g_dasha.mahaEnds;
 
-  // HR overview
-  if(HR){
-    document.getElementById('r-hr-overall').textContent=HR.overall_energy||'';
-    document.getElementById('r-hr-handtype').textContent='Hand: '+(HR.hand_type||'');
-    buildComparison(R,HR);
-  }
+  if(HR){ document.getElementById('r-hr-overall').textContent=HR.overall_energy||''; document.getElementById('r-hr-handtype').textContent='Hand: '+(HR.hand_type||''); buildComparison(R,HR); }
 
   // Shubh Lagnas
-  const lc=document.getElementById('r-lagnas');
-  lc.innerHTML='';
+  const lc=document.getElementById('r-lagnas'); lc.innerHTML='';
   (R.shubh_lagnas||[]).forEach(l=>{
     const c=LC[l.number]||LC[1];
     lc.innerHTML+=`<div class="lagna" style="background:${c.bg};border-left-color:${c.color}">
-      <div class="lagna-hdr">
-        <span class="lagna-num" style="color:${c.color}">SHUBH LAGNA ${l.number} — ${l.probability||''}</span>
-        <span class="lagna-date" style="background:${c.color}22;color:${c.color}">📅 ${l.window||''}</span>
-      </div>
+      <div class="lagna-hdr"><span class="lagna-num" style="color:${c.color}">SHUBH LAGNA ${l.number} — ${l.probability||''}</span><span class="lagna-date" style="background:${c.color}22;color:${c.color}">📅 ${l.window||''}</span></div>
       <p class="lagna-body" style="color:var(--text)">${l.what_will_happen||''}</p>
       <div class="lagna-rem"><b style="color:${c.color}">Remedy before window:</b> ${l.remedy_before||''}<br/><b style="color:#9CA3AF">If missed:</b> ${l.if_missed||''}</div>
     </div>`;
   });
 
   // Positive signs
-  const pb=document.getElementById('r-positive');
-  pb.innerHTML='';
-  (R.positive_signs||[]).forEach(s=>{
-    pb.innerHTML+=`<div style="display:flex;gap:8px;margin-bottom:7px;align-items:flex-start"><span style="color:var(--green);flex-shrink:0">◈</span><span style="font-size:13px;color:#C4D8B0;line-height:1.6">${s.en}</span></div>`;
-  });
+  const pb=document.getElementById('r-positive'); pb.innerHTML='';
+  (R.positive_signs||[]).forEach(s=>{ pb.innerHTML+=`<div style="display:flex;gap:8px;margin-bottom:7px;align-items:flex-start"><span style="color:var(--green);flex-shrink:0">◈</span><span style="font-size:13px;color:#C4D8B0;line-height:1.6">${s.en}</span></div>`; });
 
-  // Problems
+  // PREDICTIONS tab
+  const predIcons={briefcase:'💼',money:'💰',home:'🏠',heart:'❤️',health:'🌿',travel:'✈️',business:'📈',foreign:'🌍'};
+  document.getElementById('tab-predictions').innerHTML=(R.predictions||[]).map(p=>`
+    <div class="item" style="background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.18);border-radius:11px;padding:14px;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">${predIcons[p.icon]||'🔮'} ${p.category||''}</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.65;margin:0 0 8px">${p.current_situation||''}</p>
+      <div style="background:rgba(22,160,133,0.08);border-radius:7px;padding:8px 10px;margin-bottom:6px">
+        <span style="font-size:10px;font-weight:600;color:#16A085">Primary Window: </span>
+        <span style="font-size:12px;color:var(--text)">${p.primary_window||''}</span>
+      </div>
+      <div style="font-size:11px;color:var(--dim);font-style:italic">Line Evidence: ${p.line_evidence||''}</div>
+    </div>`).join('');
+
+  // PROBLEMS tab — with Line Source, Started When, Resolution
   document.getElementById('tab-problems').innerHTML=(R.problems||[]).map(p=>`
     <div class="item" style="background:${SB[p.severity]||'rgba(201,169,110,0.05)'};border:1px solid ${SC[p.severity]||'#C9A96E'}33;border-left:3px solid ${SC[p.severity]||'#C9A96E'}">
       <div class="item-hdr">
-        <span class="item-label" style="color:${SC[p.severity]}">${(p.area||'').toUpperCase()}</span>
-        <span class="badge" style="background:${SC[p.severity]}15;color:${SC[p.severity]}">${p.severity}</span>
+        <span style="font-size:13px;font-weight:600;color:${SC[p.severity]}">${p.title||p.area||''}</span>
+        <span class="badge" style="background:${SC[p.severity]}15;color:${SC[p.severity]};text-transform:uppercase">${p.severity}</span>
       </div>
-      <p class="item-text">${p.issue||''}</p>
-      ${p.deepDive?`<div class="dive">🔍 ${p.deepDive}</div>`:''}
+      <p class="item-text" style="margin-bottom:8px">${p.issue||''}</p>
+      ${p.deep_dive||p.deepDive?`<div class="dive">🔍 <b>Deeper Insight:</b> ${p.deep_dive||p.deepDive}</div>`:''}
       ${p.dasha_connection?`<div class="dasha-conn">🪐 ${p.dasha_connection}</div>`:''}
-      <p class="item-meta">${p.line||''}</p>
+      <div style="background:rgba(0,0,0,0.2);border-radius:7px;padding:9px 11px;margin-top:8px;font-size:12px;line-height:1.8">
+        ${p.line_source?`<div><b style="color:var(--gold)">Line Source:</b> <span style="color:var(--muted)">${p.line_source}</span></div>`:''}
+        ${p.started_when?`<div><b style="color:var(--gold)">Started When:</b> <span style="color:var(--muted)">${p.started_when}</span></div>`:''}
+        ${p.resolution?`<div><b style="color:var(--gold)">Resolution:</b> <span style="color:var(--muted)">${p.resolution}</span></div>`:''}
+      </div>
     </div>`).join('');
 
-  // Remedies
+  // REMEDIES
   document.getElementById('tab-remedies').innerHTML=(R.remedies||[]).map(r=>`
     <div class="item" style="background:rgba(201,169,110,0.04);border:1px solid rgba(201,169,110,0.16)">
       <div class="item-hdr">
@@ -835,54 +872,59 @@ function renderReading(){
       ${r.planet_target?`<p class="item-meta">Targets: ${r.planet_target} | For: ${r.for||''}</p>`:''}
     </div>`).join('');
 
-  // Gemstones
+  // GEMSTONES — with RECOMMENDED badge and Wear On
   const recommended=getRecommendedStones();
   document.getElementById('tab-gemstones').innerHTML=
-    (recommended.length?`<div style="background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.18);border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.6"><b style="color:var(--gold)">✦ Personalised</b> based on your concerns: <b style="color:var(--text)">${selectedConcerns.join(', ')||'General reading'}</b></div>`:'')+
+    (recommended.length?`<div style="background:rgba(201,169,110,0.05);border:1px solid rgba(201,169,110,0.18);border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.6"><b style="color:var(--gold)">✦ Personalised</b> based on: <b style="color:var(--text)">${selectedConcerns.join(', ')||'General reading'}</b></div>`:'')+
     `<div class="gem-grid">${(R.gemstones||[]).map(g=>{
-      const gm=GEMS[g.stone]||{name:g.stone,planet:'—',color:'#C9A96E',finger:'—'};
-      const isTop=recommended.indexOf(g.stone)<2 && recommended.length>0;
-      const tags=selectedConcerns.filter(c=>(STONE_MAP[c]||[]).includes(g.stone)).map(c=>`<span class="stone-tag">${c}</span>`).join('');
-      return `<div class="gem-card" style="background:linear-gradient(135deg,${h2rgba(gm.color,0.07)},rgba(0,0,0,0.2));border:1px solid ${gm.color}33;border-top:3px solid ${gm.color}">
-        ${isTop?`<div style="font-size:9px;color:${gm.color};font-family:'Cinzel Decorative',cursive;letter-spacing:1px;margin-bottom:6px">★ PRIMARY</div>`:''}
-        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
-          <div class="gem-dot" style="background:radial-gradient(circle at 35% 35%,white,${gm.color});box-shadow:0 0 12px ${gm.color}44"></div>
-          <div>
-            <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${gm.color};margin-bottom:2px">${gm.name}</div>
-            <div style="font-size:10px;color:var(--dim)">${gm.planet}</div>
+      const gm=GEMS[g.stone]||{name:g.title||g.stone,planet:g.planet||'—',color:'#C9A96E',finger:g.wear_on||'—'};
+      const displayName=g.title||gm.name;
+      const displayPlanet=g.planet||gm.planet;
+      const displayFinger=g.wear_on||gm.finger;
+      const col=gm.color;
+      return `<div class="gem-card" style="background:linear-gradient(135deg,${h2rgba(col,0.07)},rgba(0,0,0,0.2));border:1px solid ${col}33;border-top:3px solid ${col}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div class="gem-dot" style="background:radial-gradient(circle at 35% 35%,white,${col});box-shadow:0 0 12px ${col}44"></div>
+            <div>
+              <div style="font-family:'Cinzel Decorative',cursive;font-size:9px;color:${col};margin-bottom:2px">${displayName}</div>
+              <div style="font-size:10px;color:var(--dim)">Planet: ${displayPlanet}</div>
+            </div>
           </div>
+          <span style="font-size:9px;background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);border-radius:9px;padding:2px 8px;font-weight:600;white-space:nowrap">RECOMMENDED</span>
         </div>
-        ${tags?`<div style="margin-bottom:7px">${tags}</div>`:''}
         <p style="font-size:12px;color:#C4AD8A;margin:0 0 9px;line-height:1.6">${g.reason||''}</p>
         ${g.test_first==='yes'?`<div style="background:rgba(232,41,41,0.07);border-radius:6px;padding:5px 8px;font-size:11px;color:#fca5a5;margin-bottom:7px">⚠ Test before wearing</div>`:''}
         ${g.mantra?`<div style="background:rgba(201,169,110,0.06);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--gold);margin-bottom:7px">🕉 ${g.mantra}</div>`:''}
         <div style="border-top:1px solid rgba(201,169,110,0.1);padding-top:7px">
-          ${[['Weight',g.weight],['Metal',g.metal],['First Wear',g.day_to_wear],['Finger',gm.finger]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--dim)">${k}</span><span style="font-size:10px;color:#C4AD8A">${v||''}</span></div>`).join('')}
+          ${[['Weight',g.weight],['Metal',g.metal],['Wear On',displayFinger],['First Wear',g.day_to_wear]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:10px;color:var(--dim)">${k}</span><span style="font-size:10px;color:#C4AD8A">${v||''}</span></div>`).join('')}
         </div>
       </div>`;
     }).join('')}</div>`;
 
-  // Vastu
+  // VASTU — with direction pill/badge
   document.getElementById('tab-vastu').innerHTML=(R.vastu||[]).map(v=>`
-    <div class="item" style="background:rgba(201,169,110,0.03);border:1px solid rgba(201,169,110,0.16);border-left:3px solid var(--gold)">
-      <div class="item-label" style="color:var(--gold);margin-bottom:6px">🧭 ${(v.direction||'').toUpperCase()}</div>
+    <div class="item" style="background:rgba(201,169,110,0.03);border:1px solid rgba(201,169,110,0.16)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${v.direction||''}</div>
+        ${v.compass?`<span style="background:rgba(36,113,163,0.2);color:#85C1E9;border:1px solid rgba(36,113,163,0.4);border-radius:8px;padding:3px 12px;font-size:12px;font-weight:700">${v.compass}</span>`:''}
+      </div>
       <p class="item-text">${v.en||''}</p>
     </div>`).join('');
 
-  // Lifestyle
+  // LIFESTYLE — with Frequency and Best Time
   document.getElementById('tab-lifestyle').innerHTML=(R.lifestyle||[]).map(l=>`
     <div class="item" style="background:rgba(46,204,113,0.03);border:1px solid rgba(46,204,113,0.14);border-left:3px solid var(--green)">
       <div class="item-label" style="color:var(--green);margin-bottom:6px">🌿 ${(l.title||'').toUpperCase()}</div>
-      <p class="item-text">${l.en||''}</p>
+      <p class="item-text" style="margin-bottom:8px">${l.en||''}</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        ${l.frequency?`<div style="font-size:11px;color:var(--muted)"><b style="color:var(--green)">Frequency:</b> ${l.frequency}</div>`:''}
+        ${l.best_time?`<div style="font-size:11px;color:var(--muted)"><b style="color:var(--green)">Best Time:</b> ${l.best_time}</div>`:''}
+      </div>
     </div>`).join('');
 
-  // Show correct view if both engines
-  if(currentEngine==='both' && HR){
-    showEngineView('ss');
-  } else {
-    document.getElementById('r-hr-overview').style.display='none';
-    document.getElementById('r-compare-view').style.display='none';
-  }
+  if(currentEngine==='both'&&HR){ showEngineView('ss'); }
+  else { document.getElementById('r-hr-overview').style.display='none'; document.getElementById('r-compare-view').style.display='none'; }
 }
 
 function buildComparison(R,HR){
@@ -916,7 +958,7 @@ function showEngineView(view){
 }
 
 function setTab(name){
-  const tabs=['problems','remedies','gemstones','vastu','lifestyle'];
+  const tabs=['predictions','problems','remedies','gemstones','vastu','lifestyle'];
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===name));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
