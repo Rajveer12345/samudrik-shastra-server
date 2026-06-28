@@ -205,7 +205,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
   <div class="card">
     <span class="gold-label">SELECT READING ENGINE</span>
     <div class="eng-wrap">
-      <button class="eng-btn active" id="ebtn-ss" onclick="setEngine('samudrik')">✦ Classical<br/>Reading</button>
+      <button class="eng-btn active" id="ebtn-ss" onclick="setEngine('classical')">✦ Classical<br/>Reading</button>
       <button class="eng-btn" id="ebtn-hr" onclick="setEngine('hasta')">✦ Ancient<br/>Texts</button>
       <button class="eng-btn" id="ebtn-both" onclick="setEngine('both')">⚖ Compare<br/>Both</button>
     </div>
@@ -407,7 +407,7 @@ let imgUrl = null;
 let currentReading = null;
 let hrReading = null;
 let selectedConcerns = [];
-let currentEngine = 'samudrik';
+let currentEngine = 'classical';
 let currentEngineView = 'ss';
 let currentTab = 'problems';
 
@@ -471,7 +471,7 @@ const LC = {
 };
 
 const ENG_DESCS = {
-  samudrik:'Classical Vedic palmistry with Vimshottari Dasha calculation',
+  classical:'Classical Vedic palmistry with Vimshottari Dasha calculation',
   hasta:'Ancient texts reading — based on 35 rare palmistry books including Indian, Cheiro and Benham traditions',
   both:'Compare Both — see where Classical and Ancient Text readings agree (high confidence) and where they differ'
 };
@@ -690,7 +690,7 @@ function h2rgba(hex, alpha){
 // ── ENGINE TOGGLE ────────────────────────────────────────
 function setEngine(e){
   currentEngine=e;
-  document.getElementById('ebtn-ss').classList.toggle('active',e==='samudrik');
+  document.getElementById('ebtn-ss').classList.toggle('active',e==='classical');
   document.getElementById('ebtn-hr').classList.toggle('active',e==='hasta');
   document.getElementById('ebtn-both').classList.toggle('active',e==='both');
   document.getElementById('eng-desc').textContent=ENG_DESCS[e];
@@ -869,8 +869,8 @@ function renderReading(){
   const R=currentReading;
   const HR=hrReading;
 
-  const labels={samudrik:'✦ Classical Vedic Reading ✦',hasta:'✦ Ancient Texts Reading ✦',both:'✦ Complete Vedic Reading ✦'};
-  document.getElementById('result-engine-label').textContent=labels[currentEngine]||labels.samudrik;
+  const labels={classical:'✦ Classical Vedic Reading ✦',hasta:'✦ Ancient Texts Reading ✦',both:'✦ Complete Vedic Reading ✦'};
+  document.getElementById('result-engine-label').textContent=labels[currentEngine]||labels.classical;
   document.getElementById('comp-bar').style.display=currentEngine==='both'?'flex':'none';
 
   // Overview
@@ -1058,14 +1058,14 @@ function setTab(name){
 
 function resetApp(){
   imgData=null; imgUrl=null; currentReading=null; hrReading=null;
-  selectedConcerns=[]; currentEngine='samudrik'; g_name=''; g_dob=''; g_age=0; g_stage=''; g_dasha=null;
+  selectedConcerns=[]; currentEngine='classical'; g_name=''; g_dob=''; g_age=0; g_stage=''; g_dasha=null;
   document.getElementById('preview-img').style.display='none';
   document.getElementById('upload-placeholder').style.display='block';
   document.getElementById('change-hint').style.display='none';
   document.getElementById('read-btn').disabled=true;
   document.getElementById('file-inp').value='';
   document.querySelectorAll('.concern-btn').forEach(b=>b.classList.remove('selected'));
-  setEngine('samudrik');
+  setEngine('classical');
   hideErr();
   showScreen('scr-upload');
 }
