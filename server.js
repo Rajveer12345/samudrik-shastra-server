@@ -61,84 +61,47 @@ const FROM_EMAIL = SMTP_USER; // jyotish@hast-rekha.com
 const ADMIN_EMAIL = "jyotish@hast-rekha.com";
 
 async function sendEmail(to, subject, htmlBody) {
-  if (!SMTP_USER || !SMTP_PASS) { console.log("SMTP not configured — skipping email"); return; }
-  console.log("Attempting email to:", to, "from:", SMTP_USER);
-  const boundary = "----=_HastRekha_" + Date.now();
-  // Encode subject for non-ASCII safety
-  const safeSubject = "=?UTF-8?B?" + Buffer.from(subject).toString("base64") + "?=";
-  const msg = [
-    "From: HastRekha <" + FROM_EMAIL + ">",
-    "To: " + to,
-    "Reply-To: " + ADMIN_EMAIL,
-    "Subject: " + safeSubject,
-    "MIME-Version: 1.0",
-    'Content-Type: multipart/alternative; boundary="' + boundary + '"',
-    "",
-    "--" + boundary,
-    "Content-Type: text/html; charset=utf-8",
-    "",
-    htmlBody,
-    "",
-    "--" + boundary + "--"
-  ].join("\r\n");
-
-  return new Promise((resolve, reject) => {
-    const net = require("net");
-    const tls = require("tls");
-    // Use port 587 STARTTLS for Google Workspace compatibility
-    const sock = net.connect(587, "smtp.gmail.com", () => {
-      let step = 0;
-      let upgraded = false;
-      let buffer = "";
-
-      function handleLine(line) {
-        console.log("SMTP <<", line.slice(0,80));
-        const code = line.slice(0,3);
-        if (code === "220" && !upgraded) { sock.write("EHLO hast-rekha.com\r\n"); return; }
-        if (line.includes("STARTTLS") && !upgraded) { sock.write("STARTTLS\r\n"); return; }
-        if (code === "220" && !upgraded) {
-          // Upgrade to TLS
-          upgraded = true;
-          const tlsSock = tls.connect({ socket: sock, host: "smtp.gmail.com" }, () => {
-            tlsSock.write("EHLO hast-rekha.com\r\n");
-            const cmds = [
-              "AUTH LOGIN\r\n",
-              Buffer.from(SMTP_USER).toString("base64") + "\r\n",
-              Buffer.from(SMTP_PASS).toString("base64") + "\r\n",
-              "MAIL FROM:<" + SMTP_USER + ">\r\n",
-              "RCPT TO:<" + to + ">\r\n",
-              "DATA\r\n",
-              msg + "\r\n.\r\n",
-              "QUIT\r\n"
-            ];
-            let cs = 0;
-            tlsSock.on("data", d => {
-              const r = d.toString();
-              console.log("SMTP(tls) <<", r.slice(0,80));
-              if (r.startsWith("2") || r.startsWith("3")) { if(cs < cmds.length) tlsSock.write(cmds[cs++]); }
-              if (r.startsWith("221")) { tlsSock.destroy(); resolve(); }
-              if (r.startsWith("5")) { tlsSock.destroy(); reject(new Error(r.trim())); }
-            });
-            tlsSock.on("error", e => { console.error("TLS sock error:", e.message); reject(e); });
-          });
-          return;
-        }
-        if (!upgraded) {
-          if (code === "250") { sock.write("STARTTLS\r\n"); }
-        }
-      }
-
-      sock.on("data", d => {
-        buffer += d.toString();
-        const lines = buffer.split("\r\n");
-        buffer = lines.pop();
-        lines.forEach(l => { if(l) handleLine(l); });
-      });
-      sock.on("error", e => { console.error("Socket error:", e.message); reject(e); });
-      sock.on("close", () => { if(!upgraded) reject(new Error("Connection closed before TLS upgrade")); });
+  const RESEND_KEY = process.env.RESEND_API_KEY || "";
+  if (!RESEND_KEY) { console.log("Resend API key not configured — skipping email"); return; }
+  console.log("Sending email via Resend to:", to);
+  try {
+    const payload = JSON.stringify({
+      from: "HastRekha <jyotish@hast-rekha.com>",
+      to: [to],
+      reply_to: "jyotish@hast-rekha.com",
+      subject: subject,
+      html: htmlBody
     });
-    sock.on("error", e => { console.error("Connect error:", e.message); reject(e); });
-  });
+    const result = await new Promise((resolve, reject) => {
+      const https = require("https");
+      const req = https.request({
+        hostname: "api.resend.com",
+        path: "/emails",
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + RESEND_KEY,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload)
+        }
+      }, res => {
+        let data = "";
+        res.on("data", d => data += d);
+        res.on("end", () => {
+          console.log("Resend response:", res.statusCode, data.slice(0,200));
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
+          else reject(new Error("Resend API error " + res.statusCode + ": " + data));
+        });
+      });
+      req.on("error", reject);
+      req.write(payload);
+      req.end();
+    });
+    console.log("Email sent successfully, id:", result.id);
+    return result;
+  } catch(e) {
+    console.error("sendEmail failed:", e.message);
+    throw e;
+  }
 }
 
 function buildReadingEmail(name, age, stage, concerns, dasha, R) {
