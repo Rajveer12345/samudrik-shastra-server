@@ -234,6 +234,12 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
   </div>
 
   <div class="card">
+    <span class="gold-label">YOUR EMAIL <span style="color:var(--dim);font-size:9px">(READING WILL BE SENT HERE)</span></span>
+    <input id="inp-email" class="inp" type="email" placeholder="your@email.com"/>
+    <p style="font-size:11px;color:var(--dim);margin-top:6px">Your full reading will be emailed to you as a beautiful keepsake</p>
+  </div>
+
+  <div class="card">
     <span class="gold-label">YOUR PRIMARY CONCERNS <span style="color:var(--dim);font-size:9px">(SELECT UP TO 3)</span></span>
     <div class="concerns-grid" id="concerns-grid"></div>
   </div>
@@ -837,7 +843,8 @@ async function startReading(){
             mediaType:imgData.mediaType,
             name:g_name, dob:g_dob, gender:g_gender,
             concerns:selectedConcerns,
-            engine:currentEngine
+            engine:currentEngine,
+            userEmail:document.getElementById('inp-email').value.trim()
           })
         },130000);
         data=await res.json();
@@ -1064,6 +1071,7 @@ function resetApp(){
   document.getElementById('change-hint').style.display='none';
   document.getElementById('read-btn').disabled=true;
   document.getElementById('file-inp').value='';
+  document.getElementById('inp-email').value='';
   document.querySelectorAll('.concern-btn').forEach(b=>b.classList.remove('selected'));
   setEngine('classical');
   hideErr();
