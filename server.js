@@ -85,7 +85,7 @@ function callClaude(messages, maxTokens, systemPrompt) {
   });
 }
 
-async function analyzePalm(imageData, mediaType, name, dob, gender, concerns) {
+async function analyzePalm(imageData, mediaType, name, dob, gender, concerns, engine) {
   const age   = dob ? calcAge(dob) : 35;
   const dasha = dob ? calcDasha(dob) : { maha:"Saturn", antar:"Jupiter", mahaEnds:"2028", remaining:2 };
   const stage = getStage(age);
@@ -93,8 +93,22 @@ async function analyzePalm(imageData, mediaType, name, dob, gender, concerns) {
 
   console.log("Reading:", name, "| Age:", age, "| Stage:", stage, "| Dasha:", dasha.maha, "-", dasha.antar);
 
-  const SYSTEM = `You are a master Vedic palmist combining Samudrik Shastra with Vimshottari Dasha.
+  const bookKnowledge = engine === 'hasta' || engine === 'both' ? `
 
+=== ANCIENT TEXTS — RULES FROM 35 PALMISTRY BOOKS ===
+Apply ALL of the following rules from Cheiro, Frith, Jaquin, Saint-Germain, Indian Palmistry (Mrs J.B. Dale 1895), Benham and 29 other books in the collection:
+
+${ANCIENT_TEXTS_KNOWLEDGE}
+=== END ANCIENT TEXTS ===
+` : `
+
+=== CLASSICAL VEDIC READING ===
+Apply standard Samudrik Shastra rules: 7 hand types, all palm lines, all 7 mounts, thumb reading, special markings (fish, lotus, trident, star, square, triangle, cross, island, grille).
+Use Vimshottari Dasha correlation for timing all predictions.
+`;
+
+  const SYSTEM = `You are a master Vedic palmist combining Samudrik Shastra with Vimshottari Dasha.
+${bookKnowledge}
 PERSON: ${name||"the person"}, Age: ${age}, DOB: ${dob||"unknown"}, Gender: ${gender||"not specified"}
 LIFE STAGE: ${stage}
 CURRENT DASHA: ${dasha.maha} Mahadasha (ends ${dasha.mahaEnds}, ${dasha.remaining} years remaining), ${dasha.antar} Antardasha
@@ -234,7 +248,7 @@ async function handleRequest(req, res) {
     const {imageData,mediaType,name,dob,gender,concerns}=body;
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
     try {
-      const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns);
+      const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns,engine);
       const record = { id:makeId(),name:name||"Anonymous",dob:dob||"",age:dob?calcAge(dob):0,gender:gender||"",concerns:concerns||[],status:"completed",createdAt:new Date().toISOString(),readingData:reading };
       DB.readings.push(record);
       sendJSON(res,{reading,recordId:record.id});
@@ -345,3 +359,274 @@ async function handleRequest(req, res) {
 http.createServer(handleRequest).listen(PORT,()=>{
   console.log(`HastRekha server on port ${PORT} | Model: claude-opus-4-5 | Key: ${API_KEY?"OK":"MISSING"}`);
 });
+
+// ── ANCIENT TEXTS KNOWLEDGE BASE ─────────────────────────────
+// Extracted from 35 palmistry books in your Google Drive collection
+// Sources: Cheiro (Palmistry for All), Practical Palmistry (Frith),
+// Scientific Palmistry (Jaquin), Study of Palmistry (Saint-Germain),
+// Indian Palmistry (Mrs J.B. Dale 1895), Benham, and others
+
+const ANCIENT_TEXTS_KNOWLEDGE = `
+=== HAND TYPES — FROM CHEIRO AND FRITH ===
+ELEMENTARY HAND: Short thick fingers, heavy palm, little or no Fate Line. Materialistic nature, low imagination. In Indian tradition: indicates a life of physical labour and struggle.
+SQUARE HAND (Earth): Square-tipped fingers, practical nature. Love of order, punctuality, respect for authority. Most common in businessmen and government servants. Fate Line usually clear and straight.
+SPATULATE HAND (Fire): Splay-tipped fingers, active and energetic, self-reliant. Always must be doing something. Good for entrepreneurs and builders. Fate Line often broken — career changes.
+CONIC HAND (Water): Rounded artistic fingers, impulsive, imaginative, love of beauty. Easily influenced by surroundings. In Indian tradition: artistic, emotional, prone to multiple relationships.
+PHILOSOPHIC HAND (Air): Knotted joints, long fingers, analytical mind. Questions everything. Independent thinker. Rare but produces scholars, judges, philosophers.
+PSYCHIC HAND: Very long pointed fingers, small delicate palm. Idealistic, spiritual, impractical in business. In Vedic tradition: indicates past life merit and spiritual gifts.
+MIXED HAND: Combination of types. Most common. Read dominant features only.
+
+THUMB — CHEIRO RULE: Thumb reading = 30% of total reading weight. Never skip thumb.
+- Large strong thumb: Strong will, determination, leadership. Career success through persistence.
+- Small weak thumb: Led by others, difficulty completing projects, emotional decisions over rational.
+- Clubbed thumb: Violent temper when provoked. Exercise caution in predictions about anger.
+- Supple-jointed thumb bending back: Extravagant, generous to fault, adaptable. Financial leakage.
+- Firm-jointed thumb straight: Stubborn, careful with money, reliable in commitments.
+- First phalange (nail joint) long: Strong willpower, determination, can overcome obstacles.
+- Second phalange (logic joint) long: Excellent reasoning, diplomatic, good advisor.
+- Mount of Venus (ball of thumb) full and developed: Strong vitality, family devotion, passionate nature, love of music and beauty. In Indian tradition: strong life force, protective ancestors.
+- Mount of Venus flat or absent: Cold nature, selfish, difficulty giving or receiving love.
+
+=== LINE OF LIFE — PRECISE RULES ===
+FROM CHEIRO: Line of Life runs over the great Palmer Arch blood vessel — directly connected to heart, stomach, vital organs.
+- Long, clear, deep: Long life, good constitution, recovery from illness. In Indian tradition: strong ancestral blessings.
+- Chained or linked: Poor health, weak digestion, low vitality throughout life.
+- Broad and shallow: More muscular strength than willpower. Robust but not resilient under mental strain.
+- Fine and deep: Strong nervous energy, willpower, mental resilience. Brain workers.
+- Starts high near Jupiter: Ambitious, driven, great control over oneself.
+- Starts low from Mars: Quarrelsome, rebellious in youth, quick temper.
+- Curves widely into palm: Strong vitality, passionate nature, good health, longevity.
+- Hugs thumb tightly, narrow Venus: Delicate constitution, cold nature, less life force.
+- Break in Life Line — key rule: Break where one side begins before other ends = major change in life circumstances, not death. If break is clean with square protective mark nearby = danger but survival.
+- Island on Life Line: Period of illness or serious difficulty. Duration shown by length of island.
+- Ascending lines from Life Line toward Jupiter: Periods of ambition fulfilled, advancement.
+- Ascending lines from Life Line toward Saturn: Periods of hardship turned to wisdom.
+- Ascending lines from Life Line toward Apollo: Creative success, recognition, financial gain.
+- Lines descending from Life Line: Losses, setbacks, energy drain at that age.
+TIMING ON LIFE LINE: Start at thumb base. Age 35 is roughly middle of the arc. Age 70 is near wrist.
+
+=== LINE OF HEAD — MOST IMPORTANT LINE, CHEIRO ===
+"The Line of Head is like the needle in the compass — without it you cannot read the direction of the subject."
+- Clear, deep, fine: Excellent mental clarity, concentration. Academic and professional success.
+- Broad and pale: Vacillating nature, lack of concentration, easily distracted.
+- Starts inside Life Line (close to thumb): Over-sensitive, nervous, quarrelsome over trifles.
+- Starts joined to Life Line: Cautious, undervalues own abilities, needs encouragement. Artists and creative people.
+- Starts separated from Life Line (open gap): Quick judgment, mental independence, excellent for leadership and public life.
+- Runs straight across palm: Practical, materialistic, business-minded, money-conscious.
+- Slopes toward Luna mount: Imaginative, creative, romantic, literary talent. Writers, artists.
+- Slopes steeply to wrist: Extreme imagination, morbid tendencies, risk of mental health challenges.
+- Forked ending: Diplomacy, ability to see both sides. Excellent for negotiators and lawyers.
+- Islands on Head Line: Mental strain, headaches at the age those islands appear.
+- Island under Saturn finger: Severe headaches, melancholy tendencies at that age.
+- Island under Apollo finger: Eye weakness, vision problems at that period.
+- Break in Head Line: Mental crisis, change of thinking, sometimes recovery leads to new career.
+- Head Line curves up to Mercury at end: Growing desire for money in later years.
+- Head and Heart Lines merged into one line: Simian line — extreme intensity of purpose, great focus, sometimes difficulty distinguishing emotion from logic.
+
+=== LINE OF HEART — EMOTIONAL AND HEALTH ===
+- Long, clear, curves to Jupiter: Strong capacity for love, faithful, idealistic in relationships. Marriage lasting.
+- Ends between Jupiter and Saturn: Hard-working in love, must earn affection, love through service.
+- Short Heart Line: Practical about relationships, less emotional, not cold-hearted.
+- Chained Heart Line: Inconstancy, multiple attractions, emotional instability. IN INDIAN TRADITION: many relationships across lifetimes, karmic debts in love.
+- Breaks in Heart Line: Heartbreak at age of break. Under Saturn = fatalistic ending. Under Apollo = romantic disappointment with artistic or creative person.
+- Heart Line droops to Head Line: Mind controls heart, makes logical decisions in love, sometimes cold.
+- No Heart Line: Selfishness, difficulty with lasting relationships. Rare sign.
+- Lines rising from Heart Line: Good friendships, liked by many, popular socially.
+- Lines falling from Heart Line: Disappointments in love, emotional drain.
+PHYSICAL: Heart Line also shows physical heart condition. Indentations = minor heart weakness, not disease. Breaks = palpitations or emotional shock.
+
+=== LINE OF FATE (SATURN LINE) — DESTINY ===
+FROM CHEIRO: "The Fate Line undoubtedly appears to indicate at least the main events of one's career."
+- Rises from wrist clearly to Saturn with Sun Line present: Outstanding luck, brilliance, success — the best combination.
+- Rises from Life Line: Success by personal merit, no help from family or luck. Hard early life.
+- Rises from Luna Mount: Career influenced heavily by others, especially opposite sex. Changeable destiny.
+- Rises from center of palm late: Difficult early life, self-made success from middle age onward.
+- Faint or barely visible: Materialistic person who rebels against the idea of Fate. Success only through own effort.
+- No Fate Line: Colourless life, nothing very particular, drifts without clear purpose.
+- Break in Fate Line where new line begins before old ends: Complete change of career or life path — usually positive if new line is strong.
+- Island on Fate Line: Loss, difficulty, scandal at age of island. In Plain of Mars = financial loss.
+- Fate Line stopped by Heart Line: Career ruined by affections placed badly, love over career.
+- Fate Line stopped by Head Line: Career damaged by own stupidity or poor judgment.
+- Fate Line sends branch to Jupiter: Power, command, authority. High position from that age.
+- Fate Line sends branch to Apollo: Wealth, fame, recognition from that age.
+- Fate Line sends branch to Mercury: Business success, scientific achievement from that age.
+- Double Fate Line: Two parallel careers, double life, or inherited wealth alongside earned career.
+
+=== SUN LINE (APOLLO LINE) — SUCCESS AND RECOGNITION ===
+- Present and clear: Public recognition, fame, artistic success, financial comfort through talent.
+- Absent: Success possible but without fame or recognition. Ordinary life even with hard work.
+- Short Sun Line appearing late in palm: Recognition comes late in life, after 50.
+- Rising from Luna Mount: Success through public appeal, arts, entertainment.
+- Rising from Fate Line: Success connected directly to career path.
+- Rising from Head Line: Success through intelligence and mental effort.
+- Rising from Heart Line: Success through social connections and emotional intelligence.
+- Star on Sun Line: Sudden fame, brilliant success. One of the best marks.
+- Island on Sun Line: Scandal, loss of reputation at age of island.
+
+=== MARRIAGE AND RELATIONSHIP LINES ===
+FROM CHEIRO (confirmed by Indian tradition):
+- Marriage lines on Mercury edge: Each deep line = significant relationship.
+- Long clear line: Long lasting committed relationship.
+- Short faint line: Brief relationship or attraction only.
+- Line curves downward: Partner may die before subject.
+- Fork at beginning: Separation or delay before marriage.
+- Fork at end: Divorce or permanent separation.
+- Island on marriage line: Unhappy period in marriage, separation, infidelity.
+- Cross on marriage line: Serious obstacle to marriage.
+- Marriage line touches or cuts Heart Line: Marriage causes emotional pain.
+INDIAN TRADITION — ADDITIONAL: Lines on Luna mount rising toward Mercury = foreign marriage or partner from different culture or religion.
+
+=== SPECIAL MARKINGS — INDIAN AND VEDIC TRADITION ===
+STAR: Brilliant success in whichever mount or line it appears. On Jupiter = powerful leadership position. On Apollo = sudden fame. On Luna = psychic gifts. On Saturn = fatalistic event.
+SQUARE: Protection and preservation. A square surrounding a break in any line = escape from danger. Square on Life Line = protection during illness. Square on Fate Line = protection in career crisis.
+TRIANGLE: Mental gift, special talent. Triangle on Jupiter = political skill. Triangle on Apollo = artistic genius. Triangle on Mercury = scientific ability.
+CROSS: Always externally caused, never self-created (Cheiro rule). On Jupiter = lucky cross, fortunate love. On Saturn = fatalistic cross, danger. On Apollo = disappointment in art or love. On Mercury = dishonesty or deceit.
+ISLAND: Weakness, difficulty, or scandal wherever found. Always read the duration by the length.
+CIRCLE: Very rare. On Sun mount = brilliant success. On other mounts = unfortunate.
+GRILLE: Excess of negative qualities of that mount. On Venus = excessive passion. On Jupiter = excessive pride. On Moon = excessive fantasy.
+FISH MARK (Indian tradition): Exceptional fortune in business, spiritual protection. Usually found near Luna mount or wrist.
+LOTUS MARK (Indian tradition): Spiritual attainment, divine protection, exceptional wisdom.
+TRIDENT (Indian tradition): Triple blessing — one branch to Jupiter, one to Apollo, one to Saturn = simultaneous success in power, art and wisdom.
+BRACELET LINES (Rascettes): Three clear bracelets = long life (70+ years), good fortune overall. First bracelet chained = health challenges. First bracelet rises into palm = difficult childbirth for women.
+
+=== MOUNTS — DETAILED INTERPRETATIONS ===
+MOUNT OF VENUS (base of thumb): Vitality, family love, passion, music, sensuality.
+- Full and firm: Strong life force, warm-hearted, protective of family, musical.
+- Flat: Cold, selfish, difficulty with intimacy.
+- Excessive, soft, rayed: Uncontrolled passion, sensuality, jealousy.
+IN VEDIC CORRELATION: Venus mount = Venus planet. Strong Venus mount + Venus Mahadasha = period of material abundance, relationships, luxury.
+
+MOUNT OF JUPITER (under index finger): Ambition, leadership, religion, authority.
+- Well-developed: Leadership qualities, ambition to rise, religious inclination, commanding presence.
+- Flat: Careless of duties, lacks ambition, poor social manners.
+- Excessive: Arrogance, tyranny, ostentatious display.
+VEDIC: Jupiter mount + Jupiter Mahadasha = expansion, wisdom, marriage timing.
+
+MOUNT OF SATURN (under middle finger): Fate, wisdom through suffering, solitude, agriculture.
+- Prominent: Melancholy, love of solitude, wisdom through hardship, taste for mining or agriculture.
+- Absent: Careless nature, no sense of fatality, sometimes fortunate as Saturn does not burden them.
+- Excessive: Morbid depression, fear of death, tendency to suicide.
+VEDIC: Saturn mount + Saturn Mahadasha = period of karmic clearing, discipline, delayed rewards.
+
+MOUNT OF APOLLO/SUN (under ring finger): Art, wealth, beauty, fame, happiness.
+- Developed: Sunny temperament, artistic taste, charitable, desire to shine socially.
+- Absent: Aimless life, no artistic appreciation, insignificant existence.
+- Excessive: Vanity, extravagance, boastfulness.
+VEDIC: Sun mount + Sun Antardasha = period of authority, government dealings, health of father.
+
+MOUNT OF MERCURY (under little finger): Business, intellect, medicine, communication.
+- Developed: Quick mind, business aptitude, eloquence, intelligence.
+- Absent: Failure in business, negative existence.
+- Excessive: Dishonesty, cunning, fraud.
+VEDIC: Mercury mount + Mercury Mahadasha = period of communication, business, younger siblings.
+
+MOUNT OF MARS (side of hand): Courage, resistance, military virtue.
+- Upper Mars (under Mercury): Mental courage, moral bravery, calm in danger.
+- Lower Mars (under Jupiter): Physical courage, aggression, fighting spirit.
+- Both well-developed: True hero quality, excellent soldier, police, security.
+- Absent: Timidity, nervousness, lack of presence.
+
+MOUNT OF MOON/LUNA (lower outer palm): Imagination, romance, travel, instinct.
+- Developed: Romantic, loves travel, psychic sensitivity, good writer.
+- Absent: Unsympathetic, hard, no imagination.
+- Excessive: Fantasist, moody, superstitious, restless.
+VEDIC: Moon mount + Moon Mahadasha = period of emotions, mother's influence, mind, travel.
+
+=== GEMSTONE RULES — VEDIC JYOTISH PRECISE ===
+RUBY (Manik) — Sun stone:
+- Wear ONLY if Sun is strong or Sun Antardasha is active
+- NEVER wear if Sun is debilitated (in Libra) or combust in chart
+- Palm indicators for Ruby: Strong Sun Line, good Mount of Apollo, good heart health
+- Caution: Test first always. Can cause heat, skin issues, anger if wrong placement.
+- Correct finger: Ring finger, right hand. Day: Sunday. Metal: Gold.
+- Mantra: Om Suryaya Namah 108 times before wearing.
+
+PEARL (Moti) — Moon stone:
+- Wear if Moon is weak, afflicted, or during Moon Mahadasha/Antardasha
+- Palm indicators: Chained Heart Line (emotional instability), weak or small Luna mount
+- Safe for most people. Very rarely causes issues.
+- Correct finger: Little finger, right hand. Day: Monday evening. Metal: Silver.
+- Mantra: Om Som Somaya Namah 108 times before wearing.
+
+RED CORAL (Moonga) — Mars stone:
+- Wear during Mars Mahadasha/Antardasha, or if Mars is weak
+- Palm indicators: Broken Life Line, weak Mars mount, health issues, low courage
+- CAUTION: Never wear if Mars is in Cancer or afflicted by Saturn in chart
+- Correct finger: Ring finger, right hand. Day: Tuesday morning. Metal: Gold or Copper.
+- Mantra: Om Kram Kreem Kraum Sah Bhaumaya Namah 108 times.
+
+EMERALD (Panna) — Mercury stone:
+- Wear during Mercury Mahadasha/Antardasha, or for business communication issues
+- Palm indicators: Weak or absent Mercury mount, poor little finger, communication struggles
+- Test before wearing (Cheiro rule: Mercury stones need testing). 
+- Correct finger: Little finger, right hand. Day: Wednesday. Metal: Gold or Panchdhatu.
+- Mantra: Om Bram Breem Braum Sah Budhaya Namah 108 times.
+
+YELLOW SAPPHIRE (Pukhraj) — Jupiter stone:
+- MOST BENEFICIAL of all stones for most people. Jupiter = wisdom and protection.
+- Wear during Jupiter Mahadasha/Antardasha, or if Jupiter is weak
+- Palm indicators: Weak Jupiter mount, poor ambition, absent or weak Sun Line
+- Extremely safe — rarely causes harm. One of few stones that can be worn without testing.
+- Correct finger: Index finger, right hand. Day: Thursday morning. Metal: Gold.
+- Mantra: Om Gram Greem Graum Sah Gurave Namah 108 times.
+
+DIAMOND (Heera) — Venus stone:
+- Wear during Venus Mahadasha/Antardasha (20-year period!)
+- Palm indicators: Strong Venus mount, artistic temperament, relationship issues
+- CAUTION: Must test before wearing. Can amplify both good and bad Venus qualities.
+- White Sapphire or White Topaz as alternative if Diamond unaffordable.
+- Correct finger: Middle finger, right hand. Day: Friday morning. Metal: White Gold or Platinum.
+- Mantra: Om Shum Shukraya Namah 108 times.
+
+BLUE SAPPHIRE (Neelam) — Saturn stone:
+- MOST POWERFUL and MOST DANGEROUS stone. Must test without exception.
+- Wear ONLY during Saturn Mahadasha (19 years) if Saturn is strong in chart
+- Palm indicators: Very prominent Saturn mount, Fate Line running to Saturn mount, life of hardship
+- Testing: Wear one night under pillow. If bad dream or incident, do not wear. If good feeling, proceed.
+- NEVER wear without proper Jyotish consultation for individual chart.
+- Correct finger: Middle finger, right hand. Day: Saturday morning Shani Hora. Metal: Silver.
+- Mantra: Om Pram Preem Praum Sah Shanaischaraya Namah 108 times.
+
+HESSONITE (Gomed) — Rahu stone:
+- Wear during Rahu Mahadasha (18 years) — very important
+- Palm indicators: Unusual Fate Line, sudden career changes, unconventional life path
+- Must test: 3 days trial first.
+- Correct finger: Middle finger, right hand. Day: Saturday. Metal: Silver or Panchdhatu.
+- Mantra: Om Raam Raahave Namah 108 times.
+
+CAT'S EYE (Lahsuniya) — Ketu stone:
+- Wear during Ketu Mahadasha (7 years) — spiritual and detachment period
+- Palm indicators: Mystical markings on Luna mount, intuition lines, spiritual seeking
+- CAUTION: Must test 3 days. Ketu stones are powerful and unpredictable.
+- Correct finger: Middle finger, right hand. Day: Saturday. Metal: Silver.
+- Mantra: Om Kem Ketve Namah 108 times.
+
+=== VEDIC DASHA CORRELATION WITH PALM ===
+SATURN MAHADASHA (19 years): Look for — faint or broken Fate Line in mid-palm, islands on Life Line, heavy Saturn mount. Person faces delays, hardship, karmic clearing. Remedies: Saturn mantra, oil donation, service to elderly.
+VENUS MAHADASHA (20 years): Look for — strong Venus mount, Heart Line with chains, relationship lines active. Person experiences luxury, relationships, creative pursuits. Risk: overspending, love complications.
+RAHU MAHADASHA (18 years): Look for — unusual life path, sudden breaks and new beginnings in Fate Line. Person experiences sudden changes, foreign travel, unconventional career.
+JUPITER MAHADASHA (16 years): Look for — strong Jupiter mount, ascending Fate Line. Expansion, wisdom, marriage, children, spiritual growth.
+SUN MAHADASHA (6 years): Look for — strong Sun Line appearing, good Apollo mount. Authority, government, father's health, career recognition.
+MOON MAHADASHA (10 years): Look for — developed Luna mount, emotional Heart Line. Emotions, travel, mother, public life, mind fluctuations.
+MARS MAHADASHA (7 years): Look for — strong Mars mount, breaks in Life Line healed by Mars line. Energy, courage, health challenges, property disputes.
+KETU MAHADASHA (7 years): Look for — spiritual markings on palm, detachment lines. Spiritual seeking, separation, mystical experiences, letting go.
+MERCURY MAHADASHA (17 years): Look for — developed Mercury mount, business lines. Communication, business, siblings, intellect, writing.
+
+=== TIMING METHODS — CHEIRO AND INDIAN COMBINED ===
+LIFE LINE TIMING: Start at base of Jupiter finger going down. Each centimeter roughly 5-7 years. Midpoint = age 35. Near wrist = age 70-75.
+FATE LINE TIMING: Start at wrist = birth. Where it crosses Head Line = approximately age 35. Where it crosses Heart Line = approximately age 50.
+7-YEAR CYCLES (Cheiro): Major life events tend to occur in 7-year cycles. Ages 7, 14, 21, 28, 35, 42, 49, 56, 63, 70 are critical transition points. Look for line changes at these ages.
+SUN LINE TIMING: Position on palm shows when recognition or success arrives. Near wrist = early 20s. Near Heart Line = 40s-50s.
+
+=== INDIAN TRADITION SPECIFIC RULES ===
+1. Bracelet lines (Rascettes) should always be read: First bracelet clear = health and longevity. Three clear bracelets = long prosperous life.
+2. Thumb in Indian tradition: Broad well-set thumb = person who achieves things. Weak thin thumb = dominated by circumstances.
+3. Right hand always for destiny reading in Indian tradition. Left hand = past karma and what was given.
+4. A palm with very few lines = simple straightforward destiny, no major complications.
+5. A palm with many fine lines = sensitive nervous person, multiple influences, complex destiny.
+6. Lines that appear to glow or are deeply carved = very strong influence of that planet or quality.
+7. Soft pink palm = good blood circulation, health, warmth. Pale palm = anaemia, low vitality, cold nature.
+8. Color of palm: Reddish = passionate, energetic, sometimes angry. Yellowish = liver issues, bitterness. Pale = health concerns, weakness.
+`;
+
+module.exports = { ANCIENT_TEXTS_KNOWLEDGE };
