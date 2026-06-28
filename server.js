@@ -6,7 +6,6 @@ const path = require("path");
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || "admin123";
-
 const DB = { readings: [] };
 
 function cors(res) {
@@ -36,51 +35,38 @@ function calcAge(dob) {
 }
 function calcDasha(dob) {
   const planets = ["Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury"];
-  const years   = [7, 20, 6, 10, 7, 18, 16, 19, 17];
+  const years   = [7,20,6,10,7,18,16,19,17];
   const b = new Date(dob), now = new Date();
-  const ageYrs = (now - b) / (1000 * 60 * 60 * 24 * 365.25);
-  const bf = (b.getMonth() * 30 + b.getDate()) / 365;
-  let cum = (bf * 120) % 120, idx = 0;
-  while (cum > years[idx]) { cum -= years[idx]; idx = (idx + 1) % 9; }
+  const ageYrs = (now - b) / (1000*60*60*24*365.25);
+  const bf = (b.getMonth()*30 + b.getDate()) / 365;
+  let cum = (bf*120)%120, idx = 0;
+  while (cum > years[idx]) { cum -= years[idx]; idx = (idx+1)%9; }
   let elapsed = ageYrs, ci = idx, rem = years[idx] - cum;
   if (elapsed < rem) {
-    const e = new Date(now.getTime() + rem * 365.25 * 24 * 3600 * 1000);
-    return { maha: planets[ci], antar: planets[(ci+1)%9], mahaEnds: e.toLocaleDateString("en-IN",{month:"short",year:"numeric"}), remaining: Math.round(rem*10)/10 };
+    const e = new Date(now.getTime() + rem*365.25*24*3600*1000);
+    return { maha:planets[ci], antar:planets[(ci+1)%9], mahaEnds:e.toLocaleDateString("en-IN",{month:"short",year:"numeric"}), remaining:Math.round(rem*10)/10 };
   }
   elapsed -= rem; ci = (ci+1)%9;
   while (elapsed > years[ci]) { elapsed -= years[ci]; ci = (ci+1)%9; }
   const remaining = years[ci] - elapsed;
-  const mahaEnds = new Date(now.getTime() + remaining * 365.25 * 24 * 3600 * 1000);
-  return { maha: planets[ci], antar: planets[(ci+1)%9], mahaEnds: mahaEnds.toLocaleDateString("en-IN",{month:"short",year:"numeric"}), remaining: Math.round(remaining*10)/10 };
+  const mahaEnds = new Date(now.getTime() + remaining*365.25*24*3600*1000);
+  return { maha:planets[ci], antar:planets[(ci+1)%9], mahaEnds:mahaEnds.toLocaleDateString("en-IN",{month:"short",year:"numeric"}), remaining:Math.round(remaining*10)/10 };
 }
 function getStage(age) {
-  if (age <= 12) return "Child (0-12)";
-  if (age <= 18) return "Teenager (13-18)";
-  if (age <= 25) return "Young Adult (19-25)";
-  if (age <= 45) return "Working Professional (26-45)";
-  if (age <= 60) return "Middle Age (46-60)";
+  if (age<=12) return "Child (0-12)";
+  if (age<=18) return "Teenager (13-18)";
+  if (age<=25) return "Young Adult (19-25)";
+  if (age<=45) return "Working Professional (26-45)";
+  if (age<=60) return "Middle Age (46-60)";
   return "Senior (60+)";
 }
 
-// ── Claude API call ───────────────────────────────────────────
 function callClaude(messages, maxTokens, systemPrompt) {
-  const body = JSON.stringify({
-    model: "claude-opus-4-5",
-    max_tokens: maxTokens || 4000,
-    system: systemPrompt || undefined,
-    messages
-  });
+  const body = JSON.stringify({ model:"claude-opus-4-5", max_tokens:maxTokens||4000, system:systemPrompt||undefined, messages });
   return new Promise((resolve, reject) => {
     const req = https.request({
-      hostname: "api.anthropic.com",
-      path: "/v1/messages",
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Length": Buffer.byteLength(body)
-      }
+      hostname:"api.anthropic.com", path:"/v1/messages", method:"POST",
+      headers:{ "Content-Type":"application/json","x-api-key":API_KEY,"anthropic-version":"2023-06-01","Content-Length":Buffer.byteLength(body) }
     }, res => {
       const parts = [];
       res.on("data", d => parts.push(d));
@@ -88,7 +74,7 @@ function callClaude(messages, maxTokens, systemPrompt) {
         try {
           const data = JSON.parse(Buffer.concat(parts).toString("utf8"));
           if (data.error) return reject(new Error(data.error.message));
-          const block = (data.content || []).find(b => b.type === "text");
+          const block = (data.content||[]).find(b=>b.type==="text");
           resolve(block ? block.text : "");
         } catch(e) { reject(e); }
       });
@@ -99,232 +85,196 @@ function callClaude(messages, maxTokens, systemPrompt) {
   });
 }
 
-// ── Main palm analysis ────────────────────────────────────────
-async function analyzePalm(imageData, mediaType, name, dob, gender, concerns, engine) {
+async function analyzePalm(imageData, mediaType, name, dob, gender, concerns) {
   const age   = dob ? calcAge(dob) : 35;
   const dasha = dob ? calcDasha(dob) : { maha:"Saturn", antar:"Jupiter", mahaEnds:"2028", remaining:2 };
   const stage = getStage(age);
-  const concernsText = concerns && concerns.length > 0
-    ? `Primary concerns: ${concerns.join(", ")}.` : "";
+  const concernsText = concerns && concerns.length > 0 ? `Primary concerns: ${concerns.join(", ")}.` : "";
 
   console.log("Reading:", name, "| Age:", age, "| Stage:", stage, "| Dasha:", dasha.maha, "-", dasha.antar);
 
-  // Build the system prompt — this is what made the white PDF excellent
-  const SYSTEM = `You are a master Vedic palmist combining Samudrik Shastra with Vimshottari Dasha calculation.
+  const SYSTEM = `You are a master Vedic palmist combining Samudrik Shastra with Vimshottari Dasha.
 
-PERSON: ${name || "the person"}, Age: ${age}, DOB: ${dob || "unknown"}, Gender: ${gender || "not specified"}
+PERSON: ${name||"the person"}, Age: ${age}, DOB: ${dob||"unknown"}, Gender: ${gender||"not specified"}
 LIFE STAGE: ${stage}
 CURRENT DASHA: ${dasha.maha} Mahadasha (ends ${dasha.mahaEnds}, ${dasha.remaining} years remaining), ${dasha.antar} Antardasha
 ${concernsText}
 
 LIFE STAGE FOCUS:
-${age <= 12 ? "Focus on talents, health, academic path. Do NOT mention career, marriage, property or finances." :
-  age <= 18 ? "Focus on education stream, college path, early relationships. No career or property advice." :
-  age <= 25 ? "Focus on first job, career direction, financial independence, early relationships." :
-  age <= 45 ? "Focus on career progression, property, marriage, children, financial growth, foreign opportunities, business potential, hidden enemies." :
-  age <= 60 ? "Focus on career recovery or peak, property, marriage stability, health, retirement planning, family conflicts, legacy." :
-  "Focus primarily on health, family harmony, grandchildren, property distribution, spiritual growth, legacy."}
+${age<=12?"Focus on talents, health, academic path. No career marriage property or finance advice.":
+  age<=18?"Focus on education stream, college path, early relationships. No career or property advice.":
+  age<=25?"Focus on first job, career direction, financial independence, early relationships.":
+  age<=45?"Focus on career progression, property, marriage, children, financial growth, foreign opportunities, business, hidden enemies.":
+  age<=60?"Focus on career recovery or peak, property, marriage stability, health, retirement planning, family conflicts, legacy.":
+  "Focus on health, family harmony, grandchildren, property distribution, spiritual growth, legacy."}
 
-INSTRUCTIONS:
-1. Study every palm feature in the image — Life Line, Heart Line, Head Line, Fate Line, Sun Line, Health Line, Marriage Lines, all 7 mounts, hand shape, thumb, fingers, special markings
-2. Cross-reference palm events with the Dasha timeline above
-3. Where palm line events MATCH the Dasha planet = CONFIRMED high-accuracy prediction
+PALM READING INSTRUCTIONS:
+1. Study every visible feature: Life Line, Heart Line, Head Line, Fate Line, Sun Line, Health Line, Marriage Lines, all 7 mounts, hand shape, thumb, fingers, markings
+2. Rate each major line quality from 1-10 based on clarity, depth, and length
+3. Cross-reference palm events with Dasha timeline — where palm matches Dasha = CONFIRMED prediction
 4. Give SPECIFIC month and year predictions — not vague
-5. Address the person's stated concerns
-6. Be honest about problems — people come here for real answers
-7. Use ONLY plain ASCII text — no Hindi, no smart quotes, no special characters, no apostrophes
-8. Respond with ONLY a valid JSON object — nothing before or after
+5. For problems: identify exactly when they started (age and year) and when they will resolve
+6. Use ONLY plain ASCII text — no Hindi, no smart quotes, no em-dashes, no apostrophes
+7. Respond with ONLY a valid JSON object — nothing before or after
+8. All date windows must be in the FUTURE — current year is 2026
 
-JSON structure:
+JSON structure — include ALL fields exactly as shown:
 {
-  "hand_type": "detailed hand type",
+  "hand_type": "detailed hand type description",
+  "dominant_mount": "which mount is most developed and what it means",
+  "line_quality": {
+    "heartLine": 7,
+    "headLine": 8,
+    "lifeLine": 7,
+    "fateLine": 5,
+    "sunLine": 4
+  },
   "overall_energy": "honest 2-3 sentence overall reading",
   "lucky_period": "Month Year to Month Year",
   "life_stage_reading": "specific reading for this age and stage",
   "dasha_summary": "what current dasha means for this specific person",
   "afflicted_planet": "${dasha.maha}",
   "shubh_lagnas": [
-    {"number": 1, "window": "Month Year to Month Year", "probability": "High", "what_will_happen": "specific prediction", "remedy_before": "remedy to do before window opens", "if_missed": "next window timing"},
-    {"number": 2, "window": "Month Year to Month Year", "probability": "Medium", "what_will_happen": "prediction", "remedy_before": "remedy", "if_missed": "fallback"},
-    {"number": 3, "window": "Month Year to Month Year", "probability": "Certain", "what_will_happen": "prediction", "remedy_before": "remedy", "if_missed": "later window"}
+    {"number":1,"window":"Month Year to Month Year","probability":"High","what_will_happen":"specific prediction","remedy_before":"remedy to do before window opens","if_missed":"next window timing"},
+    {"number":2,"window":"Month Year to Month Year","probability":"Medium","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"fallback"},
+    {"number":3,"window":"Month Year to Month Year","probability":"Certain","what_will_happen":"prediction","remedy_before":"remedy","if_missed":"later window"}
+  ],
+  "predictions": [
+    {"category":"Career Stabilization","icon":"briefcase","current_situation":"current career status from palm","primary_window":"Month Year to Month Year","line_evidence":"which line shows this"},
+    {"category":"Financial Recovery","icon":"money","current_situation":"current financial status","primary_window":"Month Year to Month Year","line_evidence":"which line shows this"},
+    {"category":"Property Matters","icon":"home","current_situation":"property situation","primary_window":"Month Year to Month Year","line_evidence":"line evidence"},
+    {"category":"Relationship Harmony","icon":"heart","current_situation":"relationship status","primary_window":"Month Year to Month Year","line_evidence":"line evidence"},
+    {"category":"Health and Vitality","icon":"health","current_situation":"health status","primary_window":"Month Year to Month Year","line_evidence":"line evidence"}
   ],
   "problems": [
-    {"area": "Career", "issue": "specific problem", "severity": "significant", "line": "Fate Line break at age X", "deepDive": "deeper insight", "dasha_connection": "how dasha relates"},
-    {"area": "Finance", "issue": "specific problem", "severity": "moderate", "line": "palm line", "deepDive": "insight", "dasha_connection": "connection"},
-    {"area": "Health", "issue": "specific problem", "severity": "mild", "line": "line", "deepDive": "insight", "dasha_connection": "connection"},
-    {"area": "Relationships", "issue": "specific problem", "severity": "moderate", "line": "Heart Line", "deepDive": "insight", "dasha_connection": "connection"}
+    {"area":"Finance","title":"Financial Instability and Cash Flow Stress","issue":"specific problem description","severity":"significant","line_source":"Fate Line, weakened Mercury Mount","deep_dive":"deeper insight connecting palm to dasha","dasha_connection":"how current dasha relates","started_when":"Around age X, approximately YEAR-YEAR","resolution":"When and how this resolves"},
+    {"area":"Business","title":"Business Partnership Challenges","issue":"specific problem","severity":"significant","line_source":"palm line","deep_dive":"insight","dasha_connection":"connection","started_when":"approximate start","resolution":"resolution timing"},
+    {"area":"Health","title":"Health and Energy Concerns","issue":"specific problem","severity":"moderate","line_source":"line","deep_dive":"insight","dasha_connection":"connection","started_when":"approximate start","resolution":"resolution"},
+    {"area":"Relationships","title":"Relationship and Communication Gaps","issue":"specific problem","severity":"moderate","line_source":"Heart Line","deep_dive":"insight","dasha_connection":"connection","started_when":"approximate start","resolution":"resolution"}
   ],
   "remedies": [
-    {"for": "career", "type": "Mantra", "remedy": "specific mantra and practice", "timing": "Every Thursday morning", "planet_target": "Jupiter"},
-    {"for": "protection", "type": "Ritual", "remedy": "specific ritual", "timing": "Every Saturday", "planet_target": "${dasha.maha}"},
-    {"for": "health", "type": "Lifestyle", "remedy": "specific practice", "timing": "Daily morning", "planet_target": "Sun"},
-    {"for": "prosperity", "type": "Charity", "remedy": "specific charity action", "timing": "Every Thursday", "planet_target": "Jupiter"}
+    {"for":"finance","type":"Mantra","remedy":"specific mantra text","timing":"Every Friday before 10 AM","planet_target":"Venus"},
+    {"for":"protection","type":"Ritual","remedy":"specific ritual","timing":"Every Thursday morning","planet_target":"Jupiter"},
+    {"for":"health","type":"Lifestyle","remedy":"specific practice","timing":"Daily morning","planet_target":"Sun"},
+    {"for":"prosperity","type":"Charity","remedy":"specific charity action","timing":"Every Sunday and Thursday","planet_target":"Jupiter"}
   ],
   "gemstones": [
-    {"stone": "yellow_sapphire", "reason": "specific reason for this person", "weight": "4-5 carats", "metal": "Gold", "day_to_wear": "Thursday morning", "test_first": "no", "mantra": "Om Brim Brihaspataye Namah"},
-    {"stone": "pearl", "reason": "specific reason", "weight": "5-6 carats", "metal": "Silver", "day_to_wear": "Monday evening", "test_first": "no", "mantra": "Om Som Somaya Namah"}
+    {"stone":"yellow_sapphire","title":"Yellow Sapphire (Pukhraj)","reason":"specific reason connected to dasha and palm","planet":"Jupiter","wear_on":"Index finger, right hand","weight":"4-5 carats","metal":"Gold","day_to_wear":"Thursday morning during Jupiter hora","test_first":"no","mantra":"Om Gram Greem Graum Sah Gurave Namah 108 times before wearing"},
+    {"stone":"diamond","title":"Diamond (Heera)","reason":"specific reason","planet":"Venus","wear_on":"Middle finger, right hand","weight":"0.5 to 1 carat","metal":"Platinum or White Gold","day_to_wear":"Friday morning after sunrise","test_first":"yes","mantra":"Om Shum Shukraya Namah 108 times before wearing"}
   ],
   "vastu": [
-    {"direction": "Sleeping Direction", "en": "head toward South or East, never North"},
-    {"direction": "Work Desk", "en": "face East or North while working"},
-    {"direction": "Wealth Zone", "en": "keep North zone clean and clutter-free"},
-    {"direction": "Prayer Corner", "en": "Northeast corner for puja and meditation"}
+    {"direction":"Sleeping Direction","compass":"South","en":"specific advice about sleeping direction connected to dasha"},
+    {"direction":"Work Desk","compass":"East","en":"specific work desk direction advice"},
+    {"direction":"Prayer and Meditation","compass":"Northeast","en":"specific prayer corner advice"},
+    {"direction":"Wealth Activation Zone","compass":"North","en":"specific north zone advice"},
+    {"direction":"Main Entrance Energy","compass":"North or East","en":"specific entrance advice"}
   ],
   "lifestyle": [
-    {"title": "Morning Routine", "en": "specific morning practice"},
-    {"title": "Physical Exercise", "en": "specific exercise advice"},
-    {"title": "Diet Practice", "en": "specific dietary advice"},
-    {"title": "Evening Practice", "en": "specific evening practice"}
+    {"title":"Morning Surya Namaskar","en":"specific morning practice description","frequency":"Daily","best_time":"Sunrise, between 6:00-7:00 AM"},
+    {"title":"Saturday Fasting and Service","en":"specific Saturday practice","frequency":"Every Saturday","best_time":"Sunrise to sunset"},
+    {"title":"Evening Gratitude Practice","en":"specific evening practice","frequency":"Daily","best_time":"Before 9:00 PM"},
+    {"title":"Diet and Health Practice","en":"specific dietary advice","frequency":"Daily","best_time":"With each meal"}
   ],
   "positive_signs": [
-    {"en": "first specific positive sign from palm"},
-    {"en": "second positive sign"},
-    {"en": "third positive sign"},
-    {"en": "fourth positive sign"}
+    {"en":"first specific positive sign from actual palm observation"},
+    {"en":"second positive sign"},
+    {"en":"third positive sign"},
+    {"en":"fourth positive sign"}
   ]
 }
 
-Include 3 shubh lagnas, 4 problems, 4 remedies, 2 gemstones, 4 vastu, 4 lifestyle, 4 positive signs.
-All future dates. Current year is 2026.`;
+Include ALL sections. All dates must be future dates after June 2026.`;
 
-  // Single call with image — same approach as June 24th working version
   const messages = [{
     role: "user",
     content: [
-      { type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageData } },
-      { type: "text", text: `Analyze this palm for ${name || "the person"} (age ${age}, ${stage}). Current Dasha: ${dasha.maha} Mahadasha. Return ONLY the JSON object.` }
+      { type:"image", source:{ type:"base64", media_type:mediaType||"image/jpeg", data:imageData } },
+      { type:"text", text:`Analyze this palm for ${name||"the person"} (age ${age}, ${stage}). Current Dasha: ${dasha.maha} Mahadasha ending ${dasha.mahaEnds}. Return ONLY the JSON object.` }
     ]
   }];
 
-  const raw = await callClaude(messages, 4000, SYSTEM);
+  const raw = await callClaude(messages, 4500, SYSTEM);
 
-  // Clean and parse JSON
-  let text = raw;
-  // Strip markdown fences if present
-  text = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
+  let text = raw.replace(/```json\s*/gi,"").replace(/```\s*/g,"");
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("No JSON in AI response — raw: " + raw.slice(0, 200));
+  if (start===-1||end===-1) throw new Error("No JSON in AI response: "+raw.slice(0,200));
 
   let safe = "";
-  const slice = text.slice(start, end + 1);
-  for (let i = 0; i < slice.length; i++) {
+  const slice = text.slice(start, end+1);
+  for (let i=0;i<slice.length;i++) {
     const c = slice.charCodeAt(i);
-    if (c === 9 || c === 10 || c === 13) safe += " ";
-    else if (c >= 32 && c <= 126) safe += slice[i];
+    if (c===9||c===10||c===13) safe += " ";
+    else if (c>=32&&c<=126) safe += slice[i];
   }
-  // Fix trailing commas
-  safe = safe.replace(/,(\s*[}\]])/g, "$1");
+  safe = safe.replace(/,(\s*[}\]])/g,"$1");
 
   const result = JSON.parse(safe);
   result._meta = { name, age, dob, gender, stage, dasha, concerns };
   return result;
 }
 
-// ── Request handler ───────────────────────────────────────────
 async function handleRequest(req, res) {
   cors(res);
-  if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+  if (req.method==="OPTIONS") { res.writeHead(204); res.end(); return; }
+  const url = new URL("http://x"+req.url).pathname;
 
-  const url = new URL("http://x" + req.url).pathname;
-
-  // Serve frontend
-  if (req.method === "GET" && url === "/") {
-    const f = path.join(__dirname, "index.html");
-    if (fs.existsSync(f)) {
-      const html = fs.readFileSync(f);
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(html);
-    } else {
-      res.writeHead(200, { "Content-Type": "text/html" });
-      res.end("<h1>HastRekha running. Upload index.html.</h1>");
-    }
+  if (req.method==="GET" && url==="/") {
+    const f = path.join(__dirname,"index.html");
+    if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }
+    else { res.writeHead(200,{"Content-Type":"text/html"}); res.end("<h1>HastRekha running.</h1>"); }
     return;
   }
+  if (req.method==="GET" && url==="/health") { sendJSON(res,{status:"ok",hasKey:!!API_KEY}); return; }
 
-  // Health check
-  if (req.method === "GET" && url === "/health") {
-    sendJSON(res, { status: "ok", hasKey: !!API_KEY });
-    return;
-  }
-
-  // Palm reading
-  if (req.method === "POST" && url === "/read-palm") {
-    if (!API_KEY) { sendJSON(res, { error: "API key not set on server" }, 500); return; }
+  if (req.method==="POST" && url==="/read-palm") {
+    if (!API_KEY) { sendJSON(res,{error:"API key not set"},500); return; }
     let body;
-    try { body = JSON.parse(await readBody(req)); }
-    catch(e) { sendJSON(res, { error: "Invalid JSON body" }, 400); return; }
-    const { imageData, mediaType, name, dob, gender, concerns, engine } = body;
-    if (!imageData) { sendJSON(res, { error: "No image provided" }, 400); return; }
+    try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid body"},400); return; }
+    const {imageData,mediaType,name,dob,gender,concerns}=body;
+    if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
     try {
-      const reading = await analyzePalm(imageData, mediaType, name, dob, gender, concerns, engine);
-      const record = {
-        id: makeId(), name: name||"Anonymous", dob: dob||"", age: dob ? calcAge(dob) : 0,
-        gender: gender||"", concerns: concerns||[], engine: engine||"samudrik",
-        status: "completed", createdAt: new Date().toISOString(), readingData: reading
-      };
+      const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns);
+      const record = { id:makeId(),name:name||"Anonymous",dob:dob||"",age:dob?calcAge(dob):0,gender:gender||"",concerns:concerns||[],status:"completed",createdAt:new Date().toISOString(),readingData:reading };
       DB.readings.push(record);
-      sendJSON(res, { reading, recordId: record.id });
+      sendJSON(res,{reading,recordId:record.id});
     } catch(e) {
-      console.error("Reading error:", e.message);
-      DB.readings.push({ id: makeId(), name: name||"", status: "failed", createdAt: new Date().toISOString(), error: e.message, readingData: {} });
-      sendJSON(res, { error: e.message }, 500);
+      console.error("Error:",e.message);
+      sendJSON(res,{error:e.message},500);
     }
     return;
   }
 
-  // Admin stats
-  if (req.method === "GET" && url === "/admin/stats") {
-    const auth = req.headers["authorization"] || "";
-    if (auth !== `Bearer ${ADMIN_PASS}`) { sendJSON(res, { error: "Unauthorized" }, 401); return; }
-    const today = new Date().toDateString();
-    const byStage = {}, byEngine = { samudrik:0, hasta:0, both:0 };
-    DB.readings.forEach(r => {
-      const s = r.age <= 12 ? "Child" : r.age <= 18 ? "Teenager" : r.age <= 25 ? "Young Adult" : r.age <= 45 ? "Working Professional" : r.age <= 60 ? "Middle Age" : "Senior";
-      byStage[s] = (byStage[s]||0) + 1;
-      if (r.engine) byEngine[r.engine] = (byEngine[r.engine]||0) + 1;
+  if (req.method==="GET" && url==="/admin/stats") {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    const today=new Date().toDateString();
+    const byStage={},byEngine={samudrik:0,hasta:0,both:0};
+    DB.readings.forEach(r=>{
+      const s=r.age<=12?"Child":r.age<=18?"Teenager":r.age<=25?"Young Adult":r.age<=45?"Working Professional":r.age<=60?"Middle Age":"Senior";
+      byStage[s]=(byStage[s]||0)+1;
     });
-    sendJSON(res, {
-      totalReadings: DB.readings.length,
-      todayReadings: DB.readings.filter(r => new Date(r.createdAt).toDateString() === today).length,
-      completedReadings: DB.readings.filter(r => r.status === "completed").length,
-      byLifeStage: byStage, byEngine
-    });
+    sendJSON(res,{totalReadings:DB.readings.length,todayReadings:DB.readings.filter(r=>new Date(r.createdAt).toDateString()===today).length,completedReadings:DB.readings.filter(r=>r.status==="completed").length,byLifeStage:byStage});
     return;
   }
 
-  // Admin readings list
-  if (req.method === "GET" && url === "/admin/readings") {
-    const auth = req.headers["authorization"] || "";
-    if (auth !== `Bearer ${ADMIN_PASS}`) { sendJSON(res, { error: "Unauthorized" }, 401); return; }
-    sendJSON(res, {
-      readings: DB.readings.map(r => ({
-        id: r.id, name: r.name, dob: r.dob, age: r.age, gender: r.gender,
-        concerns: r.concerns, engine: r.engine, status: r.status,
-        createdAt: r.createdAt, handType: r.readingData?.hand_type||"",
-        problemCount: (r.readingData?.problems||[]).length
-      })).reverse()
-    });
+  if (req.method==="GET" && url==="/admin/readings") {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    sendJSON(res,{readings:DB.readings.map(r=>({id:r.id,name:r.name,dob:r.dob,age:r.age,gender:r.gender,concerns:r.concerns,status:r.status,createdAt:r.createdAt,handType:r.readingData?.hand_type||"",problemCount:(r.readingData?.problems||[]).length})).reverse()});
     return;
   }
 
-  // Admin single reading
-  if (req.method === "GET" && url.startsWith("/admin/reading")) {
-    const auth = req.headers["authorization"] || "";
-    if (auth !== `Bearer ${ADMIN_PASS}`) { sendJSON(res, { error: "Unauthorized" }, 401); return; }
-    const params = new URL("http://x" + req.url).searchParams;
-    const id = params.get("id");
-    const record = DB.readings.find(r => r.id === id);
-    if (!record) { sendJSON(res, { error: "Not found" }, 404); return; }
-    sendJSON(res, record);
+  if (req.method==="GET" && url.startsWith("/admin/reading")) {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    const id=new URL("http://x"+req.url).searchParams.get("id");
+    const record=DB.readings.find(r=>r.id===id);
+    if (!record) { sendJSON(res,{error:"Not found"},404); return; }
+    sendJSON(res,record);
     return;
   }
 
-  sendJSON(res, { error: "Not found" }, 404);
+  sendJSON(res,{error:"Not found"},404);
 }
 
-http.createServer(handleRequest).listen(PORT, () => {
-  console.log(`✦ HastRekha server running on port ${PORT}`);
-  console.log(`   Model: claude-opus-4-5 (same as June 24th)`);
-  console.log(`   API key: ${API_KEY ? "OK" : "MISSING — set ANTHROPIC_API_KEY"}`);
+http.createServer(handleRequest).listen(PORT,()=>{
+  console.log(`HastRekha server on port ${PORT} | Model: claude-opus-4-5 | Key: ${API_KEY?"OK":"MISSING"}`);
 });
