@@ -8,6 +8,57 @@ const API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || "admin123";
 const DB = { readings: [] };
 
+// ── RAZORPAY ─────────────────────────────────────────────
+const RZP_KEY_ID     = process.env.RAZORPAY_KEY_ID     || "";
+const RZP_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
+const READING_PRICE  = 29900; // ₹299 in paise
+const CURRENCY       = "INR";
+
+function razorpayRequest(method, path, body) {
+  return new Promise((resolve, reject) => {
+    const auth = Buffer.from(RZP_KEY_ID + ":" + RZP_KEY_SECRET).toString("base64");
+    const payload = body ? JSON.stringify(body) : null;
+    const req = https.request({
+      hostname: "api.razorpay.com",
+      path: "/v1" + path,
+      method: method,
+      headers: {
+        "Authorization": "Basic " + auth,
+        "Content-Type": "application/json",
+        ...(payload ? { "Content-Length": Buffer.byteLength(payload) } : {})
+      }
+    }, res => {
+      const parts = [];
+      res.on("data", d => parts.push(d));
+      res.on("end", () => {
+        try { resolve(JSON.parse(Buffer.concat(parts).toString())); }
+        catch(e) { reject(e); }
+      });
+    });
+    req.on("error", reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+async function createRazorpayOrder() {
+  return razorpayRequest("POST", "/orders", {
+    amount: READING_PRICE,
+    currency: CURRENCY,
+    receipt: "hastrekha_" + Date.now(),
+    notes: { product: "HastRekha Palm Reading" }
+  });
+}
+
+async function verifyRazorpayPayment(orderId, paymentId, signature) {
+  const crypto = require("crypto");
+  const expected = crypto
+    .createHmac("sha256", RZP_KEY_SECRET)
+    .update(orderId + "|" + paymentId)
+    .digest("hex");
+  return expected === signature;
+}
+
 // ── ALLOWED ORIGINS ──────────────────────────────────────
 const ALLOWED_ORIGINS = [
   "https://hast-rekha.com",
@@ -524,6 +575,34 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ── CREATE RAZORPAY ORDER ──────────────────────────────
+  if (req.method==="POST" && url==="/create-order") {
+    if (!RZP_KEY_ID) { sendJSON(res,{error:"Payment not configured"},500); return; }
+    try {
+      const order = await createRazorpayOrder();
+      sendJSON(res, { orderId: order.id, amount: order.amount, currency: order.currency, keyId: RZP_KEY_ID });
+    } catch(e) {
+      console.error("Create order failed:", e.message);
+      sendJSON(res, {error: "Could not create payment order"}, 500);
+    }
+    return;
+  }
+
+  // ── VERIFY PAYMENT ─────────────────────────────────────
+  if (req.method==="POST" && url==="/verify-payment") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+      const valid = await verifyRazorpayPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+      if (!valid) { sendJSON(res,{error:"Payment verification failed"},400); return; }
+      // Store verified payment
+      sendJSON(res, { success: true, paymentId: razorpay_payment_id });
+    } catch(e) {
+      sendJSON(res, {error: "Verification error"}, 500);
+    }
+    return;
+  }
+
   if (req.method==="POST" && url==="/read-palm") {
     // ── ORIGIN GUARD ──
     const origin = req.headers.origin || "";
@@ -540,7 +619,9 @@ async function handleRequest(req, res) {
     if (!API_KEY) { sendJSON(res,{error:"API key not set"},500); return; }
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid body"},400); return; }
-    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail}=body;
+    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId}=body;
+    // Verify payment if Razorpay is configured
+    if (RZP_KEY_ID && !paymentId) { sendJSON(res,{error:"Payment required"},402); return; }
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
     try {
       const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns,engine);
