@@ -141,6 +141,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Crimso
 
 footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04);border-radius:9px;text-align:center;font-size:11px;color:#3A2F1F;font-style:italic;line-height:1.7}
 </style>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 <canvas id="universe"></canvas>
@@ -265,7 +266,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
     </div>
   </div>
 
-  <button class="btn-main" id="read-btn" onclick="startReading()" disabled>✦ Read My Palm ✦</button>
+  <button class="btn-main" id="read-btn" onclick="initiatePayment()" disabled>✦ Read My Palm — ₹299 ✦</button>
   <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:12px;font-style:italic">Your image is analysed securely and never stored permanently.</p>
 </div>
 
@@ -800,8 +801,84 @@ Age: ${g_age||''}`:'No reading done yet';
   }
 }
 
+// ── INITIATE PAYMENT ─────────────────────────────────────
+async function initiatePayment(){
+  if(!imgData){ showErr('Please upload your palm photo first'); return; }
+  const name = document.getElementById('inp-name').value.trim()||'You';
+  const dob  = document.getElementById('inp-dob').value;
+  const email = document.getElementById('inp-email').value.trim();
+  if(!dob){ showErr('Please enter your date of birth'); return; }
+  if(!email||!email.includes('@')){ showErr('Please enter a valid email address to receive your reading'); return; }
+  hideErr();
+
+  // Show loading state on button
+  const btn = document.getElementById('read-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Preparing Payment…';
+
+  try {
+    // Create Razorpay order
+    const orderRes = await fetch(SERVER+'/create-order', { method:'POST', headers:{'Content-Type':'application/json'} });
+    const orderData = await orderRes.json();
+    if(orderData.error) throw new Error(orderData.error);
+
+    // Open Razorpay checkout
+    const options = {
+      key: orderData.keyId,
+      amount: orderData.amount,
+      currency: orderData.currency,
+      name: 'HastRekha',
+      description: 'Vedic Palm Reading',
+      image: 'https://samudrik-shastra-server.onrender.com/favicon.ico',
+      order_id: orderData.orderId,
+      prefill: { name: name, email: email },
+      theme: { color: '#C9A96E' },
+      modal: {
+        ondismiss: function(){
+          btn.disabled = false;
+          btn.textContent = '✦ Read My Palm — ₹299 ✦';
+        }
+      },
+      handler: async function(response){
+        // Payment successful — verify and start reading
+        btn.textContent = '✦ Verifying Payment…';
+        try {
+          const verifyRes = await fetch(SERVER+'/verify-payment', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+          const verifyData = await verifyRes.json();
+          if(!verifyData.success) throw new Error('Payment verification failed');
+          // Payment verified — start reading
+          await startReading(verifyData.paymentId);
+        } catch(e){
+          showErr('Payment verified but reading failed. Please contact jyotish@hast-rekha.com with your payment ID: '+response.razorpay_payment_id);
+          btn.disabled = false;
+          btn.textContent = '✦ Read My Palm — ₹299 ✦';
+        }
+      }
+    };
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(response){
+      showErr('Payment failed: '+response.error.description);
+      btn.disabled = false;
+      btn.textContent = '✦ Read My Palm — ₹299 ✦';
+    });
+    rzp.open();
+  } catch(e){
+    showErr('Could not initiate payment. Please try again.');
+    btn.disabled = false;
+    btn.textContent = '✦ Read My Palm — ₹299 ✦';
+  }
+}
+
 // ── START READING ────────────────────────────────────────
-async function startReading(){
+async function startReading(paymentId){
   if(!imgData) return;
   g_name=document.getElementById('inp-name').value.trim()||'You';
   g_dob=document.getElementById('inp-dob').value;
@@ -844,7 +921,8 @@ async function startReading(){
             name:g_name, dob:g_dob, gender:g_gender,
             concerns:selectedConcerns,
             engine:currentEngine,
-            userEmail:document.getElementById('inp-email').value.trim()
+            userEmail:document.getElementById('inp-email').value.trim(),
+            paymentId:paymentId||''
           })
         },130000);
         data=await res.json();
