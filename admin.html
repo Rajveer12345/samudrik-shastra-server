@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BhagyaKar Admin Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#C9C2D6;--gold2:#8A7D99;--bg:#1A0E1F;--text:#F5F3F8;--muted:#D9D3E3;--dim:#9B90A8;}
+body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',serif;min-height:100vh;padding:20px 16px 60px}
+.wrap{max-width:920px;margin:0 auto}
+h1{font-size:22px;color:var(--gold);margin-bottom:4px;font-weight:700}
+.sub{color:var(--dim);font-size:13px;margin-bottom:24px}
+.card{background:rgba(201,194,214,0.06);border:1px solid rgba(201,194,214,0.18);border-radius:12px;padding:18px;margin-bottom:16px}
+label{font-size:11px;color:var(--gold);letter-spacing:1px;display:block;margin-bottom:6px;font-weight:600}
+input[type=text],input[type=email],input[type=password],textarea{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(201,194,214,0.25);border-radius:8px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:14px;outline:none}
+input:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:70px}
+button{background:linear-gradient(135deg,var(--gold2),var(--gold));border:none;border-radius:20px;padding:10px 20px;color:#1A0E1F;font-weight:700;font-size:13px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button.secondary{background:transparent;border:1px solid var(--gold);color:var(--gold)}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.row>div{flex:1;min-width:200px}
+.hidden{display:none}
+.reading-item{border:1px solid rgba(201,194,214,0.18);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:background .15s}
+.reading-item:hover{background:rgba(201,194,214,0.06)}
+.reading-item .date{font-size:11px;color:var(--dim)}
+.reading-item .name{font-weight:600;color:var(--gold);margin:2px 0}
+.reading-item .concerns{font-size:12px;color:var(--muted)}
+.note-item{border-left:2px solid var(--gold2);padding:8px 12px;margin-bottom:8px;background:rgba(0,0,0,0.15);border-radius:0 8px 8px 0}
+.note-item .date{font-size:10px;color:var(--dim);margin-bottom:3px}
+.err{background:rgba(232,41,41,0.1);border:1px solid rgba(232,41,41,0.3);color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+.answer-box{background:rgba(139,125,153,0.12);border:1px solid var(--gold2);border-radius:8px;padding:14px;margin-top:10px;font-size:14px;line-height:1.7;white-space:pre-wrap}
+.loading{color:var(--dim);font-size:13px;font-style:italic}
+img.palm-preview{max-width:200px;border-radius:8px;border:1px solid rgba(201,194,214,0.25);margin-top:8px}
+.section-title{font-size:12px;color:var(--gold);letter-spacing:1px;font-weight:700;margin-bottom:10px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <h1>✦ BhagyaKar Admin ✦</h1>
+    <div class="card">
+      <label>Admin Password</label>
+      <input type="password" id="login-pass" placeholder="Enter admin password" onkeydown="if(event.key==='Enter') login()"/>
+      <div style="margin-top:12px"><button onclick="login()">Log In</button></div>
+      <div class="err" id="login-err">Incorrect password.</div>
+    </div>
+  </div>
+
+  <!-- MAIN CONSOLE -->
+  <div id="console-screen" class="hidden">
+    <h1>✦ BhagyaKar Admin ✦</h1>
+    <div class="sub">Look up a customer, review their reading, ask a question during a call, and save notes.</div>
+
+    <div class="card">
+      <label>Search customer by email</label>
+      <div class="row">
+        <div><input type="email" id="search-email" placeholder="customer@email.com" onkeydown="if(event.key==='Enter') searchCustomer()"/></div>
+        <div style="flex:0"><button onclick="searchCustomer()">Search</button></div>
+      </div>
+      <div class="err" id="search-err"></div>
+    </div>
+
+    <div id="results" class="hidden">
+
+      <div class="card">
+        <div class="section-title">Reading History</div>
+        <div id="readings-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Ask AI (using this customer's stored reading)</div>
+        <label>Customer's question</label>
+        <textarea id="ai-question" placeholder="e.g. When will my financial situation improve?"></textarea>
+        <div style="margin-top:10px"><button onclick="askAI()" id="ask-btn">Get Answer</button></div>
+        <div id="ai-loading" class="loading hidden">Thinking...</div>
+        <div id="ai-answer" class="answer-box hidden"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Call Notes</div>
+        <div id="notes-list"></div>
+        <label style="margin-top:12px">Add a note</label>
+        <textarea id="new-note" placeholder="Notes from this consultation..."></textarea>
+        <div style="margin-top:10px"><button onclick="addNote()">Save Note</button></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- READING DETAIL MODAL (simple inline panel) -->
+  <div id="detail-panel" class="hidden card">
+    <button class="secondary" onclick="closeDetail()" style="margin-bottom:12px">← Back</button>
+    <div id="detail-content"></div>
+  </div>
+
+</div>
+
+<script>
+const SERVER = window.location.origin;
+let adminPassword = "";
+let currentEmail = "";
+
+function login(){
+  const pass = document.getElementById('login-pass').value.trim();
+  if(!pass){ return; }
+  adminPassword = pass;
+  // Verify by making a lightweight authenticated call
+  fetch(SERVER+'/admin/readings', { headers: { 'Authorization': 'Bearer '+adminPassword } })
+    .then(r=>{
+      if(r.status===401){ document.getElementById('login-err').style.display='block'; adminPassword=""; }
+      else { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('console-screen').classList.remove('hidden'); }
+    })
+    .catch(()=>{ document.getElementById('login-err').style.display='block'; });
+}
+
+function authHeaders(){ return { 'Authorization': 'Bearer '+adminPassword, 'Content-Type': 'application/json' }; }
+
+async function searchCustomer(){
+  const email = document.getElementById('search-email').value.trim();
+  const errEl = document.getElementById('search-err');
+  errEl.style.display='none';
+  if(!email){ errEl.textContent='Please enter an email address.'; errEl.style.display='block'; return; }
+  currentEmail = email;
+  try {
+    const res = await fetch(SERVER+'/admin/customer-history?email='+encodeURIComponent(email), { headers: authHeaders() });
+    const data = await res.json();
+    if(data.error){ errEl.textContent=data.error; errEl.style.display='block'; document.getElementById('results').classList.add('hidden'); return; }
+    if(!data.readings.length){ errEl.textContent='No readings found for this email.'; errEl.style.display='block'; document.getElementById('results').classList.add('hidden'); return; }
+
+    document.getElementById('results').classList.remove('hidden');
+    const list = document.getElementById('readings-list');
+    list.innerHTML = data.readings.map(r=>{
+      const concerns = JSON.parse(r.concerns||'[]').join(', ')||'General';
+      const date = new Date(r.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+      return `<div class="reading-item" onclick="viewReading('${r.id}')">
+        <div class="date">${date}</div>
+        <div class="name">${r.name||'Anonymous'}</div>
+        <div class="concerns">${concerns}</div>
+      </div>`;
+    }).join('');
+
+    const notesList = document.getElementById('notes-list');
+    notesList.innerHTML = data.notes.length ? data.notes.map(n=>{
+      const date = new Date(n.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+      return `<div class="note-item"><div class="date">${date}</div>${n.note}</div>`;
+    }).join('') : '<div class="loading">No notes yet.</div>';
+
+    document.getElementById('ai-answer').classList.add('hidden');
+    document.getElementById('ai-question').value='';
+  } catch(e) {
+    errEl.textContent='Something went wrong searching. Please try again.';
+    errEl.style.display='block';
+  }
+}
+
+async function viewReading(id){
+  const res = await fetch(SERVER+'/admin/reading-full?id='+encodeURIComponent(id), { headers: authHeaders() });
+  const data = await res.json();
+  if(data.error) return;
+  const R = data.reading;
+  const date = new Date(data.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('detail-content').innerHTML = `
+    <div class="section-title">${data.name} — ${date}</div>
+    <p style="margin-bottom:10px"><b>Concerns:</b> ${(data.concerns||[]).join(', ')||'General'}</p>
+    <p style="margin-bottom:10px"><b>Hand Type:</b> ${R.hand_type||''}</p>
+    <p style="margin-bottom:10px"><b>Overall:</b> ${R.overall_energy||''}</p>
+    <p style="margin-bottom:10px"><b>Dasha:</b> ${R.dasha_summary||''}</p>
+    <p style="margin-bottom:10px"><b>Lucky Period:</b> ${R.lucky_period||''}</p>
+    ${data.palmImage ? `<img class="palm-preview" src="${data.palmImage}"/>` : ''}
+  `;
+  document.getElementById('detail-panel').classList.remove('hidden');
+  document.getElementById('console-screen').classList.add('hidden');
+}
+function closeDetail(){
+  document.getElementById('detail-panel').classList.add('hidden');
+  document.getElementById('console-screen').classList.remove('hidden');
+}
+
+async function askAI(){
+  const question = document.getElementById('ai-question').value.trim();
+  if(!question || !currentEmail) return;
+  const btn = document.getElementById('ask-btn');
+  const loading = document.getElementById('ai-loading');
+  const answerBox = document.getElementById('ai-answer');
+  btn.disabled = true; loading.classList.remove('hidden'); answerBox.classList.add('hidden');
+  try {
+    const res = await fetch(SERVER+'/admin/ask-ai', { method:'POST', headers: authHeaders(), body: JSON.stringify({ email: currentEmail, question }) });
+    const data = await res.json();
+    loading.classList.add('hidden'); btn.disabled = false;
+    if(data.error){ answerBox.textContent = 'Error: '+data.error; answerBox.classList.remove('hidden'); return; }
+    answerBox.textContent = data.answer;
+    answerBox.classList.remove('hidden');
+  } catch(e) {
+    loading.classList.add('hidden'); btn.disabled = false;
+    answerBox.textContent = 'Something went wrong. Please try again.';
+    answerBox.classList.remove('hidden');
+  }
+}
+
+async function addNote(){
+  const note = document.getElementById('new-note').value.trim();
+  if(!note || !currentEmail) return;
+  try {
+    await fetch(SERVER+'/admin/notes/add', { method:'POST', headers: authHeaders(), body: JSON.stringify({ email: currentEmail, note }) });
+    document.getElementById('new-note').value='';
+    searchCustomer(); // refresh notes list
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

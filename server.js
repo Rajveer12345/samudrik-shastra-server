@@ -6,7 +6,57 @@ const path = require("path");
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || "admin123";
-const DB = { readings: [] };
+const DB = { readings: [] }; // in-memory cache for this session only
+
+// ── PERSISTENT DATABASE (MySQL, provisioned by GoDaddy Node.js Hosting) ──
+let mysql;
+try { mysql = require("mysql2/promise"); } catch(e) { console.error("mysql2 not installed — persistent storage disabled:", e.message); }
+
+let dbPool = null;
+if (mysql && process.env.DB_HOST) {
+  dbPool = mysql.createPool({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 0
+  });
+}
+
+async function initDB() {
+  if (!dbPool) { console.log("No database configured — running without persistent customer history"); return; }
+  try {
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS readings (
+        id VARCHAR(64) PRIMARY KEY,
+        email VARCHAR(255),
+        name VARCHAR(255),
+        dob VARCHAR(20),
+        gender VARCHAR(20),
+        concerns TEXT,
+        reading_json LONGTEXT,
+        palm_image_base64 LONGTEXT,
+        created_at DATETIME
+      )
+    `);
+    await dbPool.query(`CREATE INDEX idx_readings_email ON readings (email(191))`).catch(()=>{}); // ignore if already exists
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS consultation_notes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255),
+        note TEXT,
+        created_at DATETIME
+      )
+    `);
+    console.log("Database ready — persistent customer history enabled");
+  } catch(e) {
+    console.error("Database init failed — persistent storage disabled:", e.message);
+    dbPool = null;
+  }
+}
 
 // Shown to customers whenever the reading engine fails for ANY reason
 // (quota, billing, network, malformed response, etc). Never reveals
@@ -581,6 +631,13 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (req.method==="GET" && url==="/admin") {
+    const f = path.join(__dirname,"admin.html");
+    if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }
+    else { res.writeHead(404,{"Content-Type":"text/plain"}); res.end("Admin page not found"); }
+    return;
+  }
+
   // ── CREATE RAZORPAY ORDER ──────────────────────────────
   if (req.method==="POST" && url==="/create-order") {
     if (!RZP_KEY_ID) { sendJSON(res,{error:"Payment not configured"},500); return; }
@@ -634,6 +691,14 @@ async function handleRequest(req, res) {
       const record = { id:makeId(),name:name||"Anonymous",dob:dob||"",age:dob?calcAge(dob):0,gender:gender||"",concerns:concerns||[],status:"completed",createdAt:new Date().toISOString(),readingData:reading };
       DB.readings.push(record);
       sendJSON(res,{reading,recordId:record.id});
+
+      // ── SAVE TO PERSISTENT DATABASE (so the admin console can look this customer up later) ──
+      if (dbPool && userEmail) {
+        dbPool.query(
+          "INSERT INTO readings (id, email, name, dob, gender, concerns, reading_json, palm_image_base64, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+          [record.id, userEmail, record.name, record.dob, record.gender, JSON.stringify(concerns||[]), JSON.stringify(reading), imageData, new Date()]
+        ).catch(e => console.error("Failed to save reading to database:", e.message));
+      }
 
       // ── SEND READING EMAIL (async, don't block response) ──
       const age = dob ? calcAge(dob) : 0;
@@ -707,6 +772,114 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ── ADMIN: look up a customer's full reading history by email ──
+  if (req.method==="GET" && url==="/admin/customer-history") {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    if (!dbPool) { sendJSON(res,{error:"Database not configured"},500); return; }
+    const email = new URL("http://x"+req.url).searchParams.get("email");
+    if (!email) { sendJSON(res,{error:"Email required"},400); return; }
+    try {
+      const [rows] = await dbPool.query(
+        "SELECT id, name, dob, gender, concerns, created_at FROM readings WHERE email=? ORDER BY created_at DESC",
+        [email]
+      );
+      const [notes] = await dbPool.query(
+        "SELECT id, note, created_at FROM consultation_notes WHERE email=? ORDER BY created_at DESC",
+        [email]
+      );
+      sendJSON(res, { readings: rows, notes });
+    } catch(e) {
+      console.error("customer-history failed:", e.message);
+      sendJSON(res,{error:"Lookup failed"},500);
+    }
+    return;
+  }
+
+  // ── ADMIN: full detail of one past reading (including the palm photo) ──
+  if (req.method==="GET" && url==="/admin/reading-full") {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    if (!dbPool) { sendJSON(res,{error:"Database not configured"},500); return; }
+    const id = new URL("http://x"+req.url).searchParams.get("id");
+    if (!id) { sendJSON(res,{error:"id required"},400); return; }
+    try {
+      const [rows] = await dbPool.query("SELECT * FROM readings WHERE id=?", [id]);
+      if (!rows.length) { sendJSON(res,{error:"Not found"},404); return; }
+      const r = rows[0];
+      sendJSON(res, {
+        id:r.id, email:r.email, name:r.name, dob:r.dob, gender:r.gender,
+        concerns: JSON.parse(r.concerns||"[]"),
+        reading: JSON.parse(r.reading_json||"{}"),
+        palmImage: r.palm_image_base64 ? "data:image/jpeg;base64,"+r.palm_image_base64 : null,
+        createdAt: r.created_at
+      });
+    } catch(e) {
+      console.error("reading-full failed:", e.message);
+      sendJSON(res,{error:"Lookup failed"},500);
+    }
+    return;
+  }
+
+  // ── ADMIN: ask the reading engine a question about a specific customer, using their stored reading as context ──
+  if (req.method==="POST" && url==="/admin/ask-ai") {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    if (!dbPool) { sendJSON(res,{error:"Database not configured"},500); return; }
+    let body;
+    try { body = JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid request"},400); return; }
+    const { email, question } = body;
+    if (!email || !question) { sendJSON(res,{error:"email and question required"},400); return; }
+    try {
+      const [rows] = await dbPool.query("SELECT * FROM readings WHERE email=? ORDER BY created_at DESC LIMIT 1", [email]);
+      if (!rows.length) { sendJSON(res,{error:"No reading found for this customer"},404); return; }
+      const r = rows[0];
+      const reading = JSON.parse(r.reading_json||"{}");
+      const concerns = JSON.parse(r.concerns||"[]");
+
+      const contextSummary = `
+Customer: ${r.name}, DOB: ${r.dob}
+Concerns selected: ${concerns.join(", ")||"General"}
+Hand type: ${reading.hand_type||""}
+Overall reading: ${reading.overall_energy||""}
+Dasha summary: ${reading.dasha_summary||""}
+Lucky period: ${reading.lucky_period||""}
+Key problems identified: ${(reading.problems||[]).map(p=>`${p.title||p.area}: ${p.issue}`).join(" | ")}
+Predictions: ${(reading.predictions||[]).map(p=>`${p.category}: ${p.current_situation} (${p.primary_window})`).join(" | ")}
+Shubh Lagna windows: ${(reading.shubh_lagnas||[]).map(l=>`${l.window}: ${l.what_will_happen}`).join(" | ")}
+Remedies suggested: ${(reading.remedies||[]).map(r=>r.remedy).join(" | ")}
+Gemstones suggested: ${(reading.gemstones||[]).map(g=>g.title||g.stone).join(", ")}
+`.trim();
+
+      const SYSTEM = `You are helping a Vedic astrologer (Jyotishi) prepare a spoken answer for a customer on a live video call, using ONLY the customer's own stored reading below as context. Answer the customer's specific question directly and concisely, in a warm, professional tone the astrologer can read aloud or paraphrase. Do not invent new predictions beyond what is consistent with their existing reading. If their question can't be answered from this context, say so honestly and suggest what the astrologer might ask the customer to clarify.
+
+CUSTOMER'S STORED READING:
+${contextSummary}`;
+
+      const answer = await callClaude([{ role:"user", content: question }], 800, SYSTEM);
+      sendJSON(res, { answer, customerName: r.name, readingDate: r.created_at });
+    } catch(e) {
+      console.error("admin ask-ai failed:", e.message);
+      sendJSON(res,{error:"Could not generate an answer right now"},500);
+    }
+    return;
+  }
+
+  // ── ADMIN: save a note from a consultation call ──
+  if (req.method==="POST" && url==="/admin/notes/add") {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    if (!dbPool) { sendJSON(res,{error:"Database not configured"},500); return; }
+    let body;
+    try { body = JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid request"},400); return; }
+    const { email, note } = body;
+    if (!email || !note) { sendJSON(res,{error:"email and note required"},400); return; }
+    try {
+      await dbPool.query("INSERT INTO consultation_notes (email, note, created_at) VALUES (?,?,?)", [email, note, new Date()]);
+      sendJSON(res, { success:true });
+    } catch(e) {
+      console.error("add note failed:", e.message);
+      sendJSON(res,{error:"Could not save note"},500);
+    }
+    return;
+  }
+
   if (req.method==="GET" && url.startsWith("/admin/reading")) {
     if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
     const id=new URL("http://x"+req.url).searchParams.get("id");
@@ -721,6 +894,7 @@ async function handleRequest(req, res) {
 
 http.createServer(handleRequest).listen(PORT,()=>{
   console.log(`BhagyaKar server on port ${PORT} | Model: claude-opus-4-5 | Key: ${API_KEY?"OK":"MISSING"}`);
+  initDB();
 });
 
 // ── ANCIENT TEXTS KNOWLEDGE BASE ─────────────────────────────
