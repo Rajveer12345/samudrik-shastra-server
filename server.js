@@ -880,6 +880,30 @@ ${contextSummary}`;
     return;
   }
 
+  // ── ADMIN: insert one harmless test reading, for verifying the console works without a real payment ──
+  if (req.method==="POST" && url==="/admin/seed-test-data") {
+    if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
+    if (!dbPool) { sendJSON(res,{error:"Database not configured"},500); return; }
+    try {
+      const fakeReading = {
+        overall_energy: "This is a test reading to confirm the admin console works.",
+        hand_type: "Square Hand",
+        lucky_period: "January 2027 to March 2027",
+        dasha_summary: "Test dasha summary for verification purposes.",
+        problems: [], predictions: [], shubh_lagnas: [], remedies: [], gemstones: []
+      };
+      await dbPool.query(
+        "INSERT INTO readings (id, email, name, dob, gender, concerns, reading_json, palm_image_base64, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        ["test-"+Date.now(), "test@example.com", "Test Customer", "1990-01-01", "male", JSON.stringify(["Career & Job"]), JSON.stringify(fakeReading), null, new Date()]
+      );
+      sendJSON(res, { success:true, message: "Test reading added for test@example.com" });
+    } catch(e) {
+      console.error("seed-test-data failed:", e.message);
+      sendJSON(res,{error:"Could not seed test data: "+e.message},500);
+    }
+    return;
+  }
+
   if (req.method==="GET" && url.startsWith("/admin/reading")) {
     if ((req.headers["authorization"]||"")!==`Bearer ${ADMIN_PASS}`) { sendJSON(res,{error:"Unauthorized"},401); return; }
     const id=new URL("http://x"+req.url).searchParams.get("id");

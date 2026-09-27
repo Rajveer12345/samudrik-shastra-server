@@ -63,6 +63,8 @@ img.palm-preview{max-width:200px;border-radius:8px;border:1px solid rgba(201,194
         <div style="flex:0"><button onclick="searchCustomer()">Search</button></div>
       </div>
       <div class="err" id="search-err"></div>
+      <div style="margin-top:10px"><button class="secondary" onclick="seedTestData()">+ Add a test reading (for verifying this console)</button></div>
+      <div id="seed-msg" class="loading hidden" style="margin-top:8px"></div>
     </div>
 
     <div id="results" class="hidden">
@@ -119,6 +121,18 @@ function login(){
 }
 
 function authHeaders(){ return { 'Authorization': 'Bearer '+adminPassword, 'Content-Type': 'application/json' }; }
+
+async function seedTestData(){
+  const msg = document.getElementById('seed-msg');
+  msg.classList.remove('hidden'); msg.textContent = 'Adding...';
+  try {
+    const res = await fetch(SERVER+'/admin/seed-test-data', { method:'POST', headers: authHeaders() });
+    const data = await res.json();
+    msg.textContent = data.success ? (data.message + ' — search test@example.com above to see it.') : ('Error: '+data.error);
+  } catch(e) {
+    msg.textContent = 'Something went wrong.';
+  }
+}
 
 async function searchCustomer(){
   const email = document.getElementById('search-email').value.trim();
