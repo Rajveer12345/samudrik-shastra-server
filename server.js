@@ -67,6 +67,7 @@ const GENERIC_ERROR = "We're experiencing a technical issue right now and couldn
 const RZP_KEY_ID     = process.env.RAZORPAY_KEY_ID     || "";
 const RZP_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
 const READING_PRICE  = 99900; // ₹999 in paise
+const PROGRESS_READING_PRICE = 69900; // ₹699 in paise — for returning customers with a prior reading on file
 const CURRENCY       = "INR";
 
 function razorpayRequest(method, path, body) {
@@ -96,12 +97,12 @@ function razorpayRequest(method, path, body) {
   });
 }
 
-async function createRazorpayOrder() {
+async function createRazorpayOrder(amount, productLabel) {
   return razorpayRequest("POST", "/orders", {
-    amount: READING_PRICE,
+    amount: amount || READING_PRICE,
     currency: CURRENCY,
     receipt: "bhagyakar_" + Date.now(),
-    notes: { product: "BhagyaKar Palm Reading" }
+    notes: { product: productLabel || "BhagyaKar Palm Reading" }
   });
 }
 
@@ -446,7 +447,7 @@ function callClaude(messages, maxTokens, systemPrompt) {
   });
 }
 
-async function analyzePalm(imageData, mediaType, name, dob, gender, concerns, engine) {
+async function analyzePalm(imageData, mediaType, name, dob, gender, concerns, engine, priorReadingSummary) {
   const age   = dob ? calcAge(dob) : 35;
   const dasha = dob ? calcDasha(dob) : { maha:"Saturn", antar:"Jupiter", mahaEnds:"2028", remaining:2 };
   const stage = getStage(age);
@@ -468,8 +469,23 @@ Apply standard Samudrik Shastra rules: 7 hand types, all palm lines, all 7 mount
 Use Vimshottari Dasha correlation for timing all predictions.
 `;
 
+  const progressInstructions = priorReadingSummary ? `
+
+=== THIS IS A PROGRESS READING — A RETURNING CUSTOMER ===
+This person has used BhagyaKar before. Their previous reading is summarized below. Today's date is used to judge which of their earlier predicted time windows have now passed.
+
+PREVIOUS READING SUMMARY:
+${priorReadingSummary}
+
+For this new reading, you MUST:
+1. In "overall_energy", begin by briefly acknowledging this is a follow-up reading and noting what has visibly changed in the new palm photo compared to what was described before (line depth, new markings, mount development, etc).
+2. For any of the previous reading's predictions or Shubh Lagna windows whose time window has already passed (compare to today's date), explicitly say in "overall_energy" or the relevant "problems"/"predictions" entry whether the palm now shows signs consistent with that prediction having occurred, partially occurred, or not occurred — be honest and grounded in what the new palm actually shows, don't just assume the old prediction came true.
+3. Frame new "predictions" and "shubh_lagnas" as what comes NEXT, building on (not repeating) the previous reading.
+4. Keep all other JSON fields in the same format as a normal reading — do not add new fields, just weave the comparison into the existing fields as described above.
+` : "";
+
   const SYSTEM = `You are a master Vedic palmist combining Samudrik Shastra with Vimshottari Dasha.
-${bookKnowledge}
+${bookKnowledge}${progressInstructions}
 PERSON: ${name||"the person"}, Age: ${age}, DOB: ${dob||"unknown"}, Gender: ${gender||"not specified"}
 LIFE STAGE: ${stage}
 CURRENT DASHA: ${dasha.maha} Mahadasha (ends ${dasha.mahaEnds}, ${dasha.remaining} years remaining), ${dasha.antar} Antardasha
@@ -641,8 +657,20 @@ async function handleRequest(req, res) {
   // ── CREATE RAZORPAY ORDER ──────────────────────────────
   if (req.method==="POST" && url==="/create-order") {
     if (!RZP_KEY_ID) { sendJSON(res,{error:"Payment not configured"},500); return; }
+    let body = {};
+    try { body = JSON.parse(await readBody(req)); } catch(e) { /* no body is fine — defaults to full price */ }
+    const { email, isProgress } = body;
+    let amount = READING_PRICE;
+    let productLabel = "BhagyaKar Palm Reading";
+    if (isProgress && email && dbPool) {
+      try {
+        const [rows] = await dbPool.query("SELECT id FROM readings WHERE email=? LIMIT 1", [email]);
+        if (rows.length) { amount = PROGRESS_READING_PRICE; productLabel = "BhagyaKar Progress Reading"; }
+        // If no prior reading exists for this email, silently charge full price — the discount only applies to genuine returning customers
+      } catch(e) { console.error("Progress-reading price check failed, defaulting to full price:", e.message); }
+    }
     try {
-      const order = await createRazorpayOrder();
+      const order = await createRazorpayOrder(amount, productLabel);
       sendJSON(res, { orderId: order.id, amount: order.amount, currency: order.currency, keyId: RZP_KEY_ID });
     } catch(e) {
       console.error("Create order failed:", e.message);
@@ -682,12 +710,32 @@ async function handleRequest(req, res) {
     if (!API_KEY) { console.error("Server misconfigured: reading engine key not set"); sendJSON(res,{error:GENERIC_ERROR},500); return; }
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid request"},400); return; }
-    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId}=body;
+    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId,isProgress}=body;
     // Verify payment if Razorpay is configured
     if (RZP_KEY_ID && !paymentId) { sendJSON(res,{error:"Payment required"},402); return; }
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
     try {
-      const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns,engine);
+      // ── If this is a progress reading, fetch the customer's most recent prior reading for comparison ──
+      let priorReadingSummary = null;
+      if (isProgress && userEmail && dbPool) {
+        try {
+          const [rows] = await dbPool.query("SELECT reading_json, concerns, created_at FROM readings WHERE email=? ORDER BY created_at DESC LIMIT 1", [userEmail]);
+          if (rows.length) {
+            const prev = JSON.parse(rows[0].reading_json||"{}");
+            const prevDate = new Date(rows[0].created_at).toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+            priorReadingSummary = `Reading date: ${prevDate}
+Hand type: ${prev.hand_type||""}
+Overall: ${prev.overall_energy||""}
+Dasha: ${prev.dasha_summary||""}
+Lucky period: ${prev.lucky_period||""}
+Shubh Lagna windows: ${(prev.shubh_lagnas||[]).map(l=>`${l.window}: ${l.what_will_happen}`).join(" | ")}
+Predictions: ${(prev.predictions||[]).map(p=>`${p.category}: ${p.current_situation} (window: ${p.primary_window})`).join(" | ")}
+Problems noted: ${(prev.problems||[]).map(p=>`${p.title||p.area}: ${p.issue} (resolution: ${p.resolution||""})`).join(" | ")}`;
+          }
+        } catch(e) { console.error("Could not fetch prior reading for progress comparison:", e.message); }
+      }
+
+      const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns,engine,priorReadingSummary);
       const record = { id:makeId(),name:name||"Anonymous",dob:dob||"",age:dob?calcAge(dob):0,gender:gender||"",concerns:concerns||[],status:"completed",createdAt:new Date().toISOString(),readingData:reading };
       DB.readings.push(record);
       sendJSON(res,{reading,recordId:record.id});

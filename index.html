@@ -267,6 +267,11 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
   </div>
 
   <div class="card" style="display:flex;align-items:flex-start;gap:10px">
+    <input type="checkbox" id="is-progress" onchange="updateButtonPriceLabel()" style="margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:#C9C2D6"/>
+    <label for="is-progress" style="font-size:12px;color:var(--muted);line-height:1.6">This is a <b style="color:var(--gold)">follow-up / progress reading</b> — I've used BhagyaKar before with this same email address (₹699 instead of ₹999). Your new reading will note what's changed since your last one.</label>
+  </div>
+
+  <div class="card" style="display:flex;align-items:flex-start;gap:10px">
     <input type="checkbox" id="agree-terms" onchange="updateReadBtnState()" style="margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:#C9C2D6"/>
     <label for="agree-terms" style="font-size:12px;color:var(--muted);line-height:1.6">I have read and agree to the <a href="/terms.html" target="_blank" style="color:var(--gold);text-decoration:underline">Terms &amp; Conditions</a>, including that this reading is for guidance and entertainment purposes only, gemstone suggestions are not professional advice, and BhagyaKar is not liable for decisions made based on this reading.</label>
   </div>
@@ -654,7 +659,17 @@ function hideErr(){ document.getElementById('err-box').style.display='none'; }
 // Enable the pay button only once BOTH a photo is uploaded AND the T&C checkbox is ticked
 function updateReadBtnState(){
   const agreed = document.getElementById('agree-terms').checked;
-  document.getElementById('read-btn').disabled = !(imgData && agreed);
+  const btn = document.getElementById('read-btn');
+  btn.disabled = !(imgData && agreed);
+  if(!btn.disabled) btn.textContent = currentPriceLabel();
+}
+
+function currentPriceLabel(){
+  return document.getElementById('is-progress').checked ? '✦ Read My Palm — ₹699 ✦' : '✦ Read My Palm — ₹999 ✦';
+}
+function updateButtonPriceLabel(){
+  const btn = document.getElementById('read-btn');
+  if(!btn.disabled) btn.textContent = currentPriceLabel();
 }
 
 function calcAge(dob){
@@ -828,10 +843,11 @@ async function initiatePayment(){
   const btn = document.getElementById('read-btn');
   btn.disabled = true;
   btn.textContent = '⏳ Preparing Payment…';
+  const isProgress = document.getElementById('is-progress').checked;
 
   try {
     // Create Razorpay order
-    const orderRes = await fetch(SERVER+'/create-order', { method:'POST', headers:{'Content-Type':'application/json'} });
+    const orderRes = await fetch(SERVER+'/create-order', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, isProgress }) });
     const orderData = await orderRes.json();
     if(orderData.error) throw new Error(orderData.error);
 
@@ -849,7 +865,7 @@ async function initiatePayment(){
       modal: {
         ondismiss: function(){
           btn.disabled = false;
-          btn.textContent = '✦ Read My Palm — ₹999 ✦';
+          btn.textContent = currentPriceLabel();
         }
       },
       handler: async function(response){
@@ -872,7 +888,7 @@ async function initiatePayment(){
         } catch(e){
           showErr('Payment verified but reading failed. Please contact jyotish@bhagyakar.com with your payment ID: '+response.razorpay_payment_id);
           btn.disabled = false;
-          btn.textContent = '✦ Read My Palm — ₹999 ✦';
+          btn.textContent = currentPriceLabel();
         }
       }
     };
@@ -880,13 +896,13 @@ async function initiatePayment(){
     rzp.on('payment.failed', function(response){
       showErr('Payment failed: '+response.error.description);
       btn.disabled = false;
-      btn.textContent = '✦ Read My Palm — ₹999 ✦';
+      btn.textContent = currentPriceLabel();
     });
     rzp.open();
   } catch(e){
     showErr('Could not initiate payment. Please try again.');
     btn.disabled = false;
-    btn.textContent = '✦ Read My Palm — ₹999 ✦';
+    btn.textContent = currentPriceLabel();
   }
 }
 
@@ -935,7 +951,8 @@ async function startReading(paymentId){
             concerns:selectedConcerns,
             engine:currentEngine,
             userEmail:document.getElementById('inp-email').value.trim(),
-            paymentId:paymentId||''
+            paymentId:paymentId||'',
+            isProgress:document.getElementById('is-progress').checked
           })
         },130000);
         data=await res.json();
@@ -1164,6 +1181,7 @@ function resetApp(){
   document.getElementById('file-inp').value='';
   document.getElementById('inp-email').value='';
   document.getElementById('agree-terms').checked=false;
+  document.getElementById('is-progress').checked=false;
   document.querySelectorAll('.concern-btn').forEach(b=>b.classList.remove('selected'));
   setEngine('classical');
   hideErr();
