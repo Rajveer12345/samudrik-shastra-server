@@ -8,10 +8,15 @@ const API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || "admin123";
 const DB = { readings: [] };
 
+// Shown to customers whenever the reading engine fails for ANY reason
+// (quota, billing, network, malformed response, etc). Never reveals
+// which service is used internally — just a calm, generic message.
+const GENERIC_ERROR = "We're experiencing a technical issue right now and couldn't complete your reading. Your payment is safe — please try again in a little while, or contact jyotish@bhagyakar.com and we'll sort it out for you.";
+
 // ── RAZORPAY ─────────────────────────────────────────────
 const RZP_KEY_ID     = process.env.RAZORPAY_KEY_ID     || "";
 const RZP_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
-const READING_PRICE  = 29900; // ₹299 in paise
+const READING_PRICE  = 99900; // ₹999 in paise
 const CURRENCY       = "INR";
 
 function razorpayRequest(method, path, body) {
@@ -45,8 +50,8 @@ async function createRazorpayOrder() {
   return razorpayRequest("POST", "/orders", {
     amount: READING_PRICE,
     currency: CURRENCY,
-    receipt: "hastrekha_" + Date.now(),
-    notes: { product: "HastRekha Palm Reading" }
+    receipt: "bhagyakar_" + Date.now(),
+    notes: { product: "BhagyaKar Palm Reading" }
   });
 }
 
@@ -61,8 +66,9 @@ async function verifyRazorpayPayment(orderId, paymentId, signature) {
 
 // ── ALLOWED ORIGINS ──────────────────────────────────────
 const ALLOWED_ORIGINS = [
-  "https://hast-rekha.com",
-  "https://www.hast-rekha.com",
+  "https://bhagyakar.com",
+  "https://www.bhagyakar.com",
+  // Temporary — remove once Render is fully retired:
   "https://samudrik-shastra-server.onrender.com"
 ];
 
@@ -72,7 +78,7 @@ function cors(res, req) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   } else if (!origin) {
     // Direct server-to-server or same-origin — allow
-    res.setHeader("Access-Control-Allow-Origin", "https://hast-rekha.com");
+    res.setHeader("Access-Control-Allow-Origin", "https://bhagyakar.com");
   }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -105,32 +111,32 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
-// ── SMTP EMAIL SENDER ─────────────────────────────────────
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || "";
-const FROM_EMAIL = SMTP_USER; // jyotish@hast-rekha.com
-const ADMIN_EMAIL = "jyotish@hast-rekha.com";
+// ── EMAIL (Zoho ZeptoMail) ────────────────────────────────
+const ADMIN_EMAIL = "jyotish@bhagyakar.com";
 
 async function sendEmail(to, subject, htmlBody) {
-  const RESEND_KEY = process.env.RESEND_API_KEY || "";
-  if (!RESEND_KEY) { console.log("Resend API key not configured — skipping email"); return; }
-  console.log("Sending email via Resend to:", to);
+  // ── ZOHO ZEPTOMAIL ──
+  // Set these two env vars once your ZeptoMail account is ready:
+  //   ZEPTOMAIL_TOKEN — the "Send Mail Token" from your ZeptoMail Mail Agent
+  //   ZEPTOMAIL_HOST  — "api.zeptomail.in" (India account) or "api.zeptomail.com" (global account)
+  const ZEPTO_TOKEN = process.env.ZEPTOMAIL_TOKEN || "";
+  const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "api.zeptomail.in";
+  if (!ZEPTO_TOKEN) { console.log("ZeptoMail token not configured — skipping email"); return; }
+  console.log("Sending email via ZeptoMail to:", to);
   try {
     const payload = JSON.stringify({
-      from: "HastRekha <jyotish@hast-rekha.com>",
-      to: [to],
-      reply_to: "jyotish@hast-rekha.com",
+      from: { address: "jyotish@bhagyakar.com", name: "BhagyaKar" },
+      to: [ { email_address: { address: to, name: "" } } ],
       subject: subject,
-      html: htmlBody
+      htmlbody: htmlBody
     });
     const result = await new Promise((resolve, reject) => {
-      const https = require("https");
       const req = https.request({
-        hostname: "api.resend.com",
-        path: "/emails",
+        hostname: ZEPTO_HOST,
+        path: "/v1.1/email",
         method: "POST",
         headers: {
-          "Authorization": "Bearer " + RESEND_KEY,
+          "Authorization": "Zoho-enczapikey " + ZEPTO_TOKEN,
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload)
         }
@@ -138,16 +144,16 @@ async function sendEmail(to, subject, htmlBody) {
         let data = "";
         res.on("data", d => data += d);
         res.on("end", () => {
-          console.log("Resend response:", res.statusCode, data.slice(0,200));
+          console.log("ZeptoMail response:", res.statusCode, data.slice(0,200));
           if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
-          else reject(new Error("Resend API error " + res.statusCode + ": " + data));
+          else reject(new Error("ZeptoMail API error " + res.statusCode + ": " + data));
         });
       });
       req.on("error", reject);
       req.write(payload);
       req.end();
     });
-    console.log("Email sent successfully, id:", result.id);
+    console.log("Email sent successfully via ZeptoMail");
     return result;
   } catch(e) {
     console.error("sendEmail failed:", e.message);
@@ -172,7 +178,7 @@ function buildReadingEmail(name, age, stage, concerns, dasha, R) {
     <div style="border-left:3px solid ${p.severity==="significant"?"#E82929":p.severity==="moderate"?"#E67E22":"#F4D03F"};padding:10px 14px;margin-bottom:10px;background:#fafafa;border-radius:0 8px 8px 0">
       <div style="font-weight:700;color:#1a1a1a;margin-bottom:4px">${p.title||p.area||""} <span style="font-size:10px;font-weight:400;color:#888;text-transform:uppercase">${p.severity}</span></div>
       <div style="font-size:13px;color:#444;line-height:1.7">${p.issue||""}</div>
-      ${p.resolution?`<div style="font-size:12px;color:#666;margin-top:6px"><b style="color:#C9A96E">Resolution:</b> ${p.resolution}</div>`:""}
+      ${p.resolution?`<div style="font-size:12px;color:#666;margin-top:6px"><b style="color:#C9C2D6">Resolution:</b> ${p.resolution}</div>`:""}
     </div>`).join("");
 
   const predictions = (R.predictions||[]).map(p => `
@@ -186,13 +192,13 @@ function buildReadingEmail(name, age, stage, concerns, dasha, R) {
     <div style="border-left:3px solid ${i===0?"#16A085":i===1?"#E67E22":"#2471A3"};padding:10px 14px;margin-bottom:10px;background:#fafafa;border-radius:0 8px 8px 0">
       <div style="font-weight:700;color:#1a1a1a">Shubh Lagna ${l.number} — ${l.probability||""} &nbsp;<span style="font-weight:400;font-size:12px;color:#666">📅 ${l.window||""}</span></div>
       <div style="font-size:13px;color:#444;line-height:1.7;margin:6px 0">${l.what_will_happen||""}</div>
-      <div style="font-size:12px;color:#C9A96E"><b>Remedy:</b> ${l.remedy_before||""}</div>
+      <div style="font-size:12px;color:#C9C2D6"><b>Remedy:</b> ${l.remedy_before||""}</div>
     </div>`).join("");
 
   const remedies = (R.remedies||[]).map(r => `
     <div style="border:1px solid #e8e8e8;border-radius:8px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <b style="color:#8B6914;font-size:12px">${r.type||""}</b>
+        <b style="color:#5C3D73;font-size:12px">${r.type||""}</b>
         <span style="font-size:11px;color:#888">${r.timing||""}</span>
       </div>
       <div style="font-size:13px;color:#333;line-height:1.7">${r.remedy||""}</div>
@@ -203,55 +209,55 @@ function buildReadingEmail(name, age, stage, concerns, dasha, R) {
       <div style="font-weight:700;color:#1a1a1a;margin-bottom:4px">${g.title||g.stone||""} <span style="font-size:11px;color:#888">— ${g.planet||""}</span></div>
       <div style="font-size:13px;color:#444;line-height:1.7;margin-bottom:6px">${g.reason||""}</div>
       <div style="font-size:11px;color:#666">Weight: ${g.weight||""} &nbsp;·&nbsp; Metal: ${g.metal||""} &nbsp;·&nbsp; Wear: ${g.wear_on||""} &nbsp;·&nbsp; Day: ${g.day_to_wear||""}</div>
-      ${g.mantra?`<div style="font-size:11px;color:#8B6914;margin-top:4px">🕉 ${g.mantra}</div>`:""}
+      ${g.mantra?`<div style="font-size:11px;color:#5C3D73;margin-top:4px">🕉 ${g.mantra}</div>`:""}
     </div>`).join("");
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Your HastRekha Reading</title></head>
+<title>Your BhagyaKar Reading</title></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:Georgia,serif">
 <div style="max-width:640px;margin:0 auto;background:#fff">
 
   <!-- HEADER -->
-  <div style="background:linear-gradient(135deg,#06040F,#1A0D2E);padding:32px 24px;text-align:center">
+  <div style="background:linear-gradient(135deg,#1A0E1F,#1A0D2E);padding:32px 24px;text-align:center">
     <div style="font-size:36px;margin-bottom:8px">🔮</div>
-    <div style="font-family:Georgia,serif;font-size:24px;color:#C9A96E;letter-spacing:3px;margin-bottom:4px">✦ HastRekha ✦</div>
-    <div style="font-size:11px;color:#9B8866;letter-spacing:4px">ANCIENT VEDIC PALM READING</div>
-    <div style="font-size:12px;color:#6B5B40;margin-top:6px">${date}</div>
+    <div style="font-family:Georgia,serif;font-size:24px;color:#C9C2D6;letter-spacing:3px;margin-bottom:4px">✦ BhagyaKar ✦</div>
+    <div style="font-size:11px;color:#D9D3E3;letter-spacing:4px">ANCIENT VEDIC PALM READING</div>
+    <div style="font-size:12px;color:#9B90A8;margin-top:6px">${date}</div>
   </div>
 
   <!-- USER CARD -->
-  <div style="background:#1A0D2E;padding:16px 24px;text-align:center;border-bottom:1px solid rgba(201,169,110,0.2)">
-    <div style="font-size:16px;color:#C9A96E;font-weight:700;margin-bottom:4px">${name}</div>
-    <div style="font-size:12px;color:#9B8866">Age: ${age} years · ${stage}${concerns&&concerns.length?" · "+concerns.join(", "):""}</div>
+  <div style="background:#1A0D2E;padding:16px 24px;text-align:center;border-bottom:1px solid rgba(201,194,214,0.2)">
+    <div style="font-size:16px;color:#C9C2D6;font-weight:700;margin-bottom:4px">${name}</div>
+    <div style="font-size:12px;color:#D9D3E3">Age: ${age} years · ${stage}${concerns&&concerns.length?" · "+concerns.join(", "):""}</div>
   </div>
 
   <div style="padding:24px">
 
     <!-- OVERALL -->
-    <div style="background:#fffbf4;border:1px solid #e8d5a0;border-radius:10px;padding:18px;margin-bottom:20px">
-      <div style="font-size:11px;color:#8B6914;letter-spacing:2px;margin-bottom:10px;font-weight:700">✦ OVERALL READING ✦</div>
+    <div style="background:#f8f3fb;border:1px solid #d8c8e8;border-radius:10px;padding:18px;margin-bottom:20px">
+      <div style="font-size:11px;color:#5C3D73;letter-spacing:2px;margin-bottom:10px;font-weight:700">✦ OVERALL READING ✦</div>
       <div style="font-size:14px;color:#1a1a1a;line-height:1.8;margin-bottom:12px">${R.overall_energy||""}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px">
-          <div style="font-size:10px;color:#8B6914;font-weight:700;margin-bottom:4px">HAND SHAPE</div>
+          <div style="font-size:10px;color:#5C3D73;font-weight:700;margin-bottom:4px">HAND SHAPE</div>
           <div style="font-size:12px;color:#333;line-height:1.5">${R.hand_type||""}</div>
         </div>
         <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px">
-          <div style="font-size:10px;color:#8B6914;font-weight:700;margin-bottom:4px">DOMINANT MOUNT</div>
+          <div style="font-size:10px;color:#5C3D73;font-weight:700;margin-bottom:4px">DOMINANT MOUNT</div>
           <div style="font-size:12px;color:#333;line-height:1.5">${R.dominant_mount||""}</div>
         </div>
       </div>
       <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:10px">
-        <div style="font-size:10px;color:#8B6914;font-weight:700;margin-bottom:8px">LINE QUALITY</div>
+        <div style="font-size:10px;color:#5C3D73;font-weight:700;margin-bottom:8px">LINE QUALITY</div>
         ${[["heartLine","Heart Line"],["headLine","Head Line"],["lifeLine","Life Line"],["fateLine","Fate Line"],["sunLine","Sun Line"]].map(([k,l])=>`
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
           <span style="font-size:11px;color:#666;width:65px">${l}</span>
           ${lineBar(lq[k]||0)}
         </div>`).join("")}
       </div>
-      <div style="background:#fffbf0;border:1px solid #e8d5a0;border-radius:8px;padding:10px;font-size:13px">
-        🌟 <span style="color:#8B6914">Most Favorable Period:</span> <b>${R.lucky_period||""}</b>
+      <div style="background:#f8f3fb;border:1px solid #d8c8e8;border-radius:8px;padding:10px;font-size:13px">
+        🌟 <span style="color:#5C3D73">Most Favorable Period:</span> <b>${R.lucky_period||""}</b>
       </div>
     </div>
 
@@ -270,49 +276,49 @@ function buildReadingEmail(name, age, stage, concerns, dasha, R) {
 
     <!-- SHUBH LAGNAS -->
     <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#8B6914;letter-spacing:2px;margin-bottom:12px;font-weight:700">✦ SHUBH LAGNA WINDOWS ✦</div>
+      <div style="font-size:11px;color:#5C3D73;letter-spacing:2px;margin-bottom:12px;font-weight:700">✦ SHUBH LAGNA WINDOWS ✦</div>
       ${lagnas}
     </div>
 
     <!-- PREDICTIONS -->
     <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#8B6914;letter-spacing:2px;margin-bottom:12px;font-weight:700">🔮 PREDICTIONS</div>
+      <div style="font-size:11px;color:#5C3D73;letter-spacing:2px;margin-bottom:12px;font-weight:700">🔮 PREDICTIONS</div>
       ${predictions}
     </div>
 
     <!-- PROBLEMS -->
     <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#8B6914;letter-spacing:2px;margin-bottom:12px;font-weight:700">⚡ PROBLEMS IDENTIFIED</div>
+      <div style="font-size:11px;color:#5C3D73;letter-spacing:2px;margin-bottom:12px;font-weight:700">⚡ PROBLEMS IDENTIFIED</div>
       ${problems}
     </div>
 
     <!-- REMEDIES -->
     <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#8B6914;letter-spacing:2px;margin-bottom:12px;font-weight:700">🔱 VEDIC REMEDIES</div>
+      <div style="font-size:11px;color:#5C3D73;letter-spacing:2px;margin-bottom:12px;font-weight:700">🔱 VEDIC REMEDIES</div>
       ${remedies}
     </div>
 
     <!-- GEMSTONES -->
     <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#8B6914;letter-spacing:2px;margin-bottom:12px;font-weight:700">💎 GEMSTONE PRESCRIPTIONS</div>
+      <div style="font-size:11px;color:#5C3D73;letter-spacing:2px;margin-bottom:12px;font-weight:700">💎 GEMSTONE PRESCRIPTIONS</div>
       ${gemstones}
     </div>
 
     <!-- JYOTISHI CTA -->
-    <div style="background:linear-gradient(135deg,#1A0D2E,#06040F);border-radius:10px;padding:20px;text-align:center;margin-bottom:20px">
+    <div style="background:linear-gradient(135deg,#1A0D2E,#1A0E1F);border-radius:10px;padding:20px;text-align:center;margin-bottom:20px">
       <div style="font-size:26px;margin-bottom:8px">🧙‍♂️</div>
       <div style="font-size:13px;color:#C084FC;font-weight:700;margin-bottom:6px">Have questions about your reading?</div>
-      <div style="font-size:12px;color:#9B8866;margin-bottom:12px">Our Jyotishi can provide a personalised consultation</div>
-      <a href="mailto:jyotish@hast-rekha.com" style="background:linear-gradient(135deg,#8B6914,#C9A96E);color:#060410;padding:10px 24px;border-radius:20px;text-decoration:none;font-size:12px;font-weight:700">✦ Ask Our Jyotishi ✦</a>
+      <div style="font-size:12px;color:#D9D3E3;margin-bottom:12px">Our Jyotishi can provide a personalised consultation</div>
+      <a href="mailto:jyotish@bhagyakar.com" style="background:linear-gradient(135deg,#5C3D73,#C9C2D6);color:#1A0E1F;padding:10px 24px;border-radius:20px;text-decoration:none;font-size:12px;font-weight:700">✦ Ask Our Jyotishi ✦</a>
     </div>
 
   </div>
 
   <!-- FOOTER -->
-  <div style="background:#06040F;padding:18px 24px;text-align:center;border-top:1px solid rgba(201,169,110,0.15)">
-    <div style="font-size:12px;color:#C9A96E;margin-bottom:4px">✦ HastRekha ✦</div>
-    <div style="font-size:11px;color:#4A3F2F;line-height:1.7">For spiritual guidance only. Consult a qualified Vedic astrologer before wearing gemstones.<br/>
-    <a href="https://hast-rekha.com/terms.html" style="color:#6B5B40">Terms & Conditions</a> · © 2026 HastRekha</div>
+  <div style="background:#1A0E1F;padding:18px 24px;text-align:center;border-top:1px solid rgba(201,194,214,0.15)">
+    <div style="font-size:12px;color:#C9C2D6;margin-bottom:4px">✦ BhagyaKar ✦</div>
+    <div style="font-size:11px;color:#9B90A8;line-height:1.7">This reading is for guidance and entertainment purposes only. Gemstone suggestions above are based only on the concerns you selected (or your overall reading) and traditional Vedic principles — they are not medical, financial, or professional advice. Please consult a certified gemologist or astrologer before purchasing or wearing any gemstone. BhagyaKar accepts no liability for outcomes, purchases, or decisions made based on this reading.<br/><br/>
+    <a href="https://bhagyakar.com/terms.html" style="color:#9B90A8">Terms & Conditions</a> · © 2026 BhagyaKar</div>
   </div>
 
 </div>
@@ -563,7 +569,7 @@ async function handleRequest(req, res) {
   if (req.method==="GET" && url==="/") {
     const f = path.join(__dirname,"index.html");
     if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }
-    else { res.writeHead(200,{"Content-Type":"text/html"}); res.end("<h1>HastRekha running.</h1>"); }
+    else { res.writeHead(200,{"Content-Type":"text/html"}); res.end("<h1>BhagyaKar running.</h1>"); }
     return;
   }
   if (req.method==="GET" && url==="/health") { sendJSON(res,{status:"ok",hasKey:!!API_KEY}); return; }
@@ -616,9 +622,9 @@ async function handleRequest(req, res) {
     if (!checkRateLimit(clientIp)) {
       sendJSON(res,{error:"Too many requests. Maximum 3 readings per day per user. Please try again tomorrow."},429); return;
     }
-    if (!API_KEY) { sendJSON(res,{error:"API key not set"},500); return; }
+    if (!API_KEY) { console.error("Server misconfigured: reading engine key not set"); sendJSON(res,{error:GENERIC_ERROR},500); return; }
     let body;
-    try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid body"},400); return; }
+    try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid request"},400); return; }
     const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId}=body;
     // Verify payment if Razorpay is configured
     if (RZP_KEY_ID && !paymentId) { sendJSON(res,{error:"Payment required"},402); return; }
@@ -634,7 +640,7 @@ async function handleRequest(req, res) {
       const stage = age<=12?"Child (0-12)":age<=18?"Teenager (13-18)":age<=25?"Young Adult (19-25)":age<=45?"Working Professional (26-45)":age<=60?"Middle Age (46-60)":"Senior (60+)";
       const dasha = dob ? calcDasha(dob) : null;
       const emailHtml = buildReadingEmail(name||"Friend", age, stage, concerns||[], dasha, reading);
-      const subject = "Your HastRekha Reading — " + (name||"Friend") + " ✦";
+      const subject = "Your BhagyaKar Reading — " + (name||"Friend") + " ✦";
       // Send to user if they provided email
       if (userEmail && userEmail.includes("@")) {
         sendEmail(userEmail, subject, emailHtml)
@@ -645,8 +651,9 @@ async function handleRequest(req, res) {
       sendEmail(ADMIN_EMAIL, "[COPY] " + subject, emailHtml)
         .catch(e=>console.error("Admin email FAILED:", e.message, e.stack));
     } catch(e) {
-      console.error("Error:",e.message);
-      sendJSON(res,{error:e.message},500);
+      // Log the REAL error for you, but never leak vendor/internal details to the customer
+      console.error("Reading generation failed:", e.message, e.stack);
+      sendJSON(res,{error:GENERIC_ERROR},500);
     }
     return;
   }
@@ -657,61 +664,25 @@ async function handleRequest(req, res) {
     const {name,email,question,readingContext}=body;
     if(!name||!email||!question){ sendJSON(res,{error:"Missing fields"},400); return; }
 
-    // Send email via Anthropic API (use Claude to draft + send via SMTP if configured)
-    // For now: log it and return success — add SMTP_USER/SMTP_PASS env vars to enable real sending
-    console.log("=== JYOTISHI QUESTION ===");
+    console.log("=== JYOTISHI / CONSULTATION QUESTION ===");
     console.log("From:", name, "<"+email+">");
     console.log("Question:", question);
     console.log("Context:", readingContext);
-    console.log("========================");
+    console.log("=========================================");
 
-    // If SMTP configured, send email
-    const SMTP_USER = process.env.SMTP_USER||"";
-    const SMTP_PASS = process.env.SMTP_PASS||"";
-    const TO_EMAIL  = "jyotish@hast-rekha.com";
+    const notifyHtml = `
+      <div style="font-family:Georgia,serif;padding:16px">
+        <h2 style="color:#5C3D73">New Consultation Request</h2>
+        <p><b>Name:</b> ${name}<br/><b>Email:</b> ${email}</p>
+        <p><b>Question:</b><br/>${(question||"").replace(/\n/g,"<br/>")}</p>
+        <p><b>Reading Context:</b><br/>${(readingContext||"No reading done yet").replace(/\n/g,"<br/>")}</p>
+        <p style="color:#888;font-size:12px">Live video / personal consultation fee: ₹499 per session. Confirm and schedule with the customer directly at ${email}.</p>
+      </div>`;
 
-    if(SMTP_USER && SMTP_PASS) {
-      try {
-        const emailBody = [
-          "From: "+SMTP_USER,
-          "To: "+TO_EMAIL,
-          "Reply-To: "+email,
-          "Subject: HastRekha Consultation — "+name,
-          "Content-Type: text/plain; charset=utf-8",
-          "",
-          "NEW CONSULTATION REQUEST",
-          "========================",
-          "Name: "+name,
-          "Email: "+email,
-          "",
-          "QUESTION:",
-          question,
-          "",
-          "READING CONTEXT:",
-          readingContext||"No reading done yet",
-          "",
-          "--- Sent from HastRekha App ---"
-        ].join("\r\n");
-
-        // Use Gmail SMTP via TLS
-        await new Promise((resolve,reject)=>{
-          const tls=require("tls");
-          const sock=tls.connect(465,{host:"smtp.gmail.com"},()=>{
-            let step=0;
-            const cmds=["EHLO hast-rekha.com\r\n","AUTH LOGIN\r\n",Buffer.from(SMTP_USER).toString("base64")+"\r\n",Buffer.from(SMTP_PASS).toString("base64")+"\r\n","MAIL FROM:<"+SMTP_USER+">\r\n","RCPT TO:<"+TO_EMAIL+">\r\n","DATA\r\n",emailBody+"\r\n.\r\n","QUIT\r\n"];
-            sock.on("data",d=>{
-              const r=d.toString();
-              if(r.startsWith("2")||r.startsWith("3")){if(step<cmds.length){sock.write(cmds[step++]);}}
-              if(r.startsWith("221")){sock.destroy();resolve();}
-              if(r.startsWith("5")){sock.destroy();reject(new Error(r));}
-            });
-            sock.on("error",reject);
-          });
-        });
-        console.log("Email sent to",TO_EMAIL);
-      } catch(emailErr) {
-        console.error("Email send failed:",emailErr.message);
-      }
+    try {
+      await sendEmail(ADMIN_EMAIL, "BhagyaKar Consultation Request — " + name, notifyHtml);
+    } catch(emailErr) {
+      console.error("Consultation notification email failed:", emailErr.message);
     }
 
     sendJSON(res,{success:true,message:"Question received"});
@@ -749,7 +720,7 @@ async function handleRequest(req, res) {
 }
 
 http.createServer(handleRequest).listen(PORT,()=>{
-  console.log(`HastRekha server on port ${PORT} | Model: claude-opus-4-5 | Key: ${API_KEY?"OK":"MISSING"}`);
+  console.log(`BhagyaKar server on port ${PORT} | Model: claude-opus-4-5 | Key: ${API_KEY?"OK":"MISSING"}`);
 });
 
 // ── ANCIENT TEXTS KNOWLEDGE BASE ─────────────────────────────
