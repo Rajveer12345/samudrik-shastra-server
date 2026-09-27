@@ -268,7 +268,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
 
   <div class="card" style="display:flex;align-items:flex-start;gap:10px">
     <input type="checkbox" id="is-progress" onchange="updateButtonPriceLabel()" style="margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:#C9C2D6"/>
-    <label for="is-progress" style="font-size:12px;color:var(--muted);line-height:1.6">This is a <b style="color:var(--gold)">follow-up / progress reading</b> — I've used BhagyaKar before with this same email address (₹699 instead of ₹999). Your new reading will note what's changed since your last one.</label>
+    <label for="is-progress" style="font-size:12px;color:var(--muted);line-height:1.6">This is a <b style="color:var(--gold)">follow-up / progress reading</b> — I've used BhagyaKar before with this same email address (<span id="progress-price-note">₹699 instead of ₹999</span>). Your new reading will note what's changed since your last one.</label>
   </div>
 
   <div class="card" style="display:flex;align-items:flex-start;gap:10px">
@@ -490,7 +490,7 @@ const LC = {
 
 const ENG_DESCS = {
   classical:'Classical Vedic palmistry with Vimshottari Dasha calculation',
-  hasta:'Ancient texts reading — based on 35 rare palmistry books including Indian, Cheiro and Benham traditions',
+  hasta:'Ancient texts reading — based on 35 rare palmistry books spanning Indian and Western traditions',
   both:'Compare Both — see where Classical and Ancient Text readings agree (high confidence) and where they differ'
 };
 
@@ -664,11 +664,20 @@ function updateReadBtnState(){
   btn.textContent = currentPriceLabel();
 }
 
+const PRICE_MAP = {
+  classical: { full:999, progress:699 },
+  hasta:     { full:1199, progress:899 },
+  both:      { full:1499, progress:1199 }
+};
 function currentPriceLabel(){
-  return document.getElementById('is-progress').checked ? '✦ Read My Palm — ₹699 ✦' : '✦ Read My Palm — ₹999 ✦';
+  const p = PRICE_MAP[currentEngine] || PRICE_MAP.classical;
+  const price = document.getElementById('is-progress').checked ? p.progress : p.full;
+  return `✦ Read My Palm — ₹${price} ✦`;
 }
 function updateButtonPriceLabel(){
   document.getElementById('read-btn').textContent = currentPriceLabel();
+  const p = PRICE_MAP[currentEngine] || PRICE_MAP.classical;
+  document.getElementById('progress-price-note').textContent = `₹${p.progress} instead of ₹${p.full}`;
 }
 
 function calcAge(dob){
@@ -727,6 +736,7 @@ function setEngine(e){
   document.getElementById('ebtn-hr').classList.toggle('active',e==='hasta');
   document.getElementById('ebtn-both').classList.toggle('active',e==='both');
   document.getElementById('eng-desc').textContent=ENG_DESCS[e];
+  updateButtonPriceLabel();
 }
 
 // ── FILE UPLOAD ──────────────────────────────────────────
@@ -846,7 +856,7 @@ async function initiatePayment(){
 
   try {
     // Create Razorpay order
-    const orderRes = await fetch(SERVER+'/create-order', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, isProgress }) });
+    const orderRes = await fetch(SERVER+'/create-order', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, isProgress, engine:currentEngine }) });
     const orderData = await orderRes.json();
     if(orderData.error) throw new Error(orderData.error);
 

@@ -66,8 +66,12 @@ const GENERIC_ERROR = "We're experiencing a technical issue right now and couldn
 // ── RAZORPAY ─────────────────────────────────────────────
 const RZP_KEY_ID     = process.env.RAZORPAY_KEY_ID     || "";
 const RZP_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
-const READING_PRICE  = 99900; // ₹999 in paise
-const PROGRESS_READING_PRICE = 69900; // ₹699 in paise — for returning customers with a prior reading on file
+const READING_PRICE  = 99900; // ₹999 in paise — Classical, full price
+const PROGRESS_READING_PRICE = 69900; // ₹699 in paise — Classical, returning customer
+const READING_PRICE_HASTA = 119900; // ₹1199 in paise — Ancient Texts, full price
+const PROGRESS_READING_PRICE_HASTA = 89900; // ₹899 in paise — Ancient Texts, returning customer
+const READING_PRICE_BOTH = 149900; // ₹1499 in paise — Compare Both, full price
+const PROGRESS_READING_PRICE_BOTH = 119900; // ₹1199 in paise — Compare Both, returning customer
 const CURRENCY       = "INR";
 
 function razorpayRequest(method, path, body) {
@@ -666,13 +670,19 @@ async function handleRequest(req, res) {
     if (!RZP_KEY_ID) { sendJSON(res,{error:"Payment not configured"},500); return; }
     let body = {};
     try { body = JSON.parse(await readBody(req)); } catch(e) { /* no body is fine — defaults to full price */ }
-    const { email, isProgress } = body;
+    const { email, isProgress, engine } = body;
     let amount = READING_PRICE;
     let productLabel = "BhagyaKar Palm Reading";
+    if (engine === 'hasta') { amount = READING_PRICE_HASTA; productLabel = "BhagyaKar Ancient Texts Reading"; }
+    else if (engine === 'both') { amount = READING_PRICE_BOTH; productLabel = "BhagyaKar Compare Both Reading"; }
     if (isProgress && email && dbPool) {
       try {
         const [rows] = await dbPool.query("SELECT id FROM readings WHERE email=? LIMIT 1", [email]);
-        if (rows.length) { amount = PROGRESS_READING_PRICE; productLabel = "BhagyaKar Progress Reading"; }
+        if (rows.length) {
+          if (engine === 'hasta') { amount = PROGRESS_READING_PRICE_HASTA; productLabel = "BhagyaKar Ancient Texts Progress Reading"; }
+          else if (engine === 'both') { amount = PROGRESS_READING_PRICE_BOTH; productLabel = "BhagyaKar Compare Both Progress Reading"; }
+          else { amount = PROGRESS_READING_PRICE; productLabel = "BhagyaKar Progress Reading"; }
+        }
         // If no prior reading exists for this email, silently charge full price — the discount only applies to genuine returning customers
       } catch(e) { console.error("Progress-reading price check failed, defaulting to full price:", e.message); }
     }
@@ -742,10 +752,20 @@ Problems noted: ${(prev.problems||[]).map(p=>`${p.title||p.area}: ${p.issue} (re
         } catch(e) { console.error("Could not fetch prior reading for progress comparison:", e.message); }
       }
 
-      const reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns,engine,priorReadingSummary);
+      let reading, hrReadingResult = null;
+      if (engine === 'both') {
+        const [classicalReading, hastaReading] = await Promise.all([
+          analyzePalm(imageData,mediaType,name,dob,gender,concerns,'classical',priorReadingSummary),
+          analyzePalm(imageData,mediaType,name,dob,gender,concerns,'hasta',priorReadingSummary)
+        ]);
+        reading = classicalReading;
+        hrReadingResult = hastaReading;
+      } else {
+        reading = await analyzePalm(imageData,mediaType,name,dob,gender,concerns,engine,priorReadingSummary);
+      }
       const record = { id:makeId(),name:name||"Anonymous",dob:dob||"",age:dob?calcAge(dob):0,gender:gender||"",concerns:concerns||[],status:"completed",createdAt:new Date().toISOString(),readingData:reading };
       DB.readings.push(record);
-      sendJSON(res,{reading,recordId:record.id});
+      sendJSON(res,{reading,hrReading:hrReadingResult,recordId:record.id});
 
       // ── SAVE TO PERSISTENT DATABASE (so the admin console can look this customer up later) ──
       if (dbPool && userEmail) {
