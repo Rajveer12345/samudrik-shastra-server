@@ -369,7 +369,7 @@ function buildReadingEmail(name, age, stage, concerns, dasha, R) {
   <div style="background:#1A0E1F;padding:18px 24px;text-align:center;border-top:1px solid rgba(201,194,214,0.15)">
     <div style="font-size:12px;color:#C9C2D6;margin-bottom:4px">✦ BhagyaKar ✦</div>
     <div style="font-size:11px;color:#9B90A8;line-height:1.7">This reading is for guidance and entertainment purposes only. Gemstone suggestions above are based only on the concerns you selected (or your overall reading) and traditional Vedic principles — they are not medical, financial, or professional advice. Please consult a certified gemologist or astrologer before purchasing or wearing any gemstone. BhagyaKar accepts no liability for outcomes, purchases, or decisions made based on this reading.<br/><br/>
-    <a href="https://bhagyakar.com/terms.html" style="color:#9B90A8">Terms & Conditions</a> · © 2026 BhagyaKar</div>
+    <a href="https://bhagyakar.com/terms.html" style="color:#9B90A8">Terms & Conditions</a> · <a href="https://bhagyakar.com/privacy.html" style="color:#9B90A8">Privacy Policy</a> · © 2026 BhagyaKar</div>
   </div>
 
 </div>
@@ -644,6 +644,13 @@ async function handleRequest(req, res) {
     const f = path.join(__dirname,"terms.html");
     if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }
     else { res.writeHead(404,{"Content-Type":"text/plain"}); res.end("Terms page not found"); }
+    return;
+  }
+
+  if (req.method==="GET" && url==="/privacy.html") {
+    const f = path.join(__dirname,"privacy.html");
+    if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }
+    else { res.writeHead(404,{"Content-Type":"text/plain"}); res.end("Privacy page not found"); }
     return;
   }
 
