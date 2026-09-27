@@ -661,15 +661,14 @@ function updateReadBtnState(){
   const agreed = document.getElementById('agree-terms').checked;
   const btn = document.getElementById('read-btn');
   btn.disabled = !(imgData && agreed);
-  if(!btn.disabled) btn.textContent = currentPriceLabel();
+  btn.textContent = currentPriceLabel();
 }
 
 function currentPriceLabel(){
   return document.getElementById('is-progress').checked ? '✦ Read My Palm — ₹699 ✦' : '✦ Read My Palm — ₹999 ✦';
 }
 function updateButtonPriceLabel(){
-  const btn = document.getElementById('read-btn');
-  if(!btn.disabled) btn.textContent = currentPriceLabel();
+  document.getElementById('read-btn').textContent = currentPriceLabel();
 }
 
 function calcAge(dob){
