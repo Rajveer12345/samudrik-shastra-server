@@ -658,6 +658,20 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (req.method==="GET" && url==="/about.html") {
+    const f = path.join(__dirname,"about.html");
+    if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }
+    else { res.writeHead(404,{"Content-Type":"text/plain"}); res.end("About page not found"); }
+    return;
+  }
+
+  if (req.method==="GET" && url==="/llms.txt") {
+    const f = path.join(__dirname,"llms.txt");
+    if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/plain;charset=utf-8"}); res.end(h); }
+    else { res.writeHead(404,{"Content-Type":"text/plain"}); res.end("llms.txt not found"); }
+    return;
+  }
+
   if (req.method==="GET" && url==="/admin") {
     const f = path.join(__dirname,"admin.html");
     if (fs.existsSync(f)) { const h=fs.readFileSync(f); res.writeHead(200,{"Content-Type":"text/html;charset=utf-8"}); res.end(h); }

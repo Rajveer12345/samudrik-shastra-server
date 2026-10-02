@@ -1,0 +1,25 @@
+# BhagyaKar
+
+> BhagyaKar is an online Vedic palm reading service. Customers upload a photo of their right palm along with their name, date of birth and gender, select the life areas they're curious about, and receive a personalised reading covering career, marriage, health, finance, relationships and more, delivered by email. Available at bhagyakar.com and as an Android app.
+
+## Reading styles
+- Classical Reading (₹999): Traditional Vedic palmistry combined with traditional Vedic timing calculations based on date of birth.
+- Ancient Texts (₹1199): Draws on a wider base of historical palmistry knowledge spanning Indian and Western traditions.
+- Compare Both (₹1499): Runs both analyses and shows where they agree and differ.
+- Returning customers get a discounted follow-up/progress reading using the same email address.
+- A live consultation option is also available for customers with a specific question for our Jyotishi.
+
+## Key facts
+- No birth time or birth place is required, only date of birth.
+- The right hand is used, as it is traditionally read as reflecting the life a person is actively shaping through their own choices.
+- Readings are for guidance and entertainment purposes; gemstone suggestions are not professional medical, legal or financial advice.
+
+## Pages
+- [Home / Get a reading](https://bhagyakar.com/)
+- [About & FAQ](https://bhagyakar.com/about.html)
+- [Terms & Conditions](https://bhagyakar.com/terms.html)
+- [Privacy Policy](https://bhagyakar.com/privacy.html)
+
+## Contact
+- Support: jyotish@bhagyakar.com
+- Grievance Officer: grievance@bhagyakar.com
