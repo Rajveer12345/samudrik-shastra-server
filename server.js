@@ -64,6 +64,13 @@ async function initDB() {
         created_at DATETIME
       )
     `);
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS reading_payments (
+        payment_id VARCHAR(64) PRIMARY KEY,
+        email VARCHAR(255),
+        created_at DATETIME
+      )
+    `);
     console.log("Database ready — persistent customer history enabled");
   } catch(e) {
     console.error("Database init failed — persistent storage disabled:", e.message);
@@ -116,12 +123,12 @@ function razorpayRequest(method, path, body) {
   });
 }
 
-async function createRazorpayOrder(amount, productLabel) {
+async function createRazorpayOrder(amount, productLabel, extraNotes) {
   return razorpayRequest("POST", "/orders", {
     amount: amount || READING_PRICE,
     currency: CURRENCY,
     receipt: "bhagyakar_" + Date.now(),
-    notes: { product: productLabel || "BhagyaKar Palm Reading" }
+    notes: Object.assign({ product: productLabel || "BhagyaKar Palm Reading" }, extraNotes || {})
   });
 }
 
@@ -132,6 +139,79 @@ async function verifyRazorpayPayment(orderId, paymentId, signature) {
     .update(orderId + "|" + paymentId)
     .digest("hex");
   return expected === signature;
+}
+
+// ── READING PAYMENT CHECK ────────────────────────────────
+// A reading is only produced for a payment that Razorpay confirms is real, completed, for the same
+// reading type that was requested, and not already used for another reading.
+const READING_PRICES_BY_ENGINE = {
+  classical: [READING_PRICE, PROGRESS_READING_PRICE],
+  hasta:     [READING_PRICE_HASTA, PROGRESS_READING_PRICE_HASTA],
+  both:      [READING_PRICE_BOTH, PROGRESS_READING_PRICE_BOTH]
+};
+function normaliseEngine(e) { return (e === "hasta" || e === "both") ? e : "classical"; }
+
+async function checkReadingPayment(paymentId, requestedEngine) {
+  if (typeof paymentId !== "string" || !/^pay_[A-Za-z0-9]+$/.test(paymentId)) {
+    return { ok:false, status:402, error:"Payment required" };
+  }
+  const notConfirmed = "We could not confirm your payment for this reading. If money was deducted, please contact jyotish@bhagyakar.com with your payment ID: " + paymentId;
+  let pay, order;
+  try {
+    pay = await razorpayRequest("GET", "/payments/" + paymentId);
+    if (pay && pay.order_id) order = await razorpayRequest("GET", "/orders/" + encodeURIComponent(pay.order_id));
+  } catch(e) {
+    console.error("Reading payment lookup failed:", e.message);
+    return { ok:false, status:503, verifyFailed:true, error:"We could not confirm your payment just now. Your payment is safe. Please try again in a few minutes, or contact jyotish@bhagyakar.com with your payment ID: " + paymentId };
+  }
+  if (!pay || pay.error || !pay.order_id || pay.currency !== CURRENCY || !["captured","authorized"].includes(pay.status)) {
+    console.error("Reading payment not usable:", JSON.stringify({ id:paymentId, status:pay&&pay.status, error:pay&&pay.error&&pay.error.description }));
+    return { ok:false, status:402, error:notConfirmed };
+  }
+  if (!order || order.error || order.id !== pay.order_id || order.amount !== pay.amount) {
+    console.error("Reading payment order mismatch:", paymentId);
+    return { ok:false, status:402, error:notConfirmed };
+  }
+  const notes = (order.notes && !Array.isArray(order.notes)) ? order.notes : {};
+  const want = normaliseEngine(requestedEngine);
+  if (notes.engine === "consult") { // a consultation payment can never buy a reading
+    console.error("Consultation payment presented for a reading:", paymentId);
+    return { ok:false, status:402, error:notConfirmed };
+  }
+  if (notes.engine && notes.engine !== want) {
+    console.error("Payment was for a different reading type:", paymentId, notes.engine, "vs", want);
+    return { ok:false, status:402, error:notConfirmed };
+  }
+  if (!READING_PRICES_BY_ENGINE[want].includes(order.amount)) {
+    console.error("Payment amount does not match the reading requested:", paymentId, order.amount, want);
+    return { ok:false, status:402, error:notConfirmed };
+  }
+  return { ok:true };
+}
+
+const usedReadingPayments = new Set(); // only used if there is no database
+async function claimReadingPayment(paymentId, email) {
+  if (dbPool) {
+    try {
+      await dbPool.query("INSERT INTO reading_payments (payment_id, email, created_at) VALUES (?,?,?)", [paymentId, email ? String(email).slice(0,255) : null, new Date()]);
+      return "ok";
+    } catch(e) {
+      if (e && e.code === "ER_DUP_ENTRY") return "used";
+      console.error("Could not record reading payment:", e.message);
+      return "error";
+    }
+  }
+  if (usedReadingPayments.has(paymentId)) return "used";
+  usedReadingPayments.add(paymentId);
+  return "ok";
+}
+async function releaseReadingPayment(paymentId) {
+  if (dbPool) {
+    try { await dbPool.query("DELETE FROM reading_payments WHERE payment_id=?", [paymentId]); }
+    catch(e) { console.error("Could not release reading payment:", e.message); }
+  } else {
+    usedReadingPayments.delete(paymentId);
+  }
 }
 
 // Returns true / false, or null if it could not be checked (no database, or a database error)
@@ -723,7 +803,7 @@ async function handleRequest(req, res) {
       if (has === null) { sendJSON(res,{error:"We could not verify your reading just now. Please try again in a few minutes.",verifyFailed:true},503); return; }
       if (!has) { sendJSON(res,{error:"Personal consultations are available after your first reading. Please use the same email address you used for your reading.",needsReading:true},403); return; }
       try {
-        const order = await createRazorpayOrder(CONSULT_PRICE, CONSULT_LABEL);
+        const order = await createRazorpayOrder(CONSULT_PRICE, CONSULT_LABEL, { engine: "consult" });
         sendJSON(res, { orderId: order.id, amount: order.amount, currency: order.currency, keyId: RZP_KEY_ID });
       } catch(e) {
         console.error("Create consultation order failed:", e.message);
@@ -734,12 +814,14 @@ async function handleRequest(req, res) {
 
     let amount = READING_PRICE;
     let productLabel = "BhagyaKar Palm Reading";
+    let progressApplied = false;
     if (engine === 'hasta') { amount = READING_PRICE_HASTA; productLabel = "BhagyaKar Ancient Texts Reading"; }
     else if (engine === 'both') { amount = READING_PRICE_BOTH; productLabel = "BhagyaKar Compare Both Reading"; }
     if (isProgress && email && dbPool) {
       try {
         const [rows] = await dbPool.query("SELECT id FROM readings WHERE email=? LIMIT 1", [email]);
         if (rows.length) {
+          progressApplied = true;
           if (engine === 'hasta') { amount = PROGRESS_READING_PRICE_HASTA; productLabel = "BhagyaKar Ancient Texts Progress Reading"; }
           else if (engine === 'both') { amount = PROGRESS_READING_PRICE_BOTH; productLabel = "BhagyaKar Compare Both Progress Reading"; }
           else { amount = PROGRESS_READING_PRICE; productLabel = "BhagyaKar Progress Reading"; }
@@ -748,7 +830,7 @@ async function handleRequest(req, res) {
       } catch(e) { console.error("Progress-reading price check failed, defaulting to full price:", e.message); }
     }
     try {
-      const order = await createRazorpayOrder(amount, productLabel);
+      const order = await createRazorpayOrder(amount, productLabel, { engine: normaliseEngine(engine), progress: progressApplied ? "1" : "0" });
       sendJSON(res, { orderId: order.id, amount: order.amount, currency: order.currency, keyId: RZP_KEY_ID });
     } catch(e) {
       console.error("Create order failed:", e.message);
@@ -792,6 +874,22 @@ async function handleRequest(req, res) {
     // Verify payment if Razorpay is configured
     if (RZP_KEY_ID && !paymentId) { sendJSON(res,{error:"Payment required"},402); return; }
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
+
+    // ── PAYMENT MUST BE REAL, FOR THIS READING TYPE, AND UNUSED ──
+    let claimedPaymentId = null;
+    let delivered = false;
+    if (RZP_KEY_ID) {
+      const pc = await checkReadingPayment(paymentId, engine);
+      if (!pc.ok) { sendJSON(res,{error:pc.error,...(pc.verifyFailed?{verifyFailed:true}:{})},pc.status); return; }
+      const claim = await claimReadingPayment(paymentId, userEmail);
+      if (claim === "used") {
+        sendJSON(res,{error:"A reading has already been started for this payment. Please check your email (including spam) in a few minutes. If it does not arrive, contact jyotish@bhagyakar.com with your payment ID: "+paymentId},409); return;
+      }
+      if (claim === "error") {
+        sendJSON(res,{error:"We could not start your reading just now. Your payment is safe. Please try again in a few minutes.",verifyFailed:true},503); return;
+      }
+      claimedPaymentId = paymentId;
+    }
     try {
       // ── If this is a progress reading, fetch the customer's most recent prior reading for comparison ──
       let priorReadingSummary = null;
@@ -827,6 +925,7 @@ Problems noted: ${(prev.problems||[]).map(p=>`${p.title||p.area}: ${p.issue} (re
       const record = { id:makeId(),name:name||"Anonymous",dob:dob||"",age:dob?calcAge(dob):0,gender:gender||"",concerns:concerns||[],status:"completed",createdAt:new Date().toISOString(),readingData:reading };
       DB.readings.push(record);
       sendJSON(res,{reading,hrReading:hrReadingResult,recordId:record.id});
+      delivered = true;
 
       // ── SAVE TO PERSISTENT DATABASE (so the admin console can look this customer up later) ──
       if (dbPool && userEmail) {
@@ -854,6 +953,8 @@ Problems noted: ${(prev.problems||[]).map(p=>`${p.title||p.area}: ${p.issue} (re
     } catch(e) {
       // Log the REAL error for you, but never leak vendor/internal details to the customer
       console.error("Reading generation failed:", e.message, e.stack);
+      // If the reading was never delivered, give the payment back so it can be used for a retry
+      if (claimedPaymentId && !delivered) await releaseReadingPayment(claimedPaymentId);
       sendJSON(res,{error:GENERIC_ERROR},500);
     }
     return;

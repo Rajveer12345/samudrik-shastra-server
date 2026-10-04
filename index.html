@@ -275,6 +275,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
   </div>
 
   <button class="btn-main" id="read-btn" onclick="initiatePayment()" disabled>✦ Read My Palm — ₹999 ✦</button>
+  <p id="paid-note" style="display:none;font-size:12px;color:var(--gold);text-align:center;margin-top:10px;line-height:1.6">You have already paid for your reading. Upload your palm photo, tick the box above and tap the button to continue. You will not be charged again.</p>
   <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:12px;font-style:italic">Your image is analysed securely and never stored permanently.</p>
 
   <footer style="text-align:center;margin-top:28px;padding-top:16px;border-top:1px solid rgba(201,194,214,0.12);font-size:11px;color:var(--dim)">
@@ -439,6 +440,33 @@ let g_gender = '';
 let g_age = 0;
 let g_stage = '';
 let g_dasha = null;
+
+// ── "ALREADY PAID" MEMORY ────────────────────────────────
+// If a reading fails after the customer has paid, the payment is remembered (even if the app is closed)
+// so the next try never charges them again.
+const PAID_KEY = 'bhagyakar_paid_payment';
+let paidPayment = null;
+try {
+  const raw = localStorage.getItem(PAID_KEY);
+  if(raw){
+    const o = JSON.parse(raw);
+    if(o && o.id && (Date.now()-o.ts) < 7*24*3600*1000) paidPayment = o; else localStorage.removeItem(PAID_KEY);
+  }
+} catch(_) {}
+function refreshPaidUI(){
+  const note = document.getElementById('paid-note');
+  if(note) note.style.display = paidPayment ? 'block' : 'none';
+}
+function savePaidPayment(id, engine){
+  paidPayment = { id, engine, ts: Date.now() };
+  try { localStorage.setItem(PAID_KEY, JSON.stringify(paidPayment)); } catch(_) {}
+  refreshPaidUI();
+}
+function clearPaidPayment(){
+  paidPayment = null;
+  try { localStorage.removeItem(PAID_KEY); } catch(_) {}
+  refreshPaidUI();
+}
 
 // ── CONCERNS ─────────────────────────────────────────────
 const CONCERNS = [
@@ -674,6 +702,7 @@ const PRICE_MAP = {
   both:      { full:1499, progress:1199 }
 };
 function currentPriceLabel(){
+  if(paidPayment) return '✦ Retry My Reading (already paid) ✦';
   const p = PRICE_MAP[currentEngine] || PRICE_MAP.classical;
   const price = document.getElementById('is-progress').checked ? p.progress : p.full;
   return `✦ Read My Palm — ₹${price} ✦`;
@@ -897,6 +926,22 @@ async function initiatePayment(){
   if(!email||!email.includes('@')){ showErr('Please enter a valid email address to receive your reading'); return; }
   hideErr();
 
+  // A reading was already paid for but did not complete: retry it WITHOUT charging again
+  if(paidPayment){
+    if(paidPayment.engine !== currentEngine){
+      setEngine(paidPayment.engine);
+      showErr('You have already paid for a different reading style, so we have switched back to it. Please tap the button again to continue. You will not be charged again.');
+      updateReadBtnState();
+      return;
+    }
+    const rb = document.getElementById('read-btn');
+    rb.disabled = true;
+    rb.textContent = '✦ Preparing Your Reading… ✦';
+    await startReading(paidPayment.id);
+    updateReadBtnState();
+    return;
+  }
+
   // Show loading state on button
   const btn = document.getElementById('read-btn');
   btn.disabled = true;
@@ -927,7 +972,8 @@ async function initiatePayment(){
         }
       },
       handler: async function(response){
-        // Payment successful — verify and start reading
+        // Payment successful. Remember it straight away so it can never be lost or charged twice
+        savePaidPayment(response.razorpay_payment_id, currentEngine);
         btn.textContent = '✦ Verifying Payment…';
         try {
           const verifyRes = await fetch(SERVER+'/verify-payment', {
@@ -944,10 +990,9 @@ async function initiatePayment(){
           // Payment verified — start reading
           await startReading(verifyData.paymentId);
         } catch(e){
-          showErr('Payment verified but reading failed. Please contact jyotish@bhagyakar.com with your payment ID: '+response.razorpay_payment_id);
-          btn.disabled = false;
-          btn.textContent = currentPriceLabel();
+          showErr('We could not finish confirming your payment just now. Your payment is safe. Please tap the button again to retry and you will not be charged again. (Payment ID: '+response.razorpay_payment_id+')');
         }
+        updateReadBtnState();
       }
     };
     const rzp = new Razorpay(options);
@@ -1021,8 +1066,9 @@ async function startReading(paymentId){
       }
     }
     clearInterval(interval);
-    if(!res.ok||data.error) throw new Error(data.error||'Server error '+res.status);
+    if(!res.ok||data.error){ const he=new Error(data.error||'Server error '+res.status); he.status=res.status; throw he; }
     if(!data.reading) throw new Error('Something went wrong generating your reading. Please try again.');
+    clearPaidPayment(); // the reading has been delivered, so this payment is used up
     currentReading=data.reading;
     hrReading=data.hrReading||null;
     renderReading();
@@ -1032,6 +1078,8 @@ async function startReading(paymentId){
     let msg=err.message;
     if(err.name==='AbortError') msg='Request timed out. Please try again.';
     else if(msg.includes('Failed to fetch')) msg='Cannot reach server. Please try again.';
+    // A payment the server cannot use (not confirmed, or already used) is dropped; any other failure keeps it so the retry is free
+    if(err.status===402 || err.status===409) clearPaidPayment();
     showErr(msg);
     showScreen('scr-upload');
   }
@@ -1476,6 +1524,9 @@ ${pdfSec('🌿','LIFESTYLE PRACTICES',lifeHTML)}
   printWin.focus();
   setTimeout(()=>{ printWin.print(); }, 800);
 }
+
+refreshPaidUI();
+updateReadBtnState();
 </script>
 </body>
 </html>
