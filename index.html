@@ -25,7 +25,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Crimso
 #universe{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
 
 /* Screens */
-.screen{display:none;min-height:100vh;padding:20px 16px 40px;position:relative;z-index:1}
+.screen{display:none;min-height:100vh;padding:20px 16px 40px;position:relative;z-index:1;max-width:720px;margin-left:auto;margin-right:auto}
 .screen.active{display:block;animation:fadeUp .4s ease}
 
 /* Cards */
@@ -55,6 +55,12 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Crimso
 .btn-gold{padding:7px 14px;border-radius:20px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#1A0E1F;font-family:'Crimson Pro',serif;font-size:12px;font-weight:600}
 
 /* Concerns grid */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-grid>div{min-width:0}
+.field-grid .f-full{grid-column:1/-1}
+.f-label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.f-hint{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+@media(max-width:340px){.field-grid{grid-template-columns:1fr}}
 .concerns-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px}
 .concern-btn{padding:9px 10px;border-radius:9px;border:1px solid rgba(201,194,214,0.18);background:transparent;color:var(--muted);font-family:'Crimson Pro',serif;font-size:12px;cursor:pointer;text-align:left;transition:all .2s;line-height:1.3}
 .concern-btn.selected{background:rgba(201,194,214,0.14);color:var(--gold);border-color:var(--gold)}
@@ -163,13 +169,13 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
 <div class="modal-bg" id="modal-jyotishi">
   <div class="modal-box" style="max-width:420px">
     <div class="modal-title">🧙‍♂️ Ask Our Jyotishi</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px;text-align:center">Type your specific question below. Our Jyotishi will personally review your palm reading and reply within 24-48 hours.</p>
+    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px;text-align:center">Type your specific question below. Our Jyotishi will personally review your palm reading and reply within 24-48 hours. A personal consultation is ₹499 per session, paid securely before your question is sent.</p>
     <div style="margin-bottom:10px">
       <div style="font-size:10px;color:var(--gold);margin-bottom:4px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px">YOUR NAME</div>
       <input id="j-name" class="inp" type="text" placeholder="Your full name"/>
     </div>
     <div style="margin-bottom:10px">
-      <div style="font-size:10px;color:var(--gold);margin-bottom:4px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px">YOUR EMAIL (for our reply)</div>
+      <div style="font-size:10px;color:var(--gold);margin-bottom:4px;font-family:'Cinzel Decorative',cursive;letter-spacing:1px">YOUR EMAIL (the one used for your reading)</div>
       <input id="j-email" class="inp" type="email" placeholder="your@email.com"/>
     </div>
     <div style="margin-bottom:14px">
@@ -177,7 +183,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
       <textarea id="j-question" class="inp" rows="4" placeholder="e.g. When will my financial situation improve? Is 2027 a good year for property purchase?" style="resize:none;line-height:1.6"></textarea>
     </div>
     <div id="j-status" style="display:none;font-size:12px;text-align:center;padding:8px;border-radius:8px;margin-bottom:10px"></div>
-    <button class="btn-main" onclick="submitJyotishi()" id="j-submit-btn" style="margin-bottom:8px">✦ Send My Question ✦</button>
+    <button class="btn-main" onclick="submitJyotishi()" id="j-submit-btn" style="margin-bottom:8px">✦ Pay ₹499 &amp; Send Question ✦</button>
     <button class="modal-close" onclick="closeModal('modal-jyotishi')">Close</button>
     <p style="font-size:10px;color:var(--dim);text-align:center;margin-top:8px">Live video or personal consultation — ₹499 per session · jyotish@bhagyakar.com</p>
   </div>
@@ -190,15 +196,6 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
     <div style="font-family:'Crimson Pro',serif;font-weight:700;font-size:clamp(22px,5vw,30px);color:var(--gold);animation:glow 3s ease-in-out infinite;margin-bottom:4px">BhagyaKar</div>
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;font-style:italic;margin-bottom:3px">✦ Ancient Vedic Palm Reading ✦</div>
     <div style="font-size:11px;color:var(--dim)">✦ Ancient Wisdom · Modern Clarity ✦</div>
-  </div>
-
-  <div class="jbar" onclick="openJyotishi()">
-    <div class="jbar-icon">🧙‍♂️</div>
-    <div style="flex:1">
-      <div class="jbar-title">Ask Our Jyotishi</div>
-      <div class="jbar-sub">Have a specific question? Get a personalised consultation from our expert Vedic astrologer.</div>
-    </div>
-    <div style="color:var(--gold);font-size:18px">›</div>
   </div>
 
   <div class="err" id="err-box"></div>
@@ -214,30 +211,31 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
   </div>
 
   <div class="card">
-    <span class="gold-label">YOUR FULL NAME</span>
-    <input id="inp-name" class="inp" type="text" placeholder="Enter your full name"/>
-  </div>
-
-  <div class="card">
-    <span class="gold-label">DATE OF BIRTH</span>
-    <input id="inp-dob" class="inp" type="date"/>
-    <p style="font-size:11px;color:var(--dim);margin-top:6px">Required for accurate Dasha period calculation</p>
-  </div>
-
-  <div class="card">
-    <span class="gold-label">GENDER</span>
-    <select id="inp-gender" class="sel">
-      <option value="">Select gender</option>
-      <option value="male">Male</option>
-      <option value="female">Female</option>
-      <option value="other">Other / Prefer not to say</option>
-    </select>
-  </div>
-
-  <div class="card">
-    <span class="gold-label">YOUR EMAIL <span style="color:var(--dim);font-size:9px">(READING WILL BE SENT HERE)</span></span>
-    <input id="inp-email" class="inp" type="email" placeholder="your@email.com"/>
-    <p style="font-size:11px;color:var(--dim);margin-top:6px">Your full reading will be emailed to you as a beautiful keepsake</p>
+    <span class="gold-label">YOUR DETAILS</span>
+    <div class="field-grid">
+      <div class="f-full">
+        <label class="f-label" for="inp-name">Full name</label>
+        <input id="inp-name" class="inp" type="text" placeholder="Enter your full name"/>
+      </div>
+      <div>
+        <label class="f-label" for="inp-dob">Date of birth</label>
+        <input id="inp-dob" class="inp" type="date"/>
+      </div>
+      <div>
+        <label class="f-label" for="inp-gender">Gender</label>
+        <select id="inp-gender" class="sel">
+          <option value="">Select gender</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other / Prefer not to say</option>
+        </select>
+      </div>
+      <div class="f-full">
+        <label class="f-label" for="inp-email">Email <span style="color:var(--dim);font-size:11px">(your reading will be sent here)</span></label>
+        <input id="inp-email" class="inp" type="email" placeholder="your@email.com"/>
+      </div>
+    </div>
+    <p class="f-hint">Date of birth is required for accurate Dasha period calculation. Your full reading will be emailed to you as a beautiful keepsake.</p>
   </div>
 
   <div class="card">
@@ -407,7 +405,7 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
       <div class="jbar-icon">🧙‍♂️</div>
       <div style="flex:1">
         <div class="jbar-title">Questions About Your Reading?</div>
-        <div class="jbar-sub">Our Jyotishi can provide a personalised consultation.</div>
+        <div class="jbar-sub">Our Jyotishi can provide a personalised consultation (₹499 per session).</div>
       </div>
       <div style="color:var(--gold);font-size:18px">›</div>
     </div>
@@ -771,37 +769,47 @@ function openJyotishi(){
   if(nameEl && (g_name||document.getElementById('inp-name').value)){
     nameEl.value=g_name||document.getElementById('inp-name').value||'';
   }
+  const emEl=document.getElementById('j-email');
+  const mainEm=document.getElementById('inp-email');
+  if(emEl && !emEl.value && mainEm && mainEm.value){ emEl.value=mainEm.value.trim(); }
   document.getElementById('j-status').style.display='none';
-  document.getElementById('j-submit-btn').disabled=false;
-  document.getElementById('j-submit-btn').textContent='✦ Send My Question ✦';
+  resetJBtn();
   openModal('modal-jyotishi');
 }
 
+let pendingConsult=null; // set once the ₹499 is paid, so a failed send can be retried WITHOUT paying again
+
+function jStatus(msg,kind){
+  const el=document.getElementById('j-status');
+  el.style.display='block';
+  if(kind==='ok'){ el.style.background='rgba(46,204,113,0.1)'; el.style.color='#2ECC71'; }
+  else if(kind==='err'){ el.style.background='rgba(232,41,41,0.1)'; el.style.color='#fca5a5'; }
+  else { el.style.background='rgba(201,194,214,0.1)'; el.style.color='var(--gold)'; }
+  el.textContent=msg;
+}
+
+function resetJBtn(){
+  const b=document.getElementById('j-submit-btn');
+  b.disabled=false;
+  b.textContent=pendingConsult?'✦ Retry Sending (already paid) ✦':'✦ Pay ₹499 & Send Question ✦';
+}
+
 async function submitJyotishi(){
+  const btn=document.getElementById('j-submit-btn');
+
+  // Already paid but sending failed earlier: retry the send only, never charge again
+  if(pendingConsult){ btn.disabled=true; btn.textContent='Sending…'; await sendConsultation(); return; }
+
   const name=document.getElementById('j-name').value.trim();
   const email=document.getElementById('j-email').value.trim();
   const question=document.getElementById('j-question').value.trim();
-  const statusEl=document.getElementById('j-status');
-  const btn=document.getElementById('j-submit-btn');
 
-  if(!name||!email||!question){
-    statusEl.style.display='block';
-    statusEl.style.background='rgba(232,41,41,0.1)';
-    statusEl.style.color='#fca5a5';
-    statusEl.textContent='Please fill in all fields before submitting.';
-    return;
-  }
-  if(!email.includes('@')){
-    statusEl.style.display='block';
-    statusEl.style.background='rgba(232,41,41,0.1)';
-    statusEl.style.color='#fca5a5';
-    statusEl.textContent='Please enter a valid email address.';
-    return;
-  }
+  if(!name||!email||!question){ jStatus('Please fill in all fields before submitting.','err'); return; }
+  if(!email.includes('@')){ jStatus('Please enter a valid email address.','err'); return; }
 
   btn.disabled=true;
-  btn.textContent='Sending...';
-  statusEl.style.display='none';
+  btn.textContent='⏳ Preparing Payment…';
+  document.getElementById('j-status').style.display='none';
 
   // Build reading context
   const readingContext=currentReading?
@@ -813,34 +821,69 @@ DOB: ${g_dob||'Not provided'}
 Age: ${g_age||''}`:'No reading done yet';
 
   try {
+    const orderRes=await fetch(SERVER+'/create-order',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ type:'consult', email })
+    });
+    const orderData=await orderRes.json();
+    if(orderData.needsReading||orderData.verifyFailed){ jStatus(orderData.error); resetJBtn(); return; }
+    if(orderData.error) throw new Error(orderData.error);
+
+    const rzp=new Razorpay({
+      key: orderData.keyId,
+      amount: orderData.amount,
+      currency: orderData.currency,
+      name: 'BhagyaKar',
+      description: 'Personal Consultation',
+      image: SERVER + '/favicon.ico',
+      order_id: orderData.orderId,
+      prefill: { name: name, email: email },
+      theme: { color: '#C9C2D6' },
+      modal: { ondismiss: function(){ if(!pendingConsult) resetJBtn(); } },
+      handler: async function(response){
+        pendingConsult={ name, email, question, readingContext,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature };
+        btn.textContent='✦ Sending Your Question… ✦';
+        await sendConsultation();
+      }
+    });
+    rzp.on('payment.failed',function(r){
+      jStatus('Payment failed: '+((r&&r.error&&r.error.description)||'please try again.'),'err');
+      resetJBtn();
+    });
+    rzp.open();
+  } catch(e) {
+    jStatus('Could not start payment. Please try again.','err');
+    resetJBtn();
+  }
+}
+
+async function sendConsultation(){
+  const btn=document.getElementById('j-submit-btn');
+  let serverMsg='';
+  try {
     const res=await fetch(SERVER+'/ask-jyotishi',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ name, email, question, readingContext })
+      body:JSON.stringify(pendingConsult)
     });
     const data=await res.json();
     if(data.success){
-      statusEl.style.display='block';
-      statusEl.style.background='rgba(46,204,113,0.1)';
-      statusEl.style.color='#2ECC71';
-      statusEl.textContent='Your question has been sent! Our Jyotishi will reply to '+email+' within 24-48 hours.';
+      const em=pendingConsult.email;
+      pendingConsult=null;
+      jStatus('Payment received and your question has been sent! Our Jyotishi will reply to '+em+' within 24-48 hours.','ok');
+      btn.disabled=true;
       btn.textContent='✦ Question Sent ✦';
       document.getElementById('j-question').value='';
-    } else {
-      throw new Error(data.error||'Failed to send');
+      return;
     }
-  } catch(e) {
-    // Fallback to mailto if server endpoint not available
-    const subject=encodeURIComponent('BhagyaKar Consultation — '+name);
-    const body=encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nQuestion:\n${question}\n\n--- Reading Context ---\n${readingContext}`);
-    window.open(`mailto:${JYOTISHI_EMAIL}?subject=${subject}&body=${body}`,'_blank');
-    statusEl.style.display='block';
-    statusEl.style.background='rgba(201,194,214,0.1)';
-    statusEl.style.color='var(--gold)';
-    statusEl.textContent='Opening your email app to send the question...';
-    btn.disabled=false;
-    btn.textContent='✦ Send My Question ✦';
-  }
+    serverMsg=data.error||'';
+  } catch(e) { /* network problem: fall through to the message below */ }
+  jStatus((serverMsg||'Your payment was received, but we could not send your question just now. Please tap Retry below.')+' Payment ID: '+pendingConsult.razorpay_payment_id+' (you can also email jyotish@bhagyakar.com with this ID).','err');
+  resetJBtn();
 }
 
 // ── INITIATE PAYMENT ─────────────────────────────────────

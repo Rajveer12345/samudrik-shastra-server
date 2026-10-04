@@ -51,6 +51,19 @@ async function initDB() {
         created_at DATETIME
       )
     `);
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS consult_requests (
+        payment_id VARCHAR(64) PRIMARY KEY,
+        order_id VARCHAR(64),
+        email VARCHAR(255),
+        name VARCHAR(255),
+        question TEXT,
+        reading_context TEXT,
+        amount INT,
+        status VARCHAR(32),
+        created_at DATETIME
+      )
+    `);
     console.log("Database ready — persistent customer history enabled");
   } catch(e) {
     console.error("Database init failed — persistent storage disabled:", e.message);
@@ -72,6 +85,8 @@ const READING_PRICE_HASTA = 119900; // ₹1199 in paise — Ancient Texts, full 
 const PROGRESS_READING_PRICE_HASTA = 89900; // ₹899 in paise — Ancient Texts, returning customer
 const READING_PRICE_BOTH = 149900; // ₹1499 in paise — Compare Both, full price
 const PROGRESS_READING_PRICE_BOTH = 119900; // ₹1199 in paise — Compare Both, returning customer
+const CONSULT_PRICE = 49900; // ₹499 in paise — personal consultation session (only for customers who already have a reading)
+const CONSULT_LABEL = "BhagyaKar Personal Consultation";
 const CURRENCY       = "INR";
 
 function razorpayRequest(method, path, body) {
@@ -117,6 +132,22 @@ async function verifyRazorpayPayment(orderId, paymentId, signature) {
     .update(orderId + "|" + paymentId)
     .digest("hex");
   return expected === signature;
+}
+
+// Returns true / false, or null if it could not be checked (no database, or a database error)
+async function customerHasReading(email) {
+  if (!dbPool || !email) return null;
+  try {
+    const [rows] = await dbPool.query("SELECT id FROM readings WHERE email=? LIMIT 1", [String(email).trim()]);
+    return rows.length > 0;
+  } catch(e) {
+    console.error("Reading lookup failed:", e.message);
+    return null;
+  }
+}
+
+function escHtml(v) {
+  return String(v == null ? "" : v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
 // ── ALLOWED ORIGINS ──────────────────────────────────────
@@ -684,7 +715,23 @@ async function handleRequest(req, res) {
     if (!RZP_KEY_ID) { sendJSON(res,{error:"Payment not configured"},500); return; }
     let body = {};
     try { body = JSON.parse(await readBody(req)); } catch(e) { /* no body is fine — defaults to full price */ }
-    const { email, isProgress, engine } = body;
+    const { email, isProgress, engine, type } = body;
+
+    // ── Personal consultation (₹499): only for customers who already have a reading ──
+    if (type === "consult") {
+      const has = await customerHasReading(email);
+      if (has === null) { sendJSON(res,{error:"We could not verify your reading just now. Please try again in a few minutes.",verifyFailed:true},503); return; }
+      if (!has) { sendJSON(res,{error:"Personal consultations are available after your first reading. Please use the same email address you used for your reading.",needsReading:true},403); return; }
+      try {
+        const order = await createRazorpayOrder(CONSULT_PRICE, CONSULT_LABEL);
+        sendJSON(res, { orderId: order.id, amount: order.amount, currency: order.currency, keyId: RZP_KEY_ID });
+      } catch(e) {
+        console.error("Create consultation order failed:", e.message);
+        sendJSON(res, {error: "Could not create payment order"}, 500);
+      }
+      return;
+    }
+
     let amount = READING_PRICE;
     let productLabel = "BhagyaKar Palm Reading";
     if (engine === 'hasta') { amount = READING_PRICE_HASTA; productLabel = "BhagyaKar Ancient Texts Reading"; }
@@ -815,28 +862,66 @@ Problems noted: ${(prev.problems||[]).map(p=>`${p.title||p.area}: ${p.issue} (re
   if (req.method==="POST" && url==="/ask-jyotishi") {
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid body"},400); return; }
-    const {name,email,question,readingContext}=body;
+    const {name,email,question,readingContext,razorpay_order_id,razorpay_payment_id,razorpay_signature}=body;
     if(!name||!email||!question){ sendJSON(res,{error:"Missing fields"},400); return; }
+    if(!razorpay_order_id||!razorpay_payment_id||!razorpay_signature){
+      sendJSON(res,{error:"The personal consultation fee must be paid before your question is sent.",paymentRequired:true},402); return;
+    }
+    const cleanEmail = String(email).trim().slice(0,255);
+    const cleanName = String(name).trim().slice(0,200);
+    const cleanQuestion = String(question).trim().slice(0,2000);
+    const cleanContext = String(readingContext||"").slice(0,2000);
 
-    console.log("=== JYOTISHI / CONSULTATION QUESTION ===");
-    console.log("From:", name, "<"+email+">");
-    console.log("Question:", question);
-    console.log("Context:", readingContext);
-    console.log("=========================================");
+    // 1. Only customers who already have a reading (matched by email)
+    const has = await customerHasReading(cleanEmail);
+    if (has === null) { sendJSON(res,{error:"We could not verify your reading just now. Please try again in a few minutes.",verifyFailed:true},503); return; }
+    if (!has) { sendJSON(res,{error:"Personal consultations are available after your first reading. Please use the same email address you used for your reading.",needsReading:true},403); return; }
+
+    // 2. The payment must be genuine: valid signature, and Razorpay confirms a completed ₹499 payment for this order
+    let sigOk = false;
+    try { sigOk = await verifyRazorpayPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature); } catch(e) { sigOk = false; }
+    if (!sigOk) { sendJSON(res,{error:"Payment verification failed. If money was deducted, please contact jyotish@bhagyakar.com with your payment ID: "+razorpay_payment_id},400); return; }
+    let pay = null;
+    try { pay = await razorpayRequest("GET","/payments/"+encodeURIComponent(razorpay_payment_id)); }
+    catch(e) { console.error("Consultation payment lookup failed:", e.message); sendJSON(res,{error:"We could not confirm your payment just now. Please contact jyotish@bhagyakar.com with your payment ID: "+razorpay_payment_id,verifyFailed:true},503); return; }
+    if (!pay || pay.order_id !== razorpay_order_id || pay.amount !== CONSULT_PRICE || pay.currency !== CURRENCY || !["captured","authorized"].includes(pay.status)) {
+      console.error("Consultation payment did not match expectations:", JSON.stringify({id:razorpay_payment_id,status:pay&&pay.status,amount:pay&&pay.amount,order:pay&&pay.order_id}));
+      sendJSON(res,{error:"We could not confirm a ₹499 consultation payment. If money was deducted, please contact jyotish@bhagyakar.com with your payment ID: "+razorpay_payment_id},400); return;
+    }
+
+    // 3. One consultation per payment (a retry of the same payment by the same customer is accepted quietly)
+    try {
+      await dbPool.query(
+        "INSERT INTO consult_requests (payment_id, order_id, email, name, question, reading_context, amount, status, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        [razorpay_payment_id, razorpay_order_id, cleanEmail, cleanName, cleanQuestion, cleanContext, pay.amount, "new", new Date()]
+      );
+    } catch(e) {
+      if (e && e.code === "ER_DUP_ENTRY") {
+        try {
+          const [r] = await dbPool.query("SELECT email FROM consult_requests WHERE payment_id=? LIMIT 1", [razorpay_payment_id]);
+          if (r.length && String(r[0].email).toLowerCase() === cleanEmail.toLowerCase()) { sendJSON(res,{success:true,message:"Question received"}); return; }
+        } catch(_) {}
+        sendJSON(res,{error:"This payment has already been used for a consultation."},409); return;
+      }
+      console.error("Failed to save consultation request:", e.message);
+      sendJSON(res,{error:"We could not record your request. Please contact jyotish@bhagyakar.com with your payment ID: "+razorpay_payment_id},500); return;
+    }
+
+    console.log("=== PAID JYOTISHI CONSULTATION ===");
+    console.log("From:", cleanName, "<"+cleanEmail+">", "Payment:", razorpay_payment_id);
 
     const notifyHtml = `
       <div style="font-family:Georgia,serif;padding:16px">
-        <h2 style="color:#5C3D73">New Consultation Request</h2>
-        <p><b>Name:</b> ${name}<br/><b>Email:</b> ${email}</p>
-        <p><b>Question:</b><br/>${(question||"").replace(/\n/g,"<br/>")}</p>
-        <p><b>Reading Context:</b><br/>${(readingContext||"No reading done yet").replace(/\n/g,"<br/>")}</p>
-        <p style="color:#888;font-size:12px">Live video / personal consultation fee: ₹499 per session. Confirm and schedule with the customer directly at ${email}.</p>
+        <h2 style="color:#5C3D73">New Paid Consultation Request (₹499)</h2>
+        <p><b>Name:</b> ${escHtml(cleanName)}<br/><b>Email:</b> ${escHtml(cleanEmail)}</p>
+        <p><b>Question:</b><br/>${escHtml(cleanQuestion).replace(/\n/g,"<br/>")}</p>
+        <p><b>Reading Context:</b><br/>${escHtml(cleanContext||"Not provided").replace(/\n/g,"<br/>")}</p>
+        <p style="color:#888;font-size:12px">Payment confirmed: ₹499 · Payment ID ${escHtml(razorpay_payment_id)} · Order ID ${escHtml(razorpay_order_id)}. Reply to the customer at ${escHtml(cleanEmail)} to answer or schedule the session.</p>
       </div>`;
-
     try {
-      await sendEmail(ADMIN_EMAIL, "BhagyaKar Consultation Request — " + name, notifyHtml);
+      await sendEmail(ADMIN_EMAIL, "BhagyaKar Paid Consultation — " + cleanName, notifyHtml);
     } catch(emailErr) {
-      console.error("Consultation notification email failed:", emailErr.message);
+      console.error("Consultation notification email failed (request is saved in the database):", emailErr.message);
     }
 
     sendJSON(res,{success:true,message:"Question received"});
