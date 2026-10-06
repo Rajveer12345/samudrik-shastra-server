@@ -316,9 +316,9 @@ async function sendEmail(to, subject, htmlBody) {
   //   ZEPTOMAIL_TOKEN — the "Send Mail Token" from your ZeptoMail Mail Agent
   //   ZEPTOMAIL_HOST  — "api.zeptomail.in" (India account) or "api.zeptomail.com" (global account)
   const ZEPTO_TOKEN = process.env.ZEPTOMAIL_TOKEN || "";
-  const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "api.zeptomail.in";
+  const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "cpaas.zoho.in";
   if (!ZEPTO_TOKEN) { console.log("ZeptoMail token not configured — skipping email"); return; }
-  console.log("Sending email via ZeptoMail to:", to);
+  console.log("Sending email via ZeptoMail host " + ZEPTO_HOST + " to:", to);
   try {
     const payload = JSON.stringify({
       from: { address: "jyotish@bhagyakar.com", name: "BhagyaKar" },
@@ -333,6 +333,7 @@ async function sendEmail(to, subject, htmlBody) {
         method: "POST",
         headers: {
           "Authorization": "Zoho-enczapikey " + ZEPTO_TOKEN,
+          "Accept": "application/json",
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload)
         }
@@ -340,7 +341,7 @@ async function sendEmail(to, subject, htmlBody) {
         let data = "";
         res.on("data", d => data += d);
         res.on("end", () => {
-          console.log("ZeptoMail response:", res.statusCode, data.slice(0,200));
+          console.log("ZeptoMail response:", res.statusCode, data.slice(0,200), JSON.stringify({host:ZEPTO_HOST, ctype:res.headers["content-type"], tokenLength:ZEPTO_TOKEN.length, tokenStartsWithPrefix:/^zoho-enczapikey/i.test(ZEPTO_TOKEN)}));
           if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
           else reject(new Error("ZeptoMail API error " + res.statusCode + ": " + data));
         });
