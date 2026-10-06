@@ -276,7 +276,12 @@ footer{margin-top:22px;padding:11px;background:rgba(255,255,255,0.01);border:1px
 
   <button class="btn-main" id="read-btn" onclick="initiatePayment()" disabled>✦ Read My Palm — ₹999 ✦</button>
   <p id="paid-note" style="display:none;font-size:12px;color:var(--gold);text-align:center;margin-top:10px;line-height:1.6">You have already paid for your reading. Upload your palm photo, tick the box above and tap the button to continue. You will not be charged again.</p>
-  <p style="text-align:center;margin-top:10px"><a href="#" onclick="useAccessCode();return false" style="font-size:10px;color:var(--dim);text-decoration:underline">Have an access code?</a></p>
+  <p style="text-align:center;margin-top:10px"><a href="#" onclick="toggleAccessBox();return false" style="font-size:10px;color:var(--dim);text-decoration:underline">Have an access code?</a></p>
+  <div id="access-box" style="display:none;text-align:center;margin-top:8px">
+    <input type="text" id="access-code" placeholder="Access code" autocomplete="off" style="width:60%;max-width:260px;padding:8px;border-radius:8px;border:1px solid rgba(201,194,214,0.3);background:transparent;color:inherit;font-size:13px"/>
+    <button type="button" onclick="useAccessCode()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(201,194,214,0.3);background:transparent;color:inherit;font-size:13px;cursor:pointer">Continue</button>
+    <p id="access-msg" style="font-size:12px;color:#e8a0a0;margin-top:8px;line-height:1.5"></p>
+  </div>
   <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:12px;font-style:italic">Your image is analysed securely and never stored permanently.</p>
 
   <footer style="text-align:center;margin-top:28px;padding-top:16px;border-top:1px solid rgba(201,194,214,0.12);font-size:11px;color:var(--dim)">
@@ -687,7 +692,7 @@ function showScreen(id){
 }
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-function showErr(msg){ const b=document.getElementById('err-box'); b.textContent='⚠ '+msg; b.style.display='block'; }
+function showErr(msg){ const b=document.getElementById('err-box'); b.textContent='⚠ '+msg; b.style.display='block'; try{ b.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }
 function hideErr(){ document.getElementById('err-box').style.display='none'; }
 
 // Enable the pay button only once BOTH a photo is uploaded AND the T&C checkbox is ticked
@@ -1012,15 +1017,21 @@ async function initiatePayment(){
 }
 
 // ── ACCESS CODE (reviewers only) ─────────────────────────
+function toggleAccessBox(){
+  const b=document.getElementById('access-box');
+  b.style.display = b.style.display==='none' ? 'block' : 'none';
+}
+function accessMsg(t){ document.getElementById('access-msg').textContent=t; }
 async function useAccessCode(){
-  if(!imgData){ showErr('Please upload your palm photo first'); return; }
-  if(!document.getElementById('agree-terms').checked){ showErr('Please agree to the Terms & Conditions before continuing'); return; }
+  accessMsg('');
+  if(!imgData){ accessMsg('Please upload your palm photo first (above).'); return; }
+  if(!document.getElementById('agree-terms').checked){ accessMsg('Please tick the Terms & Conditions box first (above).'); return; }
   const email = document.getElementById('inp-email').value.trim();
-  if(!document.getElementById('inp-dob').value){ showErr('Please enter your date of birth'); return; }
-  if(!email||!email.includes('@')){ showErr('Please enter a valid email address to receive your reading'); return; }
-  const code = prompt('Enter your access code');
-  if(!code) return;
-  reviewCode = code.trim();
+  if(!document.getElementById('inp-dob').value){ accessMsg('Please enter your date of birth first (above).'); return; }
+  if(!email||!email.includes('@')){ accessMsg('Please enter your email address first (above).'); return; }
+  const code = document.getElementById('access-code').value.trim();
+  if(!code){ accessMsg('Please type the access code.'); return; }
+  reviewCode = code;
   try{ await startReading(''); } finally { reviewCode = ''; }
 }
 
