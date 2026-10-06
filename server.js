@@ -315,7 +315,7 @@ async function sendEmail(to, subject, htmlBody) {
   // Set these two env vars once your ZeptoMail account is ready:
   //   ZEPTOMAIL_TOKEN — the "Send Mail Token" from your ZeptoMail Mail Agent
   //   ZEPTOMAIL_HOST  — "api.zeptomail.in" (India account) or "api.zeptomail.com" (global account)
-  const ZEPTO_TOKEN = process.env.ZEPTOMAIL_TOKEN || "";
+  const ZEPTO_TOKEN = (process.env.ZEPTOMAIL_TOKEN || "").trim().replace(/^["']|["']$/g, "").replace(/^\s*zoho-enczapikey[\s:]*/i, "").trim(); // works whether or not the prefix was pasted
   const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "cpaas.zoho.in";
   if (!ZEPTO_TOKEN) { console.log("ZeptoMail token not configured — skipping email"); return; }
   console.log("Sending email via ZeptoMail host " + ZEPTO_HOST + " to:", to);
