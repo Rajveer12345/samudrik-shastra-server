@@ -2,6 +2,7 @@ const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.ANTHROPIC_API_KEY || "";
@@ -211,7 +212,36 @@ async function releaseReadingPayment(paymentId) {
     catch(e) { console.error("Could not release reading payment:", e.message); }
   } else {
     usedReadingPayments.delete(paymentId);
+    reviewUsesMemory.delete(paymentId);
   }
+}
+
+// ── REVIEWER ACCESS CODE (for Google Play review only) ──
+// Switched OFF unless REVIEW_CODE is set in the GoDaddy app secrets.
+// Each use is recorded in reading_payments as "review_..." and capped by REVIEW_MAX_USES (default 5).
+const REVIEW_CODE = process.env.REVIEW_CODE || "";
+const REVIEW_MAX_USES = parseInt(process.env.REVIEW_MAX_USES || "5", 10);
+const reviewUsesMemory = new Set(); // only used if there is no database
+function reviewCodeMatches(given) {
+  if (!REVIEW_CODE || typeof given !== "string" || !given) return false;
+  const a = crypto.createHash("sha256").update(given.trim()).digest();
+  const b = crypto.createHash("sha256").update(REVIEW_CODE).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+// returns an id like "review_xxx" if a use was available and taken, otherwise null
+async function takeReviewUse(email) {
+  const id = "review_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex");
+  if (dbPool) {
+    try {
+      const [rows] = await dbPool.query("SELECT COUNT(*) AS n FROM reading_payments WHERE payment_id LIKE 'review\\_%'");
+      if ((rows[0] && Number(rows[0].n)) >= REVIEW_MAX_USES) return null;
+      await dbPool.query("INSERT INTO reading_payments (payment_id, email, created_at) VALUES (?,?,?)", [id, email ? String(email).slice(0,255) : null, new Date()]);
+      return id;
+    } catch(e) { console.error("Review code use failed:", e.message); return null; }
+  }
+  if (reviewUsesMemory.size >= REVIEW_MAX_USES) return null;
+  reviewUsesMemory.add(id);
+  return id;
 }
 
 // Returns true / false, or null if it could not be checked (no database, or a database error)
@@ -870,15 +900,22 @@ async function handleRequest(req, res) {
     if (!API_KEY) { console.error("Server misconfigured: reading engine key not set"); sendJSON(res,{error:GENERIC_ERROR},500); return; }
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid request"},400); return; }
-    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId,isProgress}=body;
+    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId,isProgress,reviewCode}=body;
+    // Reviewer access code (Google Play review). Only active if REVIEW_CODE is set.
+    let reviewUseId = null;
+    if (reviewCode) {
+      if (!reviewCodeMatches(reviewCode)) { sendJSON(res,{error:"This access code is not valid."},403); return; }
+      reviewUseId = await takeReviewUse(userEmail);
+      if (!reviewUseId) { sendJSON(res,{error:"This access code is no longer available."},403); return; }
+    }
     // Verify payment if Razorpay is configured
-    if (RZP_KEY_ID && !paymentId) { sendJSON(res,{error:"Payment required"},402); return; }
+    if (RZP_KEY_ID && !paymentId && !reviewUseId) { sendJSON(res,{error:"Payment required"},402); return; }
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
 
     // ── PAYMENT MUST BE REAL, FOR THIS READING TYPE, AND UNUSED ──
-    let claimedPaymentId = null;
+    let claimedPaymentId = reviewUseId; // for a reviewer, a failed reading gives the use back
     let delivered = false;
-    if (RZP_KEY_ID) {
+    if (RZP_KEY_ID && !reviewUseId) {
       const pc = await checkReadingPayment(paymentId, engine);
       if (!pc.ok) { sendJSON(res,{error:pc.error,...(pc.verifyFailed?{verifyFailed:true}:{})},pc.status); return; }
       const claim = await claimReadingPayment(paymentId, userEmail);
