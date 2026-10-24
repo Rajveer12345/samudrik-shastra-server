@@ -1206,19 +1206,19 @@ ${contextSummary}`;
 }
 
 // ── REVIEWER ACCESS CODE ──────────────────────────────────
-// Set REVIEW_ACCESS_CODES on the server (comma separated). Gives a limited number
+// Set REVIEW_CODE (and optionally REVIEW_MAX_USES, uses per 30 days) on the server. Gives a limited number
 // of free classical readings to app store reviewers. Never stored in the code.
-const REVIEW_MAX_USES = parseInt(process.env.REVIEW_CODE_MAX_USES || "15", 10);
+const REVIEW_MAX_USES = parseInt(process.env.REVIEW_MAX_USES || process.env.REVIEW_CODE_MAX_USES || "15", 10) || 15;
 let reviewUsesMemory = 0;
 async function checkReviewCode(code) {
-  const valid = (process.env.REVIEW_ACCESS_CODES || "").split(",").map(x=>x.trim()).filter(Boolean);
+  const valid = ((process.env.REVIEW_CODE || "") + "," + (process.env.REVIEW_ACCESS_CODES || "")).split(",").map(x=>x.trim()).filter(Boolean);
   const given = String(code).trim();
   const crypto = require("crypto");
   const match = valid.some(v => v.length === given.length && crypto.timingSafeEqual(Buffer.from(v), Buffer.from(given)));
   if (!match) return { ok:false, status:403, error:"That access code is not valid." };
   try {
     if (dbPool) {
-      const [rows] = await dbPool.query("SELECT COUNT(*) AS n FROM review_code_uses");
+      const [rows] = await dbPool.query("SELECT COUNT(*) AS n FROM review_code_uses WHERE created_at > ?", [new Date(Date.now() - 30*24*60*60*1000)]);
       if (Number(rows[0].n) >= REVIEW_MAX_USES) return { ok:false, status:403, error:"This access code has reached its limit." };
       await dbPool.query("INSERT INTO review_code_uses (created_at) VALUES (?)", [new Date()]);
     } else {
