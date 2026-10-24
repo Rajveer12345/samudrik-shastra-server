@@ -295,42 +295,53 @@ async function sendEmail(to, subject, htmlBody) {
   const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "api.zeptomail.in";
   if (!ZEPTO_TOKEN) { console.log("ZeptoMail token not configured — skipping email"); return; }
   console.log("Sending email via ZeptoMail to:", to);
-  try {
-    const payload = JSON.stringify({
-      from: { address: "jyotish@bhagyakar.com", name: "BhagyaKar" },
-      to: [ { email_address: { address: to, name: "" } } ],
-      subject: subject,
-      htmlbody: htmlBody
-    });
-    const result = await new Promise((resolve, reject) => {
-      const req = https.request({
-        hostname: ZEPTO_HOST,
-        path: "/v1.1/email",
-        method: "POST",
-        headers: {
-          "Authorization": "Zoho-enczapikey " + ZEPTO_TOKEN,
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload)
-        }
-      }, res => {
-        let data = "";
-        res.on("data", d => data += d);
-        res.on("end", () => {
-          console.log("ZeptoMail response:", res.statusCode, data.slice(0,200));
-          if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
-          else reject(new Error("ZeptoMail API error " + res.statusCode + ": " + data));
-        });
+  // Remove broken characters (e.g. half an emoji) that can make the mail API refuse the message
+  const clean = t => String(t||"").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "").replace(/\u0000/g, "");
+  const payload = JSON.stringify({
+    from: { address: "jyotish@bhagyakar.com", name: "BhagyaKar" },
+    to: [ { email_address: { address: to, name: "" } } ],
+    subject: clean(subject),
+    htmlbody: clean(htmlBody)
+  });
+  const sendOnce = () => new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: ZEPTO_HOST,
+      path: "/v1.1/email",
+      method: "POST",
+      headers: {
+        "Authorization": "Zoho-enczapikey " + ZEPTO_TOKEN,
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload)
+      }
+    }, res => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        console.log("ZeptoMail response:", res.statusCode, "host:", ZEPTO_HOST, "payload bytes:", Buffer.byteLength(payload), data.slice(0,300));
+        if (res.statusCode >= 200 && res.statusCode < 300) { try { resolve(JSON.parse(data)); } catch(_) { resolve({}); } }
+        else { const err = new Error("ZeptoMail API error " + res.statusCode + ": " + data.slice(0,300)); err.status = res.statusCode; reject(err); }
       });
-      req.on("error", reject);
-      req.write(payload);
-      req.end();
     });
-    console.log("Email sent successfully via ZeptoMail");
-    return result;
-  } catch(e) {
-    console.error("sendEmail failed:", e.message);
-    throw e;
+    req.setTimeout(30000, () => req.destroy(new Error("ZeptoMail request timed out")));
+    req.on("error", reject);
+    req.write(payload);
+    req.end();
+  });
+  // Try up to 3 times for temporary problems (server errors, network)
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const result = await sendOnce();
+      console.log("Email sent successfully via ZeptoMail (attempt " + attempt + ")");
+      return result;
+    } catch(e) {
+      lastErr = e;
+      console.error("sendEmail attempt " + attempt + " failed:", e.message);
+      if (e.status && e.status < 500) break; // a 4xx will not fix itself
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 6000));
+    }
   }
+  throw lastErr;
 }
 
 function buildReadingEmail(name, age, stage, concerns, dasha, R) {
