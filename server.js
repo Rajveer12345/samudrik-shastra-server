@@ -291,7 +291,7 @@ async function sendEmail(to, subject, htmlBody) {
   // Set these two env vars once your ZeptoMail account is ready:
   //   ZEPTOMAIL_TOKEN — the "Send Mail Token" from your ZeptoMail Mail Agent
   //   ZEPTOMAIL_HOST  — "api.zeptomail.in" (India account) or "api.zeptomail.com" (global account)
-  const ZEPTO_TOKEN = process.env.ZEPTOMAIL_TOKEN || "";
+  const ZEPTO_TOKEN = String(process.env.ZEPTOMAIL_TOKEN || "").trim().replace(/^["']|["']$/g,"").replace(/^Zoho-enczapikey\s+/i,"").trim();
   // Try the configured host first, then the standard India API host (a dashboard address such as cpaas.zoho.in is not a sending address)
   const ZEPTO_HOSTS = [String(process.env.ZEPTOMAIL_HOST || "").trim().replace(/^https?:\/\//,"").replace(/\/.*$/,""), "api.zeptomail.in"].filter((h,i,arr)=>h && arr.indexOf(h)===i);
   if (!ZEPTO_TOKEN) { console.log("ZeptoMail token not configured — skipping email"); return; }
@@ -342,6 +342,17 @@ async function sendEmail(to, subject, htmlBody) {
       if (attempt < 4) await new Promise(r => setTimeout(r, attempt * 6000));
     }
   }
+  // Self-check: if the full email failed, see whether a tiny one works, so the log shows where the problem is
+  try {
+    const tiny = JSON.stringify({ from:{address:"jyotish@bhagyakar.com",name:"BhagyaKar"}, to:[{email_address:{address:ADMIN_EMAIL,name:""}}], subject:"BhagyaKar email self-check", htmlbody:"<p>This is a short test sent automatically because a full email failed.</p>" });
+    const st = await new Promise(resolve => {
+      const rq = https.request({ hostname: ZEPTO_HOSTS[ZEPTO_HOSTS.length-1], path:"/v1.1/email", method:"POST",
+        headers:{ "Authorization":"Zoho-enczapikey "+ZEPTO_TOKEN, "Content-Type":"application/json", "Content-Length":Buffer.byteLength(tiny) } },
+        r => { let d=""; r.on("data",x=>d+=x); r.on("end",()=>resolve(r.statusCode+" "+d.slice(0,200))); });
+      rq.on("error", e => resolve("error "+e.message)); rq.setTimeout(20000,()=>rq.destroy()); rq.write(tiny); rq.end();
+    });
+    console.log("[email-diagnostic] tiny test email result: " + st + " | token length: " + ZEPTO_TOKEN.length + " | token starts: " + ZEPTO_TOKEN.slice(0,4));
+  } catch(_) {}
   throw lastErr;
 }
 
