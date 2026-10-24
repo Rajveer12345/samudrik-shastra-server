@@ -71,6 +71,12 @@ async function initDB() {
         created_at DATETIME
       )
     `);
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS review_code_uses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        created_at DATETIME
+      )
+    `);
     console.log("Database ready — persistent customer history enabled");
   } catch(e) {
     console.error("Database init failed — persistent storage disabled:", e.message);
@@ -870,15 +876,23 @@ async function handleRequest(req, res) {
     if (!API_KEY) { console.error("Server misconfigured: reading engine key not set"); sendJSON(res,{error:GENERIC_ERROR},500); return; }
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid request"},400); return; }
-    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId,isProgress}=body;
+    const {imageData,mediaType,name,dob,gender,concerns,engine:engineIn,userEmail,paymentId,isProgress,reviewCode}=body;
+    // ── REVIEWER ACCESS CODE (app store review only) ──
+    let usingReviewCode = false;
+    if (reviewCode) {
+      const rc = await checkReviewCode(reviewCode);
+      if (!rc.ok) { sendJSON(res,{error:rc.error},rc.status); return; }
+      usingReviewCode = true;
+    }
+    const engine = usingReviewCode ? 'classical' : engineIn;
     // Verify payment if Razorpay is configured
-    if (RZP_KEY_ID && !paymentId) { sendJSON(res,{error:"Payment required"},402); return; }
+    if (RZP_KEY_ID && !paymentId && !usingReviewCode) { sendJSON(res,{error:"Payment required"},402); return; }
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
 
     // ── PAYMENT MUST BE REAL, FOR THIS READING TYPE, AND UNUSED ──
     let claimedPaymentId = null;
     let delivered = false;
-    if (RZP_KEY_ID) {
+    if (RZP_KEY_ID && !usingReviewCode) {
       const pc = await checkReadingPayment(paymentId, engine);
       if (!pc.ok) { sendJSON(res,{error:pc.error,...(pc.verifyFailed?{verifyFailed:true}:{})},pc.status); return; }
       const claim = await claimReadingPayment(paymentId, userEmail);
@@ -1189,6 +1203,33 @@ ${contextSummary}`;
   }
 
   sendJSON(res,{error:"Not found"},404);
+}
+
+// ── REVIEWER ACCESS CODE ──────────────────────────────────
+// Set REVIEW_ACCESS_CODES on the server (comma separated). Gives a limited number
+// of free classical readings to app store reviewers. Never stored in the code.
+const REVIEW_MAX_USES = parseInt(process.env.REVIEW_CODE_MAX_USES || "15", 10);
+let reviewUsesMemory = 0;
+async function checkReviewCode(code) {
+  const valid = (process.env.REVIEW_ACCESS_CODES || "").split(",").map(x=>x.trim()).filter(Boolean);
+  const given = String(code).trim();
+  const crypto = require("crypto");
+  const match = valid.some(v => v.length === given.length && crypto.timingSafeEqual(Buffer.from(v), Buffer.from(given)));
+  if (!match) return { ok:false, status:403, error:"That access code is not valid." };
+  try {
+    if (dbPool) {
+      const [rows] = await dbPool.query("SELECT COUNT(*) AS n FROM review_code_uses");
+      if (Number(rows[0].n) >= REVIEW_MAX_USES) return { ok:false, status:403, error:"This access code has reached its limit." };
+      await dbPool.query("INSERT INTO review_code_uses (created_at) VALUES (?)", [new Date()]);
+    } else {
+      if (reviewUsesMemory >= REVIEW_MAX_USES) return { ok:false, status:403, error:"This access code has reached its limit." };
+      reviewUsesMemory++;
+    }
+  } catch(e) {
+    console.error("Review code check failed:", e.message);
+    return { ok:false, status:503, error:"Please try again in a few minutes." };
+  }
+  return { ok:true };
 }
 
 // ── DATA RETENTION (DPDP) ─────────────────────────────────
