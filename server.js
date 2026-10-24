@@ -2,7 +2,6 @@ const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
 
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.ANTHROPIC_API_KEY || "";
@@ -212,36 +211,7 @@ async function releaseReadingPayment(paymentId) {
     catch(e) { console.error("Could not release reading payment:", e.message); }
   } else {
     usedReadingPayments.delete(paymentId);
-    reviewUsesMemory.delete(paymentId);
   }
-}
-
-// ── REVIEWER ACCESS CODE (for Google Play review only) ──
-// Switched OFF unless REVIEW_CODE is set in the GoDaddy app secrets.
-// Each use is recorded in reading_payments as "review_..." and capped by REVIEW_MAX_USES (default 5).
-const REVIEW_CODE = process.env.REVIEW_CODE || "";
-const REVIEW_MAX_USES = parseInt(process.env.REVIEW_MAX_USES || "5", 10);
-const reviewUsesMemory = new Set(); // only used if there is no database
-function reviewCodeMatches(given) {
-  if (!REVIEW_CODE || typeof given !== "string" || !given) return false;
-  const a = crypto.createHash("sha256").update(given.trim()).digest();
-  const b = crypto.createHash("sha256").update(REVIEW_CODE).digest();
-  return crypto.timingSafeEqual(a, b);
-}
-// returns an id like "review_xxx" if a use was available and taken, otherwise null
-async function takeReviewUse(email) {
-  const id = "review_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex");
-  if (dbPool) {
-    try {
-      const [rows] = await dbPool.query("SELECT COUNT(*) AS n FROM reading_payments WHERE payment_id LIKE 'review\\_%'");
-      if ((rows[0] && Number(rows[0].n)) >= REVIEW_MAX_USES) return null;
-      await dbPool.query("INSERT INTO reading_payments (payment_id, email, created_at) VALUES (?,?,?)", [id, email ? String(email).slice(0,255) : null, new Date()]);
-      return id;
-    } catch(e) { console.error("Review code use failed:", e.message); return null; }
-  }
-  if (reviewUsesMemory.size >= REVIEW_MAX_USES) return null;
-  reviewUsesMemory.add(id);
-  return id;
 }
 
 // Returns true / false, or null if it could not be checked (no database, or a database error)
@@ -315,10 +285,10 @@ async function sendEmail(to, subject, htmlBody) {
   // Set these two env vars once your ZeptoMail account is ready:
   //   ZEPTOMAIL_TOKEN — the "Send Mail Token" from your ZeptoMail Mail Agent
   //   ZEPTOMAIL_HOST  — "api.zeptomail.in" (India account) or "api.zeptomail.com" (global account)
-  const ZEPTO_TOKEN = (process.env.ZEPTOMAIL_TOKEN || "").trim().replace(/^["']|["']$/g, "").replace(/^\s*zoho-enczapikey[\s:]*/i, "").trim(); // works whether or not the prefix was pasted
-  const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "cpaas.zoho.in";
+  const ZEPTO_TOKEN = process.env.ZEPTOMAIL_TOKEN || "";
+  const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "api.zeptomail.in";
   if (!ZEPTO_TOKEN) { console.log("ZeptoMail token not configured — skipping email"); return; }
-  console.log("Sending email via ZeptoMail host " + ZEPTO_HOST + " to:", to);
+  console.log("Sending email via ZeptoMail to:", to);
   try {
     const payload = JSON.stringify({
       from: { address: "jyotish@bhagyakar.com", name: "BhagyaKar" },
@@ -333,7 +303,6 @@ async function sendEmail(to, subject, htmlBody) {
         method: "POST",
         headers: {
           "Authorization": "Zoho-enczapikey " + ZEPTO_TOKEN,
-          "Accept": "application/json",
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload)
         }
@@ -341,7 +310,7 @@ async function sendEmail(to, subject, htmlBody) {
         let data = "";
         res.on("data", d => data += d);
         res.on("end", () => {
-          console.log("ZeptoMail response:", res.statusCode, data.slice(0,200), JSON.stringify({host:ZEPTO_HOST, ctype:res.headers["content-type"], tokenLength:ZEPTO_TOKEN.length, tokenStartsWithPrefix:/^zoho-enczapikey/i.test(ZEPTO_TOKEN)}));
+          console.log("ZeptoMail response:", res.statusCode, data.slice(0,200));
           if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
           else reject(new Error("ZeptoMail API error " + res.statusCode + ": " + data));
         });
@@ -901,22 +870,15 @@ async function handleRequest(req, res) {
     if (!API_KEY) { console.error("Server misconfigured: reading engine key not set"); sendJSON(res,{error:GENERIC_ERROR},500); return; }
     let body;
     try { body=JSON.parse(await readBody(req)); } catch(e) { sendJSON(res,{error:"Invalid request"},400); return; }
-    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId,isProgress,reviewCode}=body;
-    // Reviewer access code (Google Play review). Only active if REVIEW_CODE is set.
-    let reviewUseId = null;
-    if (reviewCode) {
-      if (!reviewCodeMatches(reviewCode)) { sendJSON(res,{error:"This access code is not valid."},403); return; }
-      reviewUseId = await takeReviewUse(userEmail);
-      if (!reviewUseId) { sendJSON(res,{error:"This access code is no longer available."},403); return; }
-    }
+    const {imageData,mediaType,name,dob,gender,concerns,engine,userEmail,paymentId,isProgress}=body;
     // Verify payment if Razorpay is configured
-    if (RZP_KEY_ID && !paymentId && !reviewUseId) { sendJSON(res,{error:"Payment required"},402); return; }
+    if (RZP_KEY_ID && !paymentId) { sendJSON(res,{error:"Payment required"},402); return; }
     if (!imageData) { sendJSON(res,{error:"No image"},400); return; }
 
     // ── PAYMENT MUST BE REAL, FOR THIS READING TYPE, AND UNUSED ──
-    let claimedPaymentId = reviewUseId; // for a reviewer, a failed reading gives the use back
+    let claimedPaymentId = null;
     let delivered = false;
-    if (RZP_KEY_ID && !reviewUseId) {
+    if (RZP_KEY_ID) {
       const pc = await checkReadingPayment(paymentId, engine);
       if (!pc.ok) { sendJSON(res,{error:pc.error,...(pc.verifyFailed?{verifyFailed:true}:{})},pc.status); return; }
       const claim = await claimReadingPayment(paymentId, userEmail);
@@ -1229,9 +1191,67 @@ ${contextSummary}`;
   sendJSON(res,{error:"Not found"},404);
 }
 
+// ── DATA RETENTION (DPDP) ─────────────────────────────────
+// A customer's stored data is erased 12 months after their LAST reading.
+// Runs once a day. Set RETENTION_DRY_RUN=1 to only log what would be deleted.
+const RETENTION_MONTHS = 12;
+
+async function runRetentionCleanup(pool, now, dryRun) {
+  const cutoff = new Date(now.getTime());
+  cutoff.setMonth(cutoff.getMonth() - RETENTION_MONTHS);
+  const out = { customers: 0, readings: 0, notes: 0, consults: 0, orphanNotes: 0, orphanConsults: 0, anonymousReadings: 0 };
+  if (!pool) return out;
+
+  // 1. Customers whose most recent reading is older than the cutoff
+  const [stale] = await pool.query(
+    "SELECT email FROM readings WHERE email IS NOT NULL AND email<>'' GROUP BY email HAVING MAX(created_at) < ?", [cutoff]);
+  out.customers = stale.length;
+  for (const row of stale) {
+    const email = row.email;
+    if (dryRun) continue;
+    const [r1] = await pool.query("DELETE FROM readings WHERE email=?", [email]);
+    const [r2] = await pool.query("DELETE FROM consultation_notes WHERE email=?", [email]);
+    const [r3] = await pool.query("DELETE FROM consult_requests WHERE email=?", [email]);
+    // Keep the payment id (so it can never be reused) but remove the email
+    await pool.query("UPDATE reading_payments SET email=NULL WHERE email=?", [email]);
+    out.readings += r1.affectedRows || 0; out.notes += r2.affectedRows || 0; out.consults += r3.affectedRows || 0;
+  }
+
+  // 2. Readings with no email, older than the cutoff
+  const [c4] = await pool.query("SELECT COUNT(*) AS n FROM readings WHERE (email IS NULL OR email='') AND created_at < ?", [cutoff]);
+  out.anonymousReadings = Number(c4[0].n) || 0;
+  if (!dryRun && out.anonymousReadings) await pool.query("DELETE FROM readings WHERE (email IS NULL OR email='') AND created_at < ?", [cutoff]);
+
+  // 3. Old notes / consultation requests belonging to emails that have no reading left
+  const orphan = "created_at < ? AND (email IS NULL OR email='' OR email NOT IN (SELECT email FROM readings WHERE email IS NOT NULL))";
+  const [c5] = await pool.query("SELECT COUNT(*) AS n FROM consultation_notes WHERE " + orphan, [cutoff]);
+  const [c6] = await pool.query("SELECT COUNT(*) AS n FROM consult_requests WHERE " + orphan, [cutoff]);
+  out.orphanNotes = Number(c5[0].n) || 0; out.orphanConsults = Number(c6[0].n) || 0;
+  if (!dryRun) {
+    if (out.orphanNotes) await pool.query("DELETE FROM consultation_notes WHERE " + orphan, [cutoff]);
+    if (out.orphanConsults) await pool.query("DELETE FROM consult_requests WHERE " + orphan, [cutoff]);
+    // 4. Same cutoff for the in-memory copy
+    DB.readings = DB.readings.filter(r => new Date(r.createdAt) >= cutoff);
+  }
+  return out;
+}
+
+function startRetentionJob() {
+  const dry = process.env.RETENTION_DRY_RUN === "1";
+  const run = async () => {
+    if (!dbPool) return;
+    try {
+      const res = await runRetentionCleanup(dbPool, new Date(), dry);
+      console.log("[retention]" + (dry ? " DRY RUN" : "") + " " + JSON.stringify(res));
+    } catch (e) { console.error("[retention] failed:", e.message); }
+  };
+  setTimeout(run, 2 * 60 * 1000);
+  setInterval(run, 24 * 60 * 60 * 1000);
+}
+
 http.createServer(handleRequest).listen(PORT,()=>{
   console.log(`BhagyaKar server on port ${PORT} | Model: claude-opus-4-5 | Key: ${API_KEY?"OK":"MISSING"}`);
-  initDB();
+  initDB().then(startRetentionJob);
 });
 
 // ── ANCIENT TEXTS KNOWLEDGE BASE ─────────────────────────────
