@@ -292,7 +292,8 @@ async function sendEmail(to, subject, htmlBody) {
   //   ZEPTOMAIL_TOKEN — the "Send Mail Token" from your ZeptoMail Mail Agent
   //   ZEPTOMAIL_HOST  — "api.zeptomail.in" (India account) or "api.zeptomail.com" (global account)
   const ZEPTO_TOKEN = process.env.ZEPTOMAIL_TOKEN || "";
-  const ZEPTO_HOST  = process.env.ZEPTOMAIL_HOST || "api.zeptomail.in";
+  // Try the configured host first, then the standard India API host (a dashboard address such as cpaas.zoho.in is not a sending address)
+  const ZEPTO_HOSTS = [String(process.env.ZEPTOMAIL_HOST || "").trim().replace(/^https?:\/\//,"").replace(/\/.*$/,""), "api.zeptomail.in"].filter((h,i,arr)=>h && arr.indexOf(h)===i);
   if (!ZEPTO_TOKEN) { console.log("ZeptoMail token not configured — skipping email"); return; }
   console.log("Sending email via ZeptoMail to:", to);
   // Remove broken characters (e.g. half an emoji) that can make the mail API refuse the message
@@ -303,7 +304,7 @@ async function sendEmail(to, subject, htmlBody) {
     subject: clean(subject),
     htmlbody: clean(htmlBody)
   });
-  const sendOnce = () => new Promise((resolve, reject) => {
+  const sendOnce = (ZEPTO_HOST) => new Promise((resolve, reject) => {
     const req = https.request({
       hostname: ZEPTO_HOST,
       path: "/v1.1/email",
@@ -329,16 +330,16 @@ async function sendEmail(to, subject, htmlBody) {
   });
   // Try up to 3 times for temporary problems (server errors, network)
   let lastErr;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 4; attempt++) {
     try {
-      const result = await sendOnce();
+      const result = await sendOnce(ZEPTO_HOSTS[(attempt - 1) % ZEPTO_HOSTS.length]);
       console.log("Email sent successfully via ZeptoMail (attempt " + attempt + ")");
       return result;
     } catch(e) {
       lastErr = e;
       console.error("sendEmail attempt " + attempt + " failed:", e.message);
-      if (e.status && e.status < 500) break; // a 4xx will not fix itself
-      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 6000));
+      if (e.status && e.status < 500 && e.status !== 404 && ZEPTO_HOSTS.length === 1) break; // a 4xx will not fix itself
+      if (attempt < 4) await new Promise(r => setTimeout(r, attempt * 6000));
     }
   }
   throw lastErr;
